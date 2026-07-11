@@ -1,0 +1,43 @@
+{
+  "num_samples": 32,
+  "data_types": {
+    "tokens": "Tensor",
+    "prompts": "list",
+    "sentences": "list",
+    "word_idx": "dict",
+    "io_tokenIDs": "list",
+    "s_tokenIDs": "list"
+  },
+  "tensor_shapes": {
+    "tokens": [
+      32,
+      21
+    ],
+    "prompts": [
+      32
+    ],
+    "sentences": [
+      32
+    ],
+    "io_tokenIDs": [
+      32
+    ],
+    "s_tokenIDs": [
+      32
+    ]
+  },
+  "memory_usage": 2688,
+  "generation_time": 1759996377.482634,
+  "config_hash": "a432ca4ac10054a3a3fe265497c785e3",
+  "config": {
+    "task_name": "ioi",
+    "num_examples": 32,
+    "prompt_type": "BABA",
+    "seed": 456,
+    "device": "cuda",
+    "metric_name": "logit_diff",
+    "template_type": null,
+    "corruption_strategy": null,
+    "additional_params": {}
+  }
+}

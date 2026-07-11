@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: CircuitKit Discussions
+    url: https://github.com/aditya-hem/circuitkit/discussions
+    about: Ask questions and share ideas about CircuitKit
+  - name: Documentation
+    url: https://github.com/aditya-hem/circuitkit#documentation
+    about: View CircuitKit documentation and guides

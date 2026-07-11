@@ -1,0 +1,15 @@
+[flake8]
+max-line-length = 100
+# E203/W503 conflict with black; E501 handled by black's line-length.
+extend-ignore = E203, W503, E501
+exclude =
+    .git,
+    __pycache__,
+    build,
+    dist,
+    .eggs,
+    *.egg-info,
+    .pytest_cache,
+    experiments,
+    notebooks
+max-complexity = 30

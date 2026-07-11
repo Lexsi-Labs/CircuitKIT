@@ -1,0 +1,16 @@
+# Documentation build dependencies for MkDocs.
+#
+# Install with:
+#     pip install -r requirements-docs.txt
+#
+# Or install CircuitKit with the docs extra:
+#     pip install -e ".[docs]"
+
+-e .[docs]
+
+mkdocs>=1.5
+mkdocs-material>=9.0
+pymdown-extensions>=10.0
+mkdocstrings[python]>=0.24
+mkdocs-jupyter>=0.24
+pygments>=2.15

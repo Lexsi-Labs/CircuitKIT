@@ -1,0 +1,23 @@
+{
+  "num_samples": 0,
+  "data_types": {
+    "num_examples": "int",
+    "task": "str",
+    "note": "str"
+  },
+  "tensor_shapes": {},
+  "memory_usage": 0,
+  "generation_time": 1759996336.8369157,
+  "config_hash": "ffd331060980063c9d864a291f494954",
+  "config": {
+    "task_name": "greaterthan",
+    "num_examples": 32,
+    "prompt_type": null,
+    "seed": 123,
+    "device": "cuda",
+    "metric_name": "logit_diff",
+    "template_type": null,
+    "corruption_strategy": null,
+    "additional_params": {}
+  }
+}

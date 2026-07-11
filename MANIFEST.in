@@ -1,0 +1,53 @@
+# Include the README and LICENSE files
+include README.md
+include LICENSE
+include requirements.txt
+include pyproject.toml
+
+# Include example configurations
+recursive-include examples *.py *.yaml *.yml *.json
+recursive-include examples *.ipynb
+
+# Include test data
+recursive-include tests *.py *.csv *.json *.yaml *.yml
+
+# Include documentation
+recursive-include docs *.rst *.md *.txt *.py
+
+# Include configuration files
+include pytest.ini
+include .github/workflows/*.yml
+
+# Exclude unnecessary files
+exclude .gitignore
+exclude .github/workflows/ci.yml
+exclude tests/__pycache__
+exclude tests/*/__pycache__
+exclude examples/__pycache__
+exclude examples/*/__pycache__
+
+# Exclude large data files
+exclude *.csv
+exclude *.pt
+exclude *.pth
+exclude *.h5
+exclude *.hdf5
+exclude *.pkl
+exclude *.pickle
+exclude *.npy
+exclude *.npz
+
+# Exclude results and temporary files
+exclude results/*
+exclude data/*
+exclude temp/*
+exclude tmp/*
+exclude *.log
+exclude *.tmp
+exclude *.temp
+
+# In-package data must ship in the sdist (the root-level `exclude *.csv` above
+# only matches root-level files, but without an explicit rule the src/ data was
+# omitted entirely). Keep in sync with [tool.setuptools.package-data].
+recursive-include src/circuitkit *.json *.csv
+include src/circuitkit/backends/eap/py.typed

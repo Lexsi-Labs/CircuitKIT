@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- V3 favicon: 2-col × 4-row bipartite fan mark (no wordmark) -->
+  <!-- Left col x=8, rows y=6,18,30,42 | Right col x=40 | mx=24 -->
+  <!-- Accent: (8,6)→(40,30) and (8,18)→(40,6) crossing paths -->
+
+  <g stroke="#D1D5DB" stroke-width="1.5" fill="none">
+    <path d="M8,6  C24,6  24,6  40,6"/>
+    <path d="M8,6  C24,6  24,18 40,18"/>
+    <path d="M8,6  C24,6  24,30 40,30"/>
+    <path d="M8,6  C24,6  24,42 40,42"/>
+    <path d="M8,18 C24,18 24,6  40,6"/>
+    <path d="M8,18 C24,18 24,18 40,18"/>
+    <path d="M8,18 C24,18 24,30 40,30"/>
+    <path d="M8,18 C24,18 24,42 40,42"/>
+    <path d="M8,30 C24,30 24,6  40,6"/>
+    <path d="M8,30 C24,30 24,18 40,18"/>
+    <path d="M8,30 C24,30 24,30 40,30"/>
+    <path d="M8,30 C24,30 24,42 40,42"/>
+    <path d="M8,42 C24,42 24,6  40,6"/>
+    <path d="M8,42 C24,42 24,18 40,18"/>
+    <path d="M8,42 C24,42 24,30 40,30"/>
+    <path d="M8,42 C24,42 24,42 40,42"/>
+  </g>
+
+  <!-- Accent edges — crossing pattern -->
+  <path d="M8,6  C24,6  24,30 40,30" stroke="#EC5A2C" stroke-width="4" opacity="0.18" fill="none"/>
+  <path d="M8,18 C24,18 24,6  40,6"  stroke="#EC5A2C" stroke-width="4" opacity="0.18" fill="none"/>
+  <path d="M8,6  C24,6  24,30 40,30" stroke="#EC5A2C" stroke-width="2" fill="none"/>
+  <path d="M8,18 C24,18 24,6  40,6"  stroke="#EC5A2C" stroke-width="2" fill="none"/>
+
+  <!-- Neutral nodes -->
+  <g fill="#F3F4F6" stroke="#9CA3AF" stroke-width="1.2">
+    <circle cx="8"  cy="30" r="3.5"/>
+    <circle cx="8"  cy="42" r="3.5"/>
+    <circle cx="40" cy="18" r="3.5"/>
+    <circle cx="40" cy="42" r="3.5"/>
+  </g>
+
+  <!-- Accent nodes -->
+  <circle cx="8"  cy="6"  r="7" fill="#EC5A2C" opacity="0.15"/>
+  <circle cx="8"  cy="6"  r="4.5" fill="#EC5A2C"/>
+  <circle cx="8"  cy="18" r="7" fill="#EC5A2C" opacity="0.15"/>
+  <circle cx="8"  cy="18" r="4.5" fill="#EC5A2C"/>
+  <circle cx="40" cy="30" r="7" fill="#EC5A2C" opacity="0.15"/>
+  <circle cx="40" cy="30" r="4.5" fill="#EC5A2C"/>
+  <circle cx="40" cy="6"  r="7" fill="#EC5A2C" opacity="0.15"/>
+  <circle cx="40" cy="6"  r="4.5" fill="#EC5A2C"/>
+</svg>

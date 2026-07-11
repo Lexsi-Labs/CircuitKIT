@@ -1,0 +1,12 @@
+# CircuitKit dependencies
+#
+# Install with:
+#     pip install -r requirements.txt
+#
+# Or install CircuitKit directly:
+#     pip install -e .
+#
+# Optional extras: [benchmarks], [quantization], [dev], [docs]
+# See pyproject.toml for the full canonical dependency list.
+
+-e .

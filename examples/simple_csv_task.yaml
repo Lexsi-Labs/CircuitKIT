@@ -1,0 +1,50 @@
+# Simple CSV Task Configuration
+#
+# This is an example YAML configuration for running circuit discovery
+# on a custom CSV dataset without writing Python code.
+#
+# Usage:
+#   circuitkit discover-yaml --model gpt2 --task-yaml examples/simple_csv_task.yaml
+#
+# To customize:
+# 1. Replace 'path' with your CSV file path
+# 2. Update 'schema' to match your CSV column names
+# 3. Adjust 'corruption' strategy and config as needed
+# 4. Change 'metric' if you want a different evaluation metric
+
+name: simple_task
+
+# Data source configuration
+source:
+  type: csv                            # csv | jsonl | hf
+  path: examples/simple_task_sample.csv   # Path to your CSV file
+
+# Schema mapping: which columns map to prompt/answer
+schema:
+  prompt: question        # Column name containing prompts
+  answer: answer          # Column name containing answers
+  corrupted: corrupted    # Optional: column with explicit counter-factual prompts
+  corrupted_answer: corrupt_answer  # Answer to the corrupted prompt (needs a
+                                    # different first token from `answer`, else
+                                    # the logit_diff metric is identically zero)
+  # choices: options      # Optional: column with multiple choice options
+
+# Corruption strategy (optional)
+# If the data already provides a 'corrupted' column (as above), that explicit
+# counter-factual is used directly and no strategy is needed. Otherwise pick a
+# strategy here to generate corrupted prompts automatically. Note: entity_swap
+# and role_swap use spaCy (bundled with the base install); they also need the
+# English model — run: python -m spacy download en_core_web_sm
+# corruption:
+#   strategy: entity_swap
+#   config:
+#     entity_types: [PERSON, GPE]
+
+# Evaluation metric (optional, defaults to logit_diff)
+#   logit_diff | kl  -> differentiable, required for EAP-family discovery
+#   accuracy         -> non-differentiable; reporting only, NOT usable for discovery
+metric: logit_diff
+
+# Jinja2 template for rendering prompts (optional)
+# If provided, all CSV columns are available as variables
+# prompt_template: "Question: {{ question }}\nAnswer: {{ answer }}"

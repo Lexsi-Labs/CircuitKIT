@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 120">
+  <!-- V3: Bipartite Fan — 2 cols × 5 rows, all 25 cubic bezier connections -->
+  <!-- Left col x=22, rows y=12,36,60,84,108 | Right col x=150 | mx=86 -->
+  <!-- Accent sub-circuit: (22,12)→(150,84) and (22,60)→(150,36) -->
+
+  <!-- All 25 neutral bezier paths -->
+  <g stroke="#D1D5DB" stroke-width="0.85" fill="none">
+    <path d="M22,12  C86,12  86,12  150,12"/>
+    <path d="M22,12  C86,12  86,36  150,36"/>
+    <path d="M22,12  C86,12  86,60  150,60"/>
+    <path d="M22,12  C86,12  86,84  150,84"/>
+    <path d="M22,12  C86,12  86,108 150,108"/>
+    <path d="M22,36  C86,36  86,12  150,12"/>
+    <path d="M22,36  C86,36  86,36  150,36"/>
+    <path d="M22,36  C86,36  86,60  150,60"/>
+    <path d="M22,36  C86,36  86,84  150,84"/>
+    <path d="M22,36  C86,36  86,108 150,108"/>
+    <path d="M22,60  C86,60  86,12  150,12"/>
+    <path d="M22,60  C86,60  86,36  150,36"/>
+    <path d="M22,60  C86,60  86,60  150,60"/>
+    <path d="M22,60  C86,60  86,84  150,84"/>
+    <path d="M22,60  C86,60  86,108 150,108"/>
+    <path d="M22,84  C86,84  86,12  150,12"/>
+    <path d="M22,84  C86,84  86,36  150,36"/>
+    <path d="M22,84  C86,84  86,60  150,60"/>
+    <path d="M22,84  C86,84  86,84  150,84"/>
+    <path d="M22,84  C86,84  86,108 150,108"/>
+    <path d="M22,108 C86,108 86,12  150,12"/>
+    <path d="M22,108 C86,108 86,36  150,36"/>
+    <path d="M22,108 C86,108 86,60  150,60"/>
+    <path d="M22,108 C86,108 86,84  150,84"/>
+    <path d="M22,108 C86,108 86,108 150,108"/>
+  </g>
+
+  <!-- Accent edges — glow layer -->
+  <path d="M22,12 C86,12 86,84 150,84"  stroke="#EC5A2C" stroke-width="8" opacity="0.18" fill="none"/>
+  <path d="M22,60 C86,60 86,36 150,36"  stroke="#EC5A2C" stroke-width="8" opacity="0.18" fill="none"/>
+  <!-- Accent edges — core -->
+  <path d="M22,12 C86,12 86,84 150,84"  stroke="#EC5A2C" stroke-width="2.2" fill="none"/>
+  <path d="M22,60 C86,60 86,36 150,36"  stroke="#EC5A2C" stroke-width="2.2" fill="none"/>
+
+  <!-- Neutral nodes (6) -->
+  <g fill="#F3F4F6" stroke="#9CA3AF" stroke-width="1.3">
+    <circle cx="22"  cy="36"  r="4.5"/>
+    <circle cx="22"  cy="84"  r="4.5"/>
+    <circle cx="22"  cy="108" r="4.5"/>
+    <circle cx="150" cy="12"  r="4.5"/>
+    <circle cx="150" cy="60"  r="4.5"/>
+    <circle cx="150" cy="108" r="4.5"/>
+  </g>
+
+  <!-- Accent nodes (4) -->
+  <circle cx="22"  cy="12"  r="11" fill="#EC5A2C" opacity="0.15"/>
+  <circle cx="22"  cy="12"  r="6"  fill="#EC5A2C"/>
+  <circle cx="22"  cy="60"  r="11" fill="#EC5A2C" opacity="0.15"/>
+  <circle cx="22"  cy="60"  r="6"  fill="#EC5A2C"/>
+  <circle cx="150" cy="84"  r="11" fill="#EC5A2C" opacity="0.15"/>
+  <circle cx="150" cy="84"  r="6"  fill="#EC5A2C"/>
+  <circle cx="150" cy="36"  r="11" fill="#EC5A2C" opacity="0.15"/>
+  <circle cx="150" cy="36"  r="6"  fill="#EC5A2C"/>
+
+  <!-- Wordmark -->
+  <text x="178" y="77"
+        font-family="'Inter','Helvetica Neue',Arial,system-ui,sans-serif"
+        font-size="48" font-weight="700" letter-spacing="-0.5">
+    <tspan fill="#1A1A1A">Circuit</tspan><tspan fill="#EC5A2C">Kit</tspan>
+  </text>
+</svg>

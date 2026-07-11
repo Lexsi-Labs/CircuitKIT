@@ -1,0 +1,18 @@
+# Sample pipeline YAML for `circuitkit run` smoke tests.
+# Used by tests/unit/test_yaml_run_cli.py and tests/unit/test_yaml_pipeline_config.py.
+#
+# Intentionally uses small n_examples/batch_size so that if discovery is ever
+# run for real in a test (rather than mocked), it finishes quickly on CPU.
+
+model: gpt2
+task: ioi
+precision: float32
+output_dir: ./test_pipeline_output
+
+discovery:
+  algorithm: eap-ig
+  level: node
+  sparsity: 0.3
+  n_examples: 4
+  batch_size: 2
+  scope: both

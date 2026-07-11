@@ -1,0 +1,11 @@
+question,answer,corrupted,corrupt_answer
+What is 2 plus 2?,4,What is 3 plus 4?,7
+What is the capital of France?,Paris,What is the capital of Japan?,Tokyo
+What color is the sky?,blue,What color is grass?,green
+How many sides does a triangle have?,3,How many sides does a square have?,4
+What is the largest planet in our solar system?,Jupiter,What is the smallest planet in our solar system?,Mercury
+Is ice cold?,yes,Is fire cold?,no
+What is the boiling point of water in Celsius?,100,What is the freezing point of water in Celsius?,0
+How many legs does a dog have?,4,How many legs does a spider have?,8
+What is the opposite of hot?,cold,What is the opposite of up?,down
+Who painted the Mona Lisa?,Leonardo,Who wrote Romeo and Juliet?,Shakespeare

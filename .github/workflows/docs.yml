@@ -1,0 +1,83 @@
+name: Documentation
+
+on:
+  push:
+    branches: [main, cust_data]
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "src/circuitkit/**"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "src/circuitkit/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: docs-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: docs-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pip install ".[docs]"
+
+      - name: Build
+        run: mkdocs build --strict --clean
+
+      - name: Upload site artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: site/
+          retention-days: 3
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/cust_data')
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: docs-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: docs-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pip install ".[docs]"
+
+      - name: Deploy
+        run: mkdocs gh-deploy --force --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

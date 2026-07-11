@@ -1,0 +1,234 @@
+site_name: CircuitKit
+site_description: "Discover, Evaluate, and Intervene on Circuits in Neural Networks — 13 circuit discovery algorithms, 6-pillar faithfulness evaluation, and pruning / quantization / knowledge editing / unlearning / activation steering / contrastive weight steering interventions behind one API."
+site_url: https://lexsi-labs.github.io/circuitkit/
+repo_url: https://github.com/Lexsi-Labs/circuitkit
+repo_name: Lexsi-Labs/circuitkit
+edit_uri: edit/main/docs/
+
+exclude_docs: |
+  API_REFERENCE.md
+  INSTALLATION.md
+  guides/CONCEPTS.md
+  reference/ARCHITECTURE_REGISTRY.md
+  reference/FEATURES.md
+  guidelines/
+  blog/
+  product_blueprint.md
+  pypi_core_contract.md
+  dev_enterprise_runbook.md
+  # Orphan duplicate pages: each duplicated (and contradicted) an in-nav page; the
+  # canonical version is kept in nav, these copies are excluded to avoid drift.
+  # NOTE: keep pattern lines comment-free. mkdocs exclude_docs is gitignore-style,
+  # where '#' is a comment only at line start; an inline '# ...' becomes part of the
+  # glob, so the pattern matches nothing and the page silently ships. Redirect map:
+  #   guides/circuit_artifact_guide.md     -> advanced/circuit-artifacts.md
+  #   guides/eap_ig_memory_optimization.md -> advanced/memory-optimization.md
+  #   guides/vllm_evaluation.md            -> advanced/vllm-evaluation.md
+  #   advanced/hallucination-detection.md  -> guides/hallucination_detection_guide.md
+  guides/circuit_artifact_guide.md
+  guides/eap_ig_memory_optimization.md
+  guides/vllm_evaluation.md
+  advanced/hallucination-detection.md
+
+copyright: >
+  Copyright &copy; 2026 <a href="https://lexsi.ai" target="_blank" rel="noopener">Lexsi Labs</a>
+
+theme:
+  name: material
+  logo: assets/circuitkit-mark-v3.svg
+  favicon: assets/favicon-v3.svg
+  font:
+    text: Schibsted Grotesk
+    code: IBM Plex Mono
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - navigation.prune
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.action.edit
+
+extra_css:
+  - assets/circuitkit.css
+
+extra_javascript:
+  - assets/circuitkit.js
+  - assets/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+  - https://unpkg.com/mermaid@10.9.0/dist/mermaid.min.js
+
+extra:
+  version:
+    provider: mike
+    default: latest
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Lexsi-Labs/circuitkit
+      name: CircuitKit on GitHub
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/circuitkit/
+      name: CircuitKit on PyPI
+    - icon: fontawesome/brands/x-twitter
+      link: https://x.com/Lexsi_labs
+      name: Lexsi Labs on X
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/company/lexsi-labs/
+      name: Lexsi Labs on LinkedIn
+    - icon: simple/huggingface
+      link: https://huggingface.co/Lexsi
+      name: Lexsi Labs on Hugging Face
+
+plugins:
+  - search
+  - mkdocs-jupyter:
+      include_source: true
+      execute: false
+  - mkdocstrings:
+      handlers:
+        python:
+          paths:
+            - src
+          options:
+            show_source: true
+            heading_level: 2
+            allow_inspection: false
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Overview: getting-started/index.md
+      - Installation: getting-started/installation.md
+      - Quick Start: getting-started/quickstart.md
+      - Core Concepts: getting-started/core-concepts.md
+      - Taxonomy: getting-started/taxonomy.md
+      - Configuration: getting-started/configuration.md
+  - User Guide:
+      - guides/index.md
+      - Pipeline: user-guide/pipeline-overview.md
+      - Visualization: user-guide/visualization.md
+      - Selectors: user-guide/selectors.md
+      - Troubleshooting: user-guide/troubleshooting.md
+      - Data:
+          - Overview: user-guide/data.md
+          - Built-in Tasks: user-guide/tasks.md
+          - Bring Your Own Data: user-guide/custom-data.md
+          - Corruption: user-guide/data-corruption.md
+      - Algorithms:
+          - Overview: algorithms/overview.md
+          - EAP Family: algorithms/eap.md
+          - ACDC: algorithms/acdc.md
+          - IBCircuit: algorithms/ibcircuit.md
+          - CD-T: algorithms/cdt.md
+          - Stability Tiers: algorithms/stability-tiers.md
+          - Capability Matrix: algorithms/capability-matrix.md
+      - Evaluation:
+          - Overview: user-guide/evaluation.md
+          - Framework: evaluation/framework.md
+          - Causal Patching: evaluation/causal-patching.md
+          - Ablation: evaluation/ablation.md
+          - Stability: evaluation/stability.md
+          - Robustness: evaluation/robustness.md
+          - Baselines: evaluation/baselines.md
+          - Generalization: evaluation/generalization.md
+          - Downstream Benchmarking: evaluation/benchmarking.md
+      - Applications:
+          - Overview: user-guide/applications.md
+          - Steering: guides/steering.md
+          - Hallucination Detection: guides/hallucination_detection_guide.md
+      - Advanced:
+          - Architecture Registry: advanced/architecture-registry.md
+          - Memory Optimization: advanced/memory-optimization.md
+          - vLLM Evaluation: advanced/vllm-evaluation.md
+          - Circuit Artifacts: advanced/circuit-artifacts.md
+          - Chat Templates: advanced/chat-templates.md
+      - Trust & Audit:
+          - trust/index.md
+          - Scope & Limitations: trust/scope.md
+          - Audit Results: trust/results.md
+  - Reference:
+      - reference/index.md
+      - API Reference:
+          - Overview: api-reference/overview.md
+          - Dict-Config API: api-reference/dict-config.md
+          - Flat Typed API: api-reference/flat-api.md
+          - Pipeline Class: api-reference/pipeline.md
+          - Backends: api-reference/backends.md
+          - Evaluation: api-reference/evaluation.md
+          - Tasks: api-reference/tasks.md
+          - Selectors: api-reference/selectors.md
+          - Applications: api-reference/applications.md
+      - CLI Reference:
+          - Overview: cli/overview.md
+          - Discovery Commands: cli/discovery.md
+          - Evaluation Commands: cli/evaluation.md
+          - Application Commands: cli/applications.md
+          - YAML Configuration: cli/yaml-config.md
+      - References: references.md
+      - Citation Map: citation-map.md
+  - Examples:
+      - Overview: examples/overview.md
+      - Python Scripts: examples/scripts.md
+      - Notebooks: examples/notebooks.md
+      - Case Studies: examples/case-studies.md
+  - Community:
+      - FAQ: about/faq.md
+      - Contributing:
+          - Development Setup: contributing/setup.md
+          - Code Standards: contributing/standards.md
+          - Adding Algorithms: contributing/new-algorithms.md
+          - Documentation Guide: contributing/documentation.md
+          - Testing on CUDA: contributing/testing-on-cuda.md
+      - Release Notes: about/release-notes.md
+      - Roadmap: about/roadmap.md
+      - License: about/license.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - tables
+  - toc:
+      permalink: true

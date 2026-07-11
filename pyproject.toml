@@ -1,0 +1,183 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "circuitkit"
+version = "1.0.0"
+# Pratinav Seth, Hem Gosalia, and Aditya Kasliwal are equal co-first authors.
+# Pratinav Seth is the corresponding author. Author order is kept consistent
+# with src/circuitkit/__init__.py and CITATION.cff.
+authors = [
+  { name="Pratinav Seth", email="pratinav.seth@lexsi.ai" },
+  { name="Hem Gosalia" },
+  { name="Aditya Kasliwal" },
+  { name="Vinay Kumar Sankarapu" },
+]
+maintainers = [
+  { name="Pratinav Seth", email="pratinav.seth@lexsi.ai" },
+]
+description = "Unified Discover, Evaluate, Intervene toolkit for mechanistic interpretability: 13 circuit discovery algorithms, 6-pillar faithfulness evaluation, and pruning / quantization / knowledge editing / unlearning / activation steering / contrastive weight steering interventions behind one API."
+readme = "README.md"
+license = { text="LSAL-1.1" }
+requires-python = ">=3.10"
+keywords = [
+    "mechanistic-interpretability",
+    "circuit-discovery",
+    "transformers",
+    "neural-networks",
+    "attention-analysis",
+    "model-pruning",
+    "faithfulness-evaluation",
+    "auto-schema",
+    "corruption-robustness",
+    "knowledge-editing",
+    "model-visualization",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+
+# Updated list of dependencies
+dependencies = [
+    # Keep base dependencies portable; platform-specific CUDA pins live in optional extras / requirements.txt
+    "torch",
+    "einops",
+    "plotly",
+    "tqdm",
+    "numpy",
+    "pandas",  # imported at module top in circuitkit/api.py
+    "scipy",  # used by evaluate/transfer_analysis.py + stability discovery
+    # Pin a consistent HF + transformer-lens set. transformer-lens 2.18 (below)
+    # requires transformers>=4.57; transformers 5.x drops attrs the TL loaders read
+    # (e.g. Qwen2Config.rope_theta) so newer models fail to load; and transformers<5
+    # requires huggingface-hub<1.0. transformer-lens 3.x removes APIs CircuitKit's
+    # ACDC backend imports (transformer_lens.past_key_value_caching), so it stays <3.
+    "huggingface-hub>=0.34,<1.0",
+    "transformers>=4.57,<5",
+    "safetensors",  # checkpoint export — evaluate/hf_checkpoint.py
+    "ordered-set",
+    "pyyaml",
+    "networkx",
+    "matplotlib",
+    "seaborn",  # used by evaluate/transfer_visualizer.py
+    "ipywidgets",
+    "scikit-learn",
+    "evaluate",
+    "sacrebleu",
+    "rouge_score",
+    "bert-score", # Correct package name for bert_score
+    "accelerate",
+    "sentence-transformers",
+    # CLI dependencies
+    "click",
+    "rich",
+    # >=3.8 required: thinc's Cython extensions are built against the numpy 2.x
+    # ABI from that release onward; 3.7.x raises numpy.dtype ABI mismatch errors
+    # at import time under numpy>=2.
+    "spacy>=3.8",
+    "psutil",  # CLI debug + memory pre-flight checks
+    # transformer-lens from PyPI — verified against 2.18.x (adds Gemma-3 support).
+    # A published release is used (not a Git commit pin) for reproducible installs.
+    "transformer-lens>=2.18,<3",
+    # Structural pruning
+    "torch-pruning>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "black",
+    "flake8",
+    "mypy",
+    "isort",
+    "pre-commit"
+]
+docs = [
+    "mkdocs>=1.5",
+    "mkdocs-material>=9.0",
+    "pymdown-extensions>=10.0",
+    "mkdocstrings[python]>=0.24",
+    "mkdocs-jupyter>=0.24",
+    "pygments>=2.15",
+]
+benchmarks = [
+    "lm-eval @ git+https://github.com/EleutherAI/lm-evaluation-harness.git#egg=lm-eval",
+    "datasets>=2.20.0",
+]
+quantization = [
+    # optimum-quanto powers circuit-aware quantization; imported lazily with
+    # an ImportError guard in evaluate/hf_checkpoint.py and quantization/quant_utils.py.
+    "optimum-quanto>=0.2",
+]
+cdt = [
+    # Local-importance explainers used only by the research-tier CD-T backend.
+    "captum>=0.6",
+    "lime>=0.2",
+    "shap>=0.42",
+]
+pruning = [
+    # The structural-pruning scripts in examples/pruning/*.py drive LLM-Pruner
+    # (https://github.com/horseee/LLM-Pruner), which is NOT published on PyPI
+    # and ships no installable package metadata. It cannot be listed as a pip
+    # requirement; instead clone it next to the circuitkit package so the
+    # scripts' _LLM_PRUNER path picks it up:
+    #     git clone https://github.com/horseee/LLM-Pruner src/LLM-Pruner
+    # This extra is intentionally empty — it exists to document that manual
+    # step. The examples/pruning scripts also need `datasets` and `torch`,
+    # already pulled in by the base install and the `benchmarks` extra.
+]
+gpu-cu126 = [
+    "torch==2.6.0+cu126",
+    "torchvision==0.21.0+cu126",
+]
+
+# Platform notes:
+# - CUDA: Install your preferred torch build, then `pip install -e ".[benchmarks,quantization]"`
+# - Apple Silicon (MPS): Install torch from the official site, then `pip install -e ".`
+# - CPU-only: `pip install -e ".[dev]"` works on all platforms
+# - Structural pruning (examples/pruning/*.py): additionally clone LLM-Pruner —
+#   see the `pruning` extra above. It is not pip-installable.
+
+[project.scripts]
+circuitkit = "circuitkit.cli.main:main"
+
+# Without explicit package-data config, setuptools ships ONLY .py files: the
+# tracked in-package data (task_data/storage/*.json cache sidecars,
+# task_data/tasks/binary_align/*.csv) was silently dropped from the wheel and
+# sdist. Nothing currently breaks without them (the json are pkl-cache sidecars
+# that regenerate; the csv have no runtime reader), but any future in-package
+# data file would silently not ship — so include tracked json/csv explicitly.
+# In-package README.md files are developer docs and intentionally not shipped.
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+circuitkit = ["**/*.json", "**/*.csv", "py.typed"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[project.urls]
+"Homepage" = "https://github.com/Lexsi-Labs/circuitkit"
+"Documentation" = "https://lexsi-labs.github.io/circuitkit/"
+"Repository" = "https://github.com/Lexsi-Labs/circuitkit"
+"Bug Tracker" = "https://github.com/Lexsi-Labs/circuitkit/issues"
+"Changelog" = "https://github.com/Lexsi-Labs/circuitkit/blob/main/CHANGELOG.md"
+"Contributing" = "https://github.com/Lexsi-Labs/circuitkit/blob/main/CONTRIBUTING.md"

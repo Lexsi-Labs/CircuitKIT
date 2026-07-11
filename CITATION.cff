@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+title: CircuitKit
+abstract: |
+  CircuitKit is a Python library for mechanistic circuit discovery, evaluation,
+  and intervention in transformer models. Supports EAP, EAP-IG, ACDC, IBCircuit,
+  CDT discovery backends, 6-pillar faithfulness evaluation, and applications
+  (pruning, quantization, fine-tuning, editing, steering).
+type: software
+message: "If you use this software, please cite it."
+
+version: 1.0.0
+date-released: 2026-05-16
+
+# Pratinav Seth, Hem Gosalia, and Aditya Kasliwal are equal co-first authors
+# (Pratinav Seth is listed first). Pratinav Seth is the corresponding author.
+authors:
+  - family-names: "Seth"
+    given-names: "Pratinav"
+    email: "pratinav.seth@lexsi.ai"
+  - family-names: "Gosalia"
+    given-names: "Hem"
+  - family-names: "Kasliwal"
+    given-names: "Aditya"
+  - family-names: "Sankarapu"
+    given-names: "Vinay Kumar"
+
+contact:
+  - family-names: "Seth"
+    given-names: "Pratinav"
+    email: "pratinav.seth@lexsi.ai"
+
+repository-code: "https://github.com/Lexsi-Labs/circuitkit"
+url: "https://github.com/Lexsi-Labs/circuitkit"
+license: LSAL-1.1
+license-url: "https://github.com/Lexsi-Labs/circuitkit/blob/main/LICENSE.md"
