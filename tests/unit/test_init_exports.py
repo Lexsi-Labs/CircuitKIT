@@ -73,9 +73,14 @@ class TestPackageMetadata:
         import circuitkit
         assert isinstance(circuitkit.__version__, str)
 
-    def test_version_is_1_0_0(self):
+    def test_version_matches_installed_metadata(self):
+        import tomllib
+        from pathlib import Path
+
         import circuitkit
-        assert circuitkit.__version__ == "1.0.0"
+        pyproject = Path(__file__).parents[2] / "pyproject.toml"
+        metadata_version = tomllib.loads(pyproject.read_text())["project"]["version"]
+        assert circuitkit.__version__ == metadata_version
 
     def test_author_is_string(self):
         import circuitkit
