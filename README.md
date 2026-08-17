@@ -104,3 +104,4 @@ pytest tests/ -q
 ## License
 
 Lexsi Labs Source Available License (LSAL) v1.1: free for research, evaluation, education, and audit; commercial use requires a separate license; responsible-use conditions apply. See [LICENSE.md](LICENSE.md).
+
