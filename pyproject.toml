@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "circuitkit"
-version = "0.1.0"
+version = "0.1.1"
 # Pratinav Seth, Hem Gosalia, and Aditya Kasliwal are equal co-first authors.
 # Pratinav Seth is the corresponding author. Author order is kept consistent
 # with src/circuitkit/__init__.py and CITATION.cff.
