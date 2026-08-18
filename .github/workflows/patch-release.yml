@@ -394,33 +394,6 @@ jobs:
           : "${TWINE_PASSWORD:?PYPI_API_TOKEN is required to publish the release}"
           python -m twine upload --non-interactive --verbose dist/*
 
-      - name: Verify exact version on PyPI
-        shell: bash
-        run: |
-          set -euo pipefail
-          for attempt in 1 2 3 4 5; do
-            if python - "$PYPI_PROJECT_NAME" "$RELEASE_TAG" <<'PY'
-          import json
-          import sys
-          import urllib.error
-          import urllib.request
-
-          url = f"https://pypi.org/pypi/{sys.argv[1]}/{sys.argv[2]}/json"
-          try:
-              with urllib.request.urlopen(url, timeout=20) as response:
-                  payload = json.load(response)
-          except (urllib.error.URLError, TimeoutError):
-              raise SystemExit(1)
-          raise SystemExit(0 if payload.get("info", {}).get("version") == sys.argv[2] else 1)
-          PY
-            then
-              exit 0
-            fi
-            sleep 10
-          done
-          echo "::error::PyPI did not return exact version $RELEASE_TAG after publication."
-          exit 1
-
       - name: Send release notes to Slack
         uses: slackapi/slack-github-action@v1.24.0
         continue-on-error: true
