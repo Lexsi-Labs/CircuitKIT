@@ -304,13 +304,15 @@ jobs:
       - name: Validate source version
         run: python scripts/release.py validate-version "$RELEASE_TAG"
 
-      - name: Install project test dependencies
-        continue-on-error: true
-        run: python -m pip install -e ".[dev]"
+      # Tests are intentionally skipped in the release workflow to avoid delaying (taking more than 6hours)
+      # GitHub releases and PyPI publication.
+      # - name: Install project test dependencies
+      #   continue-on-error: true
+      #   run: python -m pip install -e ".[dev]"
 
-      - name: Run project test suite (advisory)
-        continue-on-error: true
-        run: python -m pytest
+      # - name: Run project test suite (advisory)
+      #   continue-on-error: true
+      #   run: python -m pytest
 
       - name: Install mandatory packaging tools
         run: python -m pip install --upgrade build twine
