@@ -288,6 +288,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
     env:
       RELEASE_TAG: ${{ needs.plan.outputs.version }}
     steps:
@@ -375,8 +376,6 @@ jobs:
       - name: Publish validated distributions to PyPI
         if: needs.plan.outputs.pypi-exists == 'false'
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
 
       - name: Verify exact version on PyPI
         shell: bash
