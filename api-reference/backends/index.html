@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/favicon-v3.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1702,60 +1702,60 @@
 </div>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.backends</span><span class="w"> </span><span class="kn">import</span> <span class="n">STABILITY</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">STABILITY</span><span class="p">[</span><span class="s2">&quot;eap-ig&quot;</span><span class="p">])</span>   <span class="c1"># &quot;stable&quot;</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nb">print</span><span class="p">(</span><span class="n">STABILITY</span><span class="p">[</span><span class="s2">&quot;acdc&quot;</span><span class="p">])</span>     <span class="c1"># &quot;experimental&quot;</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">STABILITY</span><span class="p">[</span><span class="s2">&quot;cdt&quot;</span><span class="p">])</span>      <span class="c1"># &quot;research&quot;</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">STABILITY</span><span class="p">[</span><span class="s2">"eap-ig"</span><span class="p">])</span>   <span class="c1"># "stable"</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nb">print</span><span class="p">(</span><span class="n">STABILITY</span><span class="p">[</span><span class="s2">"acdc"</span><span class="p">])</span>     <span class="c1"># "experimental"</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">STABILITY</span><span class="p">[</span><span class="s2">"cdt"</span><span class="p">])</span>      <span class="c1"># "research"</span>
 </code></pre></div>
 <h3 id="discovery_algorithms"><code>DISCOVERY_ALGORITHMS</code><a class="headerlink" href="#discovery_algorithms" title="Permanent link">&para;</a></h3>
 <p><code>frozenset[str]</code> — exactly the 13 discovery algorithm names.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.backends</span><span class="w"> </span><span class="kn">import</span> <span class="n">DISCOVERY_ALGORITHMS</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nb">print</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">DISCOVERY_ALGORITHMS</span><span class="p">))</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># [&#39;acdc&#39;, &#39;atp-gd&#39;, &#39;cdt&#39;, &#39;eap&#39;, &#39;eap-clean-corrupted&#39;, &#39;eap-exact&#39;,</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1">#  &#39;eap-gp&#39;, &#39;eap-ifr&#39;, &#39;eap-ig&#39;, &#39;eap-ig-activations&#39;, &#39;ibcircuit&#39;, &#39;peap&#39;, &#39;relp&#39;]</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># ['acdc', 'atp-gd', 'cdt', 'eap', 'eap-clean-corrupted', 'eap-exact',</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1">#  'eap-gp', 'eap-ifr', 'eap-ig', 'eap-ig-activations', 'ibcircuit', 'peap', 'relp']</span>
 </code></pre></div>
 <h3 id="stable_algorithms-experimental_algorithms-research_algorithms"><code>STABLE_ALGORITHMS</code>, <code>EXPERIMENTAL_ALGORITHMS</code>, <code>RESEARCH_ALGORITHMS</code><a class="headerlink" href="#stable_algorithms-experimental_algorithms-research_algorithms" title="Permanent link">&para;</a></h3>
 <p>Tier subsets derived from the full <code>ALGORITHMS</code>/<code>STABILITY</code> map (not just <code>DISCOVERY_ALGORITHMS</code>), so <code>STABLE_ALGORITHMS</code> also includes the stable-tier compression selectors.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.backends</span><span class="w"> </span><span class="kn">import</span> <span class="n">STABLE_ALGORITHMS</span><span class="p">,</span> <span class="n">EXPERIMENTAL_ALGORITHMS</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nb">print</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">STABLE_ALGORITHMS</span><span class="p">))</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># [&#39;awq&#39;, &#39;eap&#39;, &#39;eap-ig&#39;, &#39;gptq&#39;, &#39;magnitude&#39;,</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="c1">#  &#39;multi_granular&#39;, &#39;random&#39;, &#39;tacq&#39;, &#39;taylor&#39;, &#39;wanda&#39;]</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># ['awq', 'eap', 'eap-ig', 'gptq', 'magnitude',</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="c1">#  'multi_granular', 'random', 'tacq', 'taylor', 'wanda']</span>
 </code></pre></div>
 <hr />
 <h2 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">&para;</a></h2>
 <h3 id="is_stablealgo-str-bool"><code>is_stable(algo: str) -&gt; bool</code><a class="headerlink" href="#is_stablealgo-str-bool" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.backends</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_stable</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">is_stable</span><span class="p">(</span><span class="s2">&quot;eap-ig&quot;</span><span class="p">)</span>   <span class="c1"># True</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">is_stable</span><span class="p">(</span><span class="s2">&quot;acdc&quot;</span><span class="p">)</span>     <span class="c1"># False</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">is_stable</span><span class="p">(</span><span class="s2">"eap-ig"</span><span class="p">)</span>   <span class="c1"># True</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">is_stable</span><span class="p">(</span><span class="s2">"acdc"</span><span class="p">)</span>     <span class="c1"># False</span>
 </code></pre></div>
 <h3 id="is_experimentalalgo-str-bool"><code>is_experimental(algo: str) -&gt; bool</code><a class="headerlink" href="#is_experimentalalgo-str-bool" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.backends</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_experimental</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">is_experimental</span><span class="p">(</span><span class="s2">&quot;acdc&quot;</span><span class="p">)</span>     <span class="c1"># True</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">is_experimental</span><span class="p">(</span><span class="s2">&quot;eap-ig&quot;</span><span class="p">)</span>   <span class="c1"># False</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">is_experimental</span><span class="p">(</span><span class="s2">"acdc"</span><span class="p">)</span>     <span class="c1"># True</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">is_experimental</span><span class="p">(</span><span class="s2">"eap-ig"</span><span class="p">)</span>   <span class="c1"># False</span>
 </code></pre></div>
 <h3 id="is_researchalgo-str-bool"><code>is_research(algo: str) -&gt; bool</code><a class="headerlink" href="#is_researchalgo-str-bool" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.backends</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_research</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">is_research</span><span class="p">(</span><span class="s2">&quot;cdt&quot;</span><span class="p">)</span>      <span class="c1"># True</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">is_research</span><span class="p">(</span><span class="s2">&quot;eap-ig&quot;</span><span class="p">)</span>   <span class="c1"># False</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">is_research</span><span class="p">(</span><span class="s2">"cdt"</span><span class="p">)</span>      <span class="c1"># True</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">is_research</span><span class="p">(</span><span class="s2">"eap-ig"</span><span class="p">)</span>   <span class="c1"># False</span>
 </code></pre></div>
 <h3 id="default_algorithm-str"><code>default_algorithm() -&gt; str</code><a class="headerlink" href="#default_algorithm-str" title="Permanent link">&para;</a></h3>
 <p>Returns the default discovery algorithm (<code>"eap-ig"</code>).</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.backends</span><span class="w"> </span><span class="kn">import</span> <span class="n">default_algorithm</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">default_algorithm</span><span class="p">()</span>   <span class="c1"># &quot;eap-ig&quot;</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">default_algorithm</span><span class="p">()</span>   <span class="c1"># "eap-ig"</span>
 </code></pre></div>
 <hr />
 <h2 id="tier-warnings">Tier Warnings<a class="headerlink" href="#tier-warnings" title="Permanent link">&para;</a></h2>
 <p><code>discover_circuit</code> automatically emits a <code>UserWarning</code> when you request a non-stable algorithm:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>UserWarning: Algorithm &#39;acdc&#39; is experimental. May fail on larger models or non-IOI tasks. Use &#39;eap-ig&#39; for production.
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>UserWarning: Algorithm 'acdc' is experimental. May fail on larger models or non-IOI tasks. Use 'eap-ig' for production.
 </code></pre></div>
 <p>Research-tier algorithms get a similar warning:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>UserWarning: Algorithm &#39;cdt&#39; is research-quality (only validated on GPT-2 IOI). Use &#39;eap-ig&#39; for production.
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>UserWarning: Algorithm 'cdt' is research-quality (only validated on GPT-2 IOI). Use 'eap-ig' for production.
 </code></pre></div>
 <p>To suppress:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="ne">UserWarning</span><span class="p">,</span> <span class="n">module</span><span class="o">=</span><span class="s2">&quot;circuitkit&quot;</span><span class="p">)</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">"ignore"</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="ne">UserWarning</span><span class="p">,</span> <span class="n">module</span><span class="o">=</span><span class="s2">"circuitkit"</span><span class="p">)</span>
 </code></pre></div>
 <hr />
 <h2 id="backend-modules">Backend Modules<a class="headerlink" href="#backend-modules" title="Permanent link">&para;</a></h2>
@@ -1946,7 +1946,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.top", "navigation.footer", "navigation.prune", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="../../assets/circuitkit.js"></script>
       

@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/favicon-v3.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1701,28 +1701,28 @@
 </table>
 <h3 id="config-schema">Config Schema<a class="headerlink" href="#config-schema" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="p">{</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;meta-llama/Llama-3.2-1B-Instruct&quot;</span><span class="p">,</span>   <span class="c1"># HF / TransformerLens model id</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>        <span class="s2">&quot;precision&quot;</span><span class="p">:</span> <span class="s2">&quot;bfloat16&quot;</span><span class="p">,</span>                        <span class="c1"># torch dtype string</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="s2">"model"</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>        <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"meta-llama/Llama-3.2-1B-Instruct"</span><span class="p">,</span>   <span class="c1"># HF / TransformerLens model id</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>        <span class="s2">"precision"</span><span class="p">:</span> <span class="s2">"bfloat16"</span><span class="p">,</span>                        <span class="c1"># torch dtype string</span>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="p">},</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="s2">&quot;discovery&quot;</span><span class="p">:</span> <span class="p">{</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>        <span class="s2">&quot;algorithm&quot;</span><span class="p">:</span> <span class="s2">&quot;eap-ig&quot;</span><span class="p">,</span>      <span class="c1"># one of 13; only eap/eap-ig are validated at scale</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>        <span class="s2">&quot;task&quot;</span><span class="p">:</span> <span class="s2">&quot;mmlu&quot;</span><span class="p">,</span>             <span class="c1"># registered task name</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>        <span class="s2">&quot;level&quot;</span><span class="p">:</span> <span class="s2">&quot;node&quot;</span><span class="p">,</span>            <span class="c1"># &quot;node&quot; or &quot;neuron&quot;</span>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>        <span class="s2">&quot;chat_template_mode&quot;</span><span class="p">:</span> <span class="s2">&quot;auto&quot;</span><span class="p">,</span>  <span class="c1"># &quot;auto&quot;, &quot;on&quot;, &quot;off&quot; — optional</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>        <span class="s2">&quot;batch_size&quot;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>        <span class="s2">&quot;data_params&quot;</span><span class="p">:</span> <span class="p">{</span>
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>            <span class="s2">&quot;num_examples&quot;</span><span class="p">:</span> <span class="mi">128</span><span class="p">,</span>
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>            <span class="s2">&quot;batch_size&quot;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="s2">"discovery"</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>        <span class="s2">"algorithm"</span><span class="p">:</span> <span class="s2">"eap-ig"</span><span class="p">,</span>      <span class="c1"># one of 13; only eap/eap-ig are validated at scale</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>        <span class="s2">"task"</span><span class="p">:</span> <span class="s2">"mmlu"</span><span class="p">,</span>             <span class="c1"># registered task name</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>        <span class="s2">"level"</span><span class="p">:</span> <span class="s2">"node"</span><span class="p">,</span>            <span class="c1"># "node" or "neuron"</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>        <span class="s2">"chat_template_mode"</span><span class="p">:</span> <span class="s2">"auto"</span><span class="p">,</span>  <span class="c1"># "auto", "on", "off" — optional</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>        <span class="s2">"batch_size"</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>        <span class="s2">"data_params"</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>            <span class="s2">"num_examples"</span><span class="p">:</span> <span class="mi">128</span><span class="p">,</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>            <span class="s2">"batch_size"</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>
 <a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>        <span class="p">},</span>
 <a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>        <span class="c1"># EAP-IG specific (optional):</span>
-<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>        <span class="s2">&quot;ig_steps&quot;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>        <span class="s2">"ig_steps"</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
 <a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>    <span class="p">},</span>
-<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>    <span class="s2">&quot;pruning&quot;</span><span class="p">:</span> <span class="p">{</span>
-<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>        <span class="s2">&quot;target_sparsity&quot;</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">,</span>    <span class="c1"># fraction of components to remove</span>
-<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>        <span class="s2">&quot;scope&quot;</span><span class="p">:</span> <span class="s2">&quot;both&quot;</span><span class="p">,</span>           <span class="c1"># &quot;heads&quot;, &quot;mlp&quot;, or &quot;both&quot;</span>
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>    <span class="s2">"pruning"</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>        <span class="s2">"target_sparsity"</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">,</span>    <span class="c1"># fraction of components to remove</span>
+<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>        <span class="s2">"scope"</span><span class="p">:</span> <span class="s2">"both"</span><span class="p">,</span>           <span class="c1"># "heads", "mlp", or "both"</span>
 <a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>    <span class="p">},</span>
-<a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>    <span class="s2">&quot;output_path&quot;</span><span class="p">:</span> <span class="s2">&quot;./circuit.pt&quot;</span><span class="p">,</span>  <span class="c1"># optional; where to write the artifact</span>
+<a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>    <span class="s2">"output_path"</span><span class="p">:</span> <span class="s2">"./circuit.pt"</span><span class="p">,</span>  <span class="c1"># optional; where to write the artifact</span>
 <a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="p">}</span>
 </code></pre></div>
 <h3 id="returns">Returns<a class="headerlink" href="#returns" title="Permanent link">&para;</a></h3>
@@ -1736,18 +1736,18 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit</span><span class="w"> </span><span class="kn">import</span> <span class="n">discover_circuit</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">circuit</span> <span class="o">=</span> <span class="n">discover_circuit</span><span class="p">({</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;gpt2&quot;</span><span class="p">,</span> <span class="s2">&quot;precision&quot;</span><span class="p">:</span> <span class="s2">&quot;float32&quot;</span><span class="p">},</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="s2">&quot;discovery&quot;</span><span class="p">:</span> <span class="p">{</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>        <span class="s2">&quot;algorithm&quot;</span><span class="p">:</span> <span class="s2">&quot;eap-ig&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>        <span class="s2">&quot;task&quot;</span><span class="p">:</span> <span class="s2">&quot;ioi&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>        <span class="s2">&quot;level&quot;</span><span class="p">:</span> <span class="s2">&quot;node&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>        <span class="s2">&quot;ig_steps&quot;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>        <span class="s2">&quot;data_params&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;num_examples&quot;</span><span class="p">:</span> <span class="mi">64</span><span class="p">,</span> <span class="s2">&quot;batch_size&quot;</span><span class="p">:</span> <span class="mi">4</span><span class="p">},</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="s2">"model"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"name"</span><span class="p">:</span> <span class="s2">"gpt2"</span><span class="p">,</span> <span class="s2">"precision"</span><span class="p">:</span> <span class="s2">"float32"</span><span class="p">},</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="s2">"discovery"</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>        <span class="s2">"algorithm"</span><span class="p">:</span> <span class="s2">"eap-ig"</span><span class="p">,</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>        <span class="s2">"task"</span><span class="p">:</span> <span class="s2">"ioi"</span><span class="p">,</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>        <span class="s2">"level"</span><span class="p">:</span> <span class="s2">"node"</span><span class="p">,</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>        <span class="s2">"ig_steps"</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>        <span class="s2">"data_params"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"num_examples"</span><span class="p">:</span> <span class="mi">64</span><span class="p">,</span> <span class="s2">"batch_size"</span><span class="p">:</span> <span class="mi">4</span><span class="p">},</span>
 <a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    <span class="p">},</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    <span class="s2">&quot;pruning&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;target_sparsity&quot;</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">,</span> <span class="s2">&quot;scope&quot;</span><span class="p">:</span> <span class="s2">&quot;both&quot;</span><span class="p">},</span>
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>    <span class="s2">&quot;output_path&quot;</span><span class="p">:</span> <span class="s2">&quot;./gpt2_ioi.pt&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    <span class="s2">"pruning"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"target_sparsity"</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">,</span> <span class="s2">"scope"</span><span class="p">:</span> <span class="s2">"both"</span><span class="p">},</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>    <span class="s2">"output_path"</span><span class="p">:</span> <span class="s2">"./gpt2_ioi.pt"</span><span class="p">,</span>
 <a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="p">})</span>
-<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="nb">print</span><span class="p">(</span><span class="n">circuit</span><span class="p">[:</span><span class="mi">5</span><span class="p">])</span>  <span class="c1"># [&#39;A0.1&#39;, &#39;A2.3&#39;, &#39;MLP 5&#39;, ...]</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="nb">print</span><span class="p">(</span><span class="n">circuit</span><span class="p">[:</span><span class="mi">5</span><span class="p">])</span>  <span class="c1"># ['A0.1', 'A2.3', 'MLP 5', ...]</span>
 </code></pre></div>
 <hr />
 <h2 id="evaluate_circuit"><code>evaluate_circuit</code><a class="headerlink" href="#evaluate_circuit" title="Permanent link">&para;</a></h2>
@@ -1794,8 +1794,8 @@ requested, is in <code>.metadata["random_avg"]</code>.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit</span><span class="w"> </span><span class="kn">import</span> <span class="n">evaluate_circuit</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">report</span> <span class="o">=</span> <span class="n">evaluate_circuit</span><span class="p">(</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="p">{</span><span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;gpt2&quot;</span><span class="p">},</span> <span class="s2">&quot;discovery&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;task&quot;</span><span class="p">:</span> <span class="s2">&quot;ioi&quot;</span><span class="p">},</span> <span class="s2">&quot;pruning&quot;</span><span class="p">:</span> <span class="p">{}},</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">scores_path</span><span class="o">=</span><span class="s2">&quot;./gpt2_ioi_scores.pt&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="p">{</span><span class="s2">"model"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"name"</span><span class="p">:</span> <span class="s2">"gpt2"</span><span class="p">},</span> <span class="s2">"discovery"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"task"</span><span class="p">:</span> <span class="s2">"ioi"</span><span class="p">},</span> <span class="s2">"pruning"</span><span class="p">:</span> <span class="p">{}},</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">scores_path</span><span class="o">=</span><span class="s2">"./gpt2_ioi_scores.pt"</span><span class="p">,</span>
 <a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="p">)</span>
 <a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="nb">print</span><span class="p">(</span><span class="n">report</span><span class="o">.</span><span class="n">ablation_score</span><span class="p">)</span>   <span class="c1"># e.g. 0.83</span>
 </code></pre></div>
@@ -1806,7 +1806,7 @@ requested, is in <code>.metadata["random_avg"]</code>.</p>
 <p>Load a previously saved circuit artifact from disk. Returns the same type as <code>discover_circuit</code> (list for node-level, dict for neuron-level).</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_circuit</span>
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">nodes</span> <span class="o">=</span> <span class="n">load_circuit</span><span class="p">(</span><span class="s2">&quot;./gpt2_ioi.pt&quot;</span><span class="p">)</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">nodes</span> <span class="o">=</span> <span class="n">load_circuit</span><span class="p">(</span><span class="s2">"./gpt2_ioi.pt"</span><span class="p">)</span>
 </code></pre></div>
 <hr />
 <h2 id="yaml-config-files">YAML Config Files<a class="headerlink" href="#yaml-config-files" title="Permanent link">&para;</a></h2>
@@ -1831,7 +1831,7 @@ requested, is in <code>.metadata["random_avg"]</code>.</p>
 <a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>
 <a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="nt">output_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./circuit.pt</span>
 </code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">circuit</span> <span class="o">=</span> <span class="n">discover_circuit</span><span class="p">(</span><span class="s2">&quot;./circuit.yaml&quot;</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">circuit</span> <span class="o">=</span> <span class="n">discover_circuit</span><span class="p">(</span><span class="s2">"./circuit.yaml"</span><span class="p">)</span>
 </code></pre></div>
 <p>This is the same format the CLI uses internally.</p>
 <hr />
@@ -1842,10 +1842,10 @@ requested, is in <code>.metadata["random_avg"]</code>.</p>
 <a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="n">circuitkit</span><span class="o">.</span><span class="n">discover_circuit</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
 <a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="n">circuitkit</span><span class="o">.</span><span class="n">evaluate_circuit</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
 <a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="n">circuitkit</span><span class="o">.</span><span class="n">load_circuit</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="n">circuitkit</span><span class="o">.</span><span class="n">get_task</span><span class="p">(</span><span class="s2">&quot;ioi&quot;</span><span class="p">)</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="n">circuitkit</span><span class="o">.</span><span class="n">get_task</span><span class="p">(</span><span class="s2">"ioi"</span><span class="p">)</span>
 <a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="n">circuitkit</span><span class="o">.</span><span class="n">list_tasks</span><span class="p">()</span>
 <a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="n">circuitkit</span><span class="o">.</span><span class="n">register_task</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
-<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="n">circuitkit</span><span class="o">.</span><span class="n">__version__</span>   <span class="c1"># &quot;1.0.0&quot;</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="n">circuitkit</span><span class="o">.</span><span class="n">__version__</span>   <span class="c1"># "1.0.0"</span>
 </code></pre></div>
 <hr />
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
@@ -2005,7 +2005,7 @@ requested, is in <code>.metadata["random_avg"]</code>.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.top", "navigation.footer", "navigation.prune", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="../../assets/circuitkit.js"></script>
       

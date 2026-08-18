@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/favicon-v3.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -2018,19 +2018,19 @@
 </code></pre></div>
 <h3 id="modulenotfounderror-no-module-named-circuitkit">ModuleNotFoundError: No module named 'circuitkit'<a class="headerlink" href="#modulenotfounderror-no-module-named-circuitkit" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.<span class="w"> </span>--force-reinstall<span class="w"> </span>--no-deps
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import circuitkit; print(circuitkit.__version__)&quot;</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import circuitkit; print(circuitkit.__version__)"</span>
 </code></pre></div>
 <h3 id="spacy-model-not-found">spacy model not found<a class="headerlink" href="#spacy-model-not-found" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python<span class="w"> </span>-m<span class="w"> </span>spacy<span class="w"> </span>download<span class="w"> </span>en_core_web_sm
 </code></pre></div>
 <h3 id="lm-eval-not-working">lm-eval not working<a class="headerlink" href="#lm-eval-not-working" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[benchmarks]&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">".[benchmarks]"</span>
 </code></pre></div>
 <h2 id="gpu-memory">GPU / Memory<a class="headerlink" href="#gpu-memory" title="Permanent link">&para;</a></h2>
 <h3 id="cuda-out-of-memory-during-discovery">CUDA out of memory during discovery<a class="headerlink" href="#cuda-out-of-memory-during-discovery" title="Permanent link">&para;</a></h3>
 <p>Reduce example count or batch size:
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">discover_circuit</span><span class="p">({</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="s2">&quot;discovery&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;data_params&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;num_examples&quot;</span><span class="p">:</span> <span class="mi">32</span><span class="p">,</span> <span class="s2">&quot;batch_size&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">},</span> <span class="o">...</span><span class="p">},</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="s2">"discovery"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"data_params"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"num_examples"</span><span class="p">:</span> <span class="mi">32</span><span class="p">,</span> <span class="s2">"batch_size"</span><span class="p">:</span> <span class="mi">2</span><span class="p">},</span> <span class="o">...</span><span class="p">},</span>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="o">...</span>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="p">})</span>
 </code></pre></div></p>
@@ -2057,7 +2057,7 @@
 </ul>
 <h3 id="algorithm-emits-userwarning">Algorithm emits UserWarning<a class="headerlink" href="#algorithm-emits-userwarning" title="Permanent link">&para;</a></h3>
 <p>This is expected for non-Stable algorithms:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>UserWarning:<span class="w"> </span>Algorithm<span class="w"> </span><span class="s1">&#39;acdc&#39;</span><span class="w"> </span>is<span class="w"> </span>experimental.<span class="w"> </span>May<span class="w"> </span>fail<span class="w"> </span>on<span class="w"> </span>larger<span class="w"> </span>models<span class="w"> </span>or<span class="w"> </span>non-IOI<span class="w"> </span>tasks.<span class="w"> </span>Use<span class="w"> </span><span class="s1">&#39;eap-ig&#39;</span><span class="w"> </span><span class="k">for</span><span class="w"> </span>production.
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>UserWarning:<span class="w"> </span>Algorithm<span class="w"> </span><span class="s1">'acdc'</span><span class="w"> </span>is<span class="w"> </span>experimental.<span class="w"> </span>May<span class="w"> </span>fail<span class="w"> </span>on<span class="w"> </span>larger<span class="w"> </span>models<span class="w"> </span>or<span class="w"> </span>non-IOI<span class="w"> </span>tasks.<span class="w"> </span>Use<span class="w"> </span><span class="s1">'eap-ig'</span><span class="w"> </span><span class="k">for</span><span class="w"> </span>production.
 </code></pre></div>
 Suppress with <code>warnings.filterwarnings("ignore")</code> only after verification.</p>
 <h3 id="discovery-is-very-slow">Discovery is very slow<a class="headerlink" href="#discovery-is-very-slow" title="Permanent link">&para;</a></h3>
@@ -2076,7 +2076,7 @@ Suppress with <code>warnings.filterwarnings("ignore")</code> only after verifica
 <p>Generalization re-discovers the circuit on the target task. Limit <code>n_examples</code> or skip if not needed.</p>
 <h3 id="pillar-6-returns-none">Pillar 6 returns None<a class="headerlink" href="#pillar-6-returns-none" title="Permanent link">&para;</a></h3>
 <p><code>target_task</code> was not supplied. Pass it explicitly:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">pipe</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">pillars</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">target_task</span><span class="o">=</span><span class="s2">&quot;sva&quot;</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">pipe</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">pillars</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">target_task</span><span class="o">=</span><span class="s2">"sva"</span><span class="p">)</span>
 </code></pre></div></p>
 <h2 id="pruning-export">Pruning / Export<a class="headerlink" href="#pruning-export" title="Permanent link">&para;</a></h2>
 <h3 id="export-checkpoint-is-much-larger-than-expected">Export checkpoint is much larger than expected<a class="headerlink" href="#export-checkpoint-is-much-larger-than-expected" title="Permanent link">&para;</a></h3>
@@ -2093,10 +2093,10 @@ Suppress with <code>warnings.filterwarnings("ignore")</code> only after verifica
 <h2 id="visualization">Visualization<a class="headerlink" href="#visualization" title="Permanent link">&para;</a></h2>
 <h3 id="graph-is-empty">Graph is empty<a class="headerlink" href="#graph-is-empty" title="Permanent link">&para;</a></h3>
 <p>The circuit has no node scores to plot. Re-run discovery with an <code>output_path</code> so scores are captured, then render:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">ck</span><span class="o">.</span><span class="n">visualize_circuit</span><span class="p">(</span><span class="n">circuit</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;graph&quot;</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s2">&quot;circuit.html&quot;</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">ck</span><span class="o">.</span><span class="n">visualize_circuit</span><span class="p">(</span><span class="n">circuit</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"graph"</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s2">"circuit.html"</span><span class="p">)</span>
 </code></pre></div></p>
 <h3 id="plotly-not-rendering-in-jupyter">Plotly not rendering in Jupyter<a class="headerlink" href="#plotly-not-rendering-in-jupyter" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>pip<span class="w"> </span>install<span class="w"> </span>-U<span class="w"> </span>plotly<span class="w"> </span>jupyterlab<span class="w"> </span><span class="s2">&quot;ipywidgets&gt;=7.6&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>pip<span class="w"> </span>install<span class="w"> </span>-U<span class="w"> </span>plotly<span class="w"> </span>jupyterlab<span class="w"> </span><span class="s2">"ipywidgets&gt;=7.6"</span>
 </code></pre></div>
 <h2 id="next-steps">Next steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>
@@ -2255,7 +2255,7 @@ Suppress with <code>warnings.filterwarnings("ignore")</code> only after verifica
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.top", "navigation.footer", "navigation.prune", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="../../assets/circuitkit.js"></script>
       

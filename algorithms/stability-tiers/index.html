@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/favicon-v3.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1752,10 +1752,10 @@
 <p>Every algorithm has an explicit <strong>stability tier</strong> describing how broadly it has been validated. The tier is enforced at runtime — experimental and research algorithms emit a <code>UserWarning</code>.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.backends</span><span class="w"> </span><span class="kn">import</span> <span class="n">STABILITY</span><span class="p">,</span> <span class="n">is_stable</span><span class="p">,</span> <span class="n">is_experimental</span><span class="p">,</span> <span class="n">is_research</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">is_stable</span><span class="p">(</span><span class="s2">&quot;eap-ig&quot;</span><span class="p">))</span>      <span class="c1"># True</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nb">print</span><span class="p">(</span><span class="n">is_experimental</span><span class="p">(</span><span class="s2">&quot;acdc&quot;</span><span class="p">))</span>  <span class="c1"># True</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">is_research</span><span class="p">(</span><span class="s2">&quot;cdt&quot;</span><span class="p">))</span>       <span class="c1"># True</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nb">print</span><span class="p">(</span><span class="n">STABILITY</span><span class="p">[</span><span class="s2">&quot;eap-ig&quot;</span><span class="p">])</span>      <span class="c1"># &quot;stable&quot;</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">is_stable</span><span class="p">(</span><span class="s2">"eap-ig"</span><span class="p">))</span>      <span class="c1"># True</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nb">print</span><span class="p">(</span><span class="n">is_experimental</span><span class="p">(</span><span class="s2">"acdc"</span><span class="p">))</span>  <span class="c1"># True</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">is_research</span><span class="p">(</span><span class="s2">"cdt"</span><span class="p">))</span>       <span class="c1"># True</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nb">print</span><span class="p">(</span><span class="n">STABILITY</span><span class="p">[</span><span class="s2">"eap-ig"</span><span class="p">])</span>      <span class="c1"># "stable"</span>
 </code></pre></div>
 <h2 id="stable">Stable<a class="headerlink" href="#stable" title="Permanent link">&para;</a></h2>
 <p>Validated across multiple model families and tasks. Suitable for production use.</p>
@@ -1819,15 +1819,15 @@
 - Different scales (what works at 124M may OOM at 7B)</p>
 <h2 id="runtime-warnings">Runtime warnings<a class="headerlink" href="#runtime-warnings" title="Permanent link">&para;</a></h2>
 <p>When you request a non-Stable algorithm, CircuitKit emits a <code>UserWarning</code>:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="ne">UserWarning</span><span class="p">:</span> <span class="n">Algorithm</span> <span class="s1">&#39;acdc&#39;</span> <span class="ow">is</span> <span class="n">experimental</span><span class="o">.</span> <span class="n">May</span> <span class="n">fail</span> <span class="n">on</span> <span class="n">larger</span> <span class="n">models</span> <span class="ow">or</span> <span class="n">non</span><span class="o">-</span><span class="n">IOI</span> <span class="n">tasks</span><span class="o">.</span> <span class="n">Use</span> <span class="s1">&#39;eap-ig&#39;</span> <span class="k">for</span> <span class="n">production</span><span class="o">.</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="ne">UserWarning</span><span class="p">:</span> <span class="n">Algorithm</span> <span class="s1">'acdc'</span> <span class="ow">is</span> <span class="n">experimental</span><span class="o">.</span> <span class="n">May</span> <span class="n">fail</span> <span class="n">on</span> <span class="n">larger</span> <span class="n">models</span> <span class="ow">or</span> <span class="n">non</span><span class="o">-</span><span class="n">IOI</span> <span class="n">tasks</span><span class="o">.</span> <span class="n">Use</span> <span class="s1">'eap-ig'</span> <span class="k">for</span> <span class="n">production</span><span class="o">.</span>
 </code></pre></div></p>
 <p>This is expected behaviour. Suppress with <code>warnings.filterwarnings("ignore")</code> only after you have verified the algorithm works for your use case.</p>
 <h2 id="checking-before-discovery">Checking before discovery<a class="headerlink" href="#checking-before-discovery" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.backends</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_stable</span><span class="p">,</span> <span class="n">STABILITY</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">algo</span> <span class="o">=</span> <span class="s2">&quot;my_algorithm&quot;</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">algo</span> <span class="o">=</span> <span class="s2">"my_algorithm"</span>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="k">if</span> <span class="ow">not</span> <span class="n">is_stable</span><span class="p">(</span><span class="n">algo</span><span class="p">):</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;WARNING: </span><span class="si">{</span><span class="n">algo</span><span class="si">}</span><span class="s2"> is </span><span class="si">{</span><span class="n">STABILITY</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">algo</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;unknown&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"> tier&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"WARNING: </span><span class="si">{</span><span class="n">algo</span><span class="si">}</span><span class="s2"> is </span><span class="si">{</span><span class="n">STABILITY</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">algo</span><span class="p">,</span><span class="w"> </span><span class="s1">'unknown'</span><span class="p">)</span><span class="si">}</span><span class="s2"> tier"</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="recommendation">Recommendation<a class="headerlink" href="#recommendation" title="Permanent link">&para;</a></h2>
 <p>Start with <code>eap-ig</code> (Stable) for any new experiment. Only switch to Experimental or Research algorithms when you have a specific reason (e.g., comparing methods for a paper).</p>
@@ -1983,7 +1983,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.top", "navigation.footer", "navigation.prune", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="../../assets/circuitkit.js"></script>
       

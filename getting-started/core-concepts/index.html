@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/favicon-v3.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1444,8 +1444,8 @@
 <h3 id="the-default-eap-ig">The default: <code>eap-ig</code><a class="headerlink" href="#the-default-eap-ig" title="Permanent link">&para;</a></h3>
 <p>EAP with Integrated Gradients is the recommended default. It is <strong>Stable</strong> tier, runs in 1–15 minutes on GPU, works with instruction-tuned models, and is the algorithm used in the CircuitKit audit paper.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.backends</span><span class="w"> </span><span class="kn">import</span> <span class="n">default_algorithm</span><span class="p">,</span> <span class="n">is_stable</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">default_algorithm</span><span class="p">())</span>   <span class="c1"># &quot;eap-ig&quot;</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">is_stable</span><span class="p">(</span><span class="s2">&quot;eap-ig&quot;</span><span class="p">))</span>   <span class="c1"># True</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">default_algorithm</span><span class="p">())</span>   <span class="c1"># "eap-ig"</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">is_stable</span><span class="p">(</span><span class="s2">"eap-ig"</span><span class="p">))</span>   <span class="c1"># True</span>
 </code></pre></div>
 <h2 id="tasks-and-datasets">Tasks and datasets<a class="headerlink" href="#tasks-and-datasets" title="Permanent link">&para;</a></h2>
 <p>A <strong>task</strong> defines the input/output structure for discovery. It specifies:
@@ -1605,7 +1605,7 @@
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># Fast (Pillars 1+2 only)</span>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">report</span> <span class="o">=</span> <span class="n">run_full_faithfulness</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">task_spec</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>                               <span class="n">pillars</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;patching&quot;</span><span class="p">,</span> <span class="s2">&quot;ablation&quot;</span><span class="p">])</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>                               <span class="n">pillars</span><span class="o">=</span><span class="p">[</span><span class="s2">"patching"</span><span class="p">,</span> <span class="s2">"ablation"</span><span class="p">])</span>
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># Full audit</span>
 <a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">report</span> <span class="o">=</span> <span class="n">run_full_faithfulness</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">task_spec</span><span class="p">,</span> <span class="n">cfg</span><span class="p">)</span>
@@ -1617,14 +1617,14 @@
 <h2 id="interventions">Interventions<a class="headerlink" href="#interventions" title="Permanent link">&para;</a></h2>
 <p>After discovery and evaluation, CircuitKit provides five ways to act on the circuit:</p>
 <p><strong>Pruning</strong> — removes lowest-scoring components, writes a real HF checkpoint:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">pruned</span> <span class="o">=</span> <span class="n">ck</span><span class="o">.</span><span class="n">prune</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">circuit</span><span class="p">,</span> <span class="n">sparsity</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="s2">&quot;both&quot;</span><span class="p">)</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">ck</span><span class="o">.</span><span class="n">export_checkpoint</span><span class="p">(</span><span class="n">pruned</span><span class="p">,</span> <span class="n">circuit</span><span class="p">,</span> <span class="s2">&quot;./output/pruned&quot;</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">pruned</span> <span class="o">=</span> <span class="n">ck</span><span class="o">.</span><span class="n">prune</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">circuit</span><span class="p">,</span> <span class="n">sparsity</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="s2">"both"</span><span class="p">)</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">ck</span><span class="o">.</span><span class="n">export_checkpoint</span><span class="p">(</span><span class="n">pruned</span><span class="p">,</span> <span class="n">circuit</span><span class="p">,</span> <span class="s2">"./output/pruned"</span><span class="p">)</span>
 </code></pre></div></p>
 <p><strong>Quantization</strong> — circuit-guided mixed-precision, protecting high-importance layers:
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">plan</span> <span class="o">=</span> <span class="n">ck</span><span class="o">.</span><span class="n">quantize</span><span class="p">(</span><span class="n">hf_model</span><span class="p">,</span> <span class="n">circuit</span><span class="p">,</span> <span class="n">high_fraction</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">bits</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
 </code></pre></div></p>
 <p><strong>Selective fine-tuning</strong> — restricts LoRA adapters to circuit components:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">result</span> <span class="o">=</span> <span class="n">ck</span><span class="o">.</span><span class="n">selective_finetune</span><span class="p">(</span><span class="n">circuit</span><span class="p">,</span> <span class="n">model_name</span><span class="o">=</span><span class="s2">&quot;gpt2&quot;</span><span class="p">,</span> <span class="n">top_fraction</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">result</span> <span class="o">=</span> <span class="n">ck</span><span class="o">.</span><span class="n">selective_finetune</span><span class="p">(</span><span class="n">circuit</span><span class="p">,</span> <span class="n">model_name</span><span class="o">=</span><span class="s2">"gpt2"</span><span class="p">,</span> <span class="n">top_fraction</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
 </code></pre></div></p>
 <p><strong>Steering</strong> — activation steering at circuit nodes:
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.applications.steering</span><span class="w"> </span><span class="kn">import</span> <span class="n">ActivationSteering</span>
@@ -1633,8 +1633,8 @@
 <p><strong>Knowledge editing</strong> — ROME/MEMIT at circuit-identified MLP layers:
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.applications.editing</span><span class="w"> </span><span class="kn">import</span> <span class="n">CircuitKnowledgeEditor</span>
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">CircuitKnowledgeEditor</span><span class="p">(</span><span class="n">model</span><span class="p">)</span><span class="o">.</span><span class="n">edit_via_circuit</span><span class="p">(</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="n">prompt</span><span class="o">=</span><span class="s2">&quot;The capital of France is&quot;</span><span class="p">,</span> <span class="n">subject</span><span class="o">=</span><span class="s2">&quot;France&quot;</span><span class="p">,</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="n">target</span><span class="o">=</span><span class="s2">&quot;Lyon&quot;</span><span class="p">,</span> <span class="n">circuit</span><span class="o">=</span><span class="n">circuit</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;rome&quot;</span><span class="p">,</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="n">prompt</span><span class="o">=</span><span class="s2">"The capital of France is"</span><span class="p">,</span> <span class="n">subject</span><span class="o">=</span><span class="s2">"France"</span><span class="p">,</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="n">target</span><span class="o">=</span><span class="s2">"Lyon"</span><span class="p">,</span> <span class="n">circuit</span><span class="o">=</span><span class="n">circuit</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">"rome"</span><span class="p">,</span>
 <a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="p">)</span>
 </code></pre></div></p>
 <h2 id="corruption-strategies">Corruption strategies<a class="headerlink" href="#corruption-strategies" title="Permanent link">&para;</a></h2>
@@ -1696,7 +1696,7 @@
 </table>
 <p>Load a saved circuit:
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">circuitkit</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ck</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">circuit</span> <span class="o">=</span> <span class="n">ck</span><span class="o">.</span><span class="n">load_scores</span><span class="p">(</span><span class="s2">&quot;./circuit.pt&quot;</span><span class="p">)</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">circuit</span> <span class="o">=</span> <span class="n">ck</span><span class="o">.</span><span class="n">load_scores</span><span class="p">(</span><span class="s2">"./circuit.pt"</span><span class="p">)</span>
 <a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">circuit</span><span class="o">.</span><span class="n">top_nodes</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span>
 </code></pre></div></p>
 <h2 id="supported-models">Supported models<a class="headerlink" href="#supported-models" title="Permanent link">&para;</a></h2>
@@ -1904,7 +1904,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.top", "navigation.footer", "navigation.prune", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="../../assets/circuitkit.js"></script>
       

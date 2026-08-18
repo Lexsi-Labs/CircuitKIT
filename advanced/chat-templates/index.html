@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/favicon-v3.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1937,15 +1937,15 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.api</span><span class="w"> </span><span class="kn">import</span> <span class="n">discover_circuit</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">circuit</span> <span class="o">=</span> <span class="n">discover_circuit</span><span class="p">({</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;meta-llama/Llama-3.2-1B-Instruct&quot;</span><span class="p">},</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="s2">&quot;discovery&quot;</span><span class="p">:</span> <span class="p">{</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>        <span class="s2">&quot;algorithm&quot;</span><span class="p">:</span> <span class="s2">&quot;eap-ig&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>        <span class="s2">&quot;task&quot;</span><span class="p">:</span> <span class="s2">&quot;capital_country&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>        <span class="s2">&quot;chat_template_mode&quot;</span><span class="p">:</span> <span class="s2">&quot;on&quot;</span><span class="p">,</span>   <span class="c1"># force template even on diagnostic task</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>        <span class="s2">&quot;level&quot;</span><span class="p">:</span> <span class="s2">&quot;node&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>        <span class="s2">&quot;data_params&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;num_examples&quot;</span><span class="p">:</span> <span class="mi">64</span><span class="p">},</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="s2">"model"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"name"</span><span class="p">:</span> <span class="s2">"meta-llama/Llama-3.2-1B-Instruct"</span><span class="p">},</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="s2">"discovery"</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>        <span class="s2">"algorithm"</span><span class="p">:</span> <span class="s2">"eap-ig"</span><span class="p">,</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>        <span class="s2">"task"</span><span class="p">:</span> <span class="s2">"capital_country"</span><span class="p">,</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>        <span class="s2">"chat_template_mode"</span><span class="p">:</span> <span class="s2">"on"</span><span class="p">,</span>   <span class="c1"># force template even on diagnostic task</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>        <span class="s2">"level"</span><span class="p">:</span> <span class="s2">"node"</span><span class="p">,</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>        <span class="s2">"data_params"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"num_examples"</span><span class="p">:</span> <span class="mi">64</span><span class="p">},</span>
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="p">},</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="s2">&quot;output_path&quot;</span><span class="p">:</span> <span class="s2">&quot;./circuit.pt&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="s2">"output_path"</span><span class="p">:</span> <span class="s2">"./circuit.pt"</span><span class="p">,</span>
 <a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="p">})</span>
 </code></pre></div>
 <h3 id="cli">CLI<a class="headerlink" href="#cli" title="Permanent link">&para;</a></h3>
@@ -1966,9 +1966,9 @@
 <p>Collapses a declared mode string into a single boolean for a given model.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.tasks._chat</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_chat_template</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">apply</span> <span class="o">=</span> <span class="n">resolve_chat_template</span><span class="p">(</span><span class="s2">&quot;auto&quot;</span><span class="p">,</span> <span class="n">tl_model</span><span class="p">)</span>   <span class="c1"># True if chat model, else False</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">apply</span> <span class="o">=</span> <span class="n">resolve_chat_template</span><span class="p">(</span><span class="s2">&quot;on&quot;</span><span class="p">,</span> <span class="n">tl_model</span><span class="p">)</span>     <span class="c1"># always True</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">apply</span> <span class="o">=</span> <span class="n">resolve_chat_template</span><span class="p">(</span><span class="s2">&quot;off&quot;</span><span class="p">,</span> <span class="n">tl_model</span><span class="p">)</span>    <span class="c1"># always False</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">apply</span> <span class="o">=</span> <span class="n">resolve_chat_template</span><span class="p">(</span><span class="s2">"auto"</span><span class="p">,</span> <span class="n">tl_model</span><span class="p">)</span>   <span class="c1"># True if chat model, else False</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">apply</span> <span class="o">=</span> <span class="n">resolve_chat_template</span><span class="p">(</span><span class="s2">"on"</span><span class="p">,</span> <span class="n">tl_model</span><span class="p">)</span>     <span class="c1"># always True</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">apply</span> <span class="o">=</span> <span class="n">resolve_chat_template</span><span class="p">(</span><span class="s2">"off"</span><span class="p">,</span> <span class="n">tl_model</span><span class="p">)</span>    <span class="c1"># always False</span>
 </code></pre></div>
 <p>Raises <code>ValueError</code> if <code>mode</code> is not one of <code>"auto"</code>, <code>"on"</code>, <code>"off"</code>.</p>
 <h3 id="model_is_chatmodel-bool"><code>model_is_chat(model) -&gt; bool</code><a class="headerlink" href="#model_is_chatmodel-bool" title="Permanent link">&para;</a></h3>
@@ -1976,15 +1976,15 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.tasks._chat</span><span class="w"> </span><span class="kn">import</span> <span class="n">model_is_chat</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="k">if</span> <span class="n">model_is_chat</span><span class="p">(</span><span class="n">tl_model</span><span class="p">):</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Chat model — &#39;auto&#39; will apply the template&quot;</span><span class="p">)</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">"Chat model — 'auto' will apply the template"</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="wrap_promptmodel-user_text-assistant_prefix-apply-str"><code>wrap_prompt(model, user_text, assistant_prefix="", *, apply) -&gt; str</code><a class="headerlink" href="#wrap_promptmodel-user_text-assistant_prefix-apply-str" title="Permanent link">&para;</a></h3>
 <p>Formats one task prompt, wrapping it in the chat template when <code>apply=True</code>.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.tasks._chat</span><span class="w"> </span><span class="kn">import</span> <span class="n">wrap_prompt</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">raw</span> <span class="o">=</span> <span class="s2">&quot;The capital of France is&quot;</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">raw</span> <span class="o">=</span> <span class="s2">"The capital of France is"</span>
 <a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">wrapped</span> <span class="o">=</span> <span class="n">wrap_prompt</span><span class="p">(</span><span class="n">tl_model</span><span class="p">,</span> <span class="n">raw</span><span class="p">,</span> <span class="n">apply</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="c1"># &quot;[INST] The capital of France is [/INST]&quot;</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="c1"># "[INST] The capital of France is [/INST]"</span>
 </code></pre></div>
 <h3 id="to_tokensmodel-text-templated-torchtensor"><code>to_tokens(model, text, *, templated) -&gt; torch.Tensor</code><a class="headerlink" href="#to_tokensmodel-text-templated-torchtensor" title="Permanent link">&para;</a></h3>
 <p>Tokenizes text with BOS handling adjusted for whether the text is already templated. Templated text already carries its own BOS token, so <code>prepend_bos=False</code> is used automatically.</p>
@@ -2002,8 +2002,8 @@
 <p>There is no <code>chat_template_mode</code> field stored in the <code>.pt</code> artifact and no <code>UserWarning</code> for a mode mismatch — <code>discover_circuit</code> never writes <code>chat_template_mode</code> into artifact metadata. If discovery and evaluation appear to disagree on chat formatting, check what each call actually resolved to:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.tasks._chat</span><span class="w"> </span><span class="kn">import</span> <span class="n">model_is_chat</span>
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">transformer_lens</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tl</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">model</span> <span class="o">=</span> <span class="n">tl</span><span class="o">.</span><span class="n">HookedTransformer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;meta-llama/Llama-3.2-1B-Instruct&quot;</span><span class="p">)</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Model is chat:&quot;</span><span class="p">,</span> <span class="n">model_is_chat</span><span class="p">(</span><span class="n">model</span><span class="p">))</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">model</span> <span class="o">=</span> <span class="n">tl</span><span class="o">.</span><span class="n">HookedTransformer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">"meta-llama/Llama-3.2-1B-Instruct"</span><span class="p">)</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"Model is chat:"</span><span class="p">,</span> <span class="n">model_is_chat</span><span class="p">(</span><span class="n">model</span><span class="p">))</span>
 </code></pre></div>
 <hr />
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
@@ -2164,7 +2164,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.top", "navigation.footer", "navigation.prune", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="../../assets/circuitkit.js"></script>
       

@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/favicon-v3.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1832,21 +1832,21 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.applications</span><span class="w"> </span><span class="kn">import</span> <span class="n">detect_model_architecture</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="n">AutoModelForCausalLM</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">hf_model</span> <span class="o">=</span> <span class="n">AutoModelForCausalLM</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;Qwen/Qwen2.5-1.5B-Instruct&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">arch_type</span> <span class="o">=</span> <span class="n">detect_model_architecture</span><span class="p">(</span><span class="n">hf_model</span><span class="p">)</span>  <span class="c1"># &quot;qwen&quot;</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">hf_model</span> <span class="o">=</span> <span class="n">AutoModelForCausalLM</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">"Qwen/Qwen2.5-1.5B-Instruct"</span><span class="p">)</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">arch_type</span> <span class="o">=</span> <span class="n">detect_model_architecture</span><span class="p">(</span><span class="n">hf_model</span><span class="p">)</span>  <span class="c1"># "qwen"</span>
 </code></pre></div>
 <h3 id="getting-architecture-config">Getting Architecture Config<a class="headerlink" href="#getting-architecture-config" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.applications</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_arch_config</span><span class="p">,</span> <span class="n">get_layers</span><span class="p">,</span> <span class="n">get_attn_proj</span><span class="p">,</span> <span class="n">get_mlp_proj</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">arch_cfg</span> <span class="o">=</span> <span class="n">get_arch_config</span><span class="p">(</span><span class="s2">&quot;gemma&quot;</span><span class="p">)</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">arch_cfg</span> <span class="o">=</span> <span class="n">get_arch_config</span><span class="p">(</span><span class="s2">"gemma"</span><span class="p">)</span>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># Access layers</span>
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">layers</span> <span class="o">=</span> <span class="n">get_layers</span><span class="p">(</span><span class="n">hf_model</span><span class="p">,</span> <span class="n">arch_cfg</span><span class="p">)</span>
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
 <a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="c1"># Access specific projections</span>
 <a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">layers</span><span class="p">:</span>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="n">q_proj</span> <span class="o">=</span> <span class="n">get_attn_proj</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">arch_cfg</span><span class="p">,</span> <span class="s2">&quot;q_proj&quot;</span><span class="p">)</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="n">gate_proj</span> <span class="o">=</span> <span class="n">get_mlp_proj</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">arch_cfg</span><span class="p">,</span> <span class="s2">&quot;gate_proj&quot;</span><span class="p">)</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="n">q_proj</span> <span class="o">=</span> <span class="n">get_attn_proj</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">arch_cfg</span><span class="p">,</span> <span class="s2">"q_proj"</span><span class="p">)</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="n">gate_proj</span> <span class="o">=</span> <span class="n">get_mlp_proj</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">arch_cfg</span><span class="p">,</span> <span class="s2">"gate_proj"</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="registry-queries">Registry Queries<a class="headerlink" href="#registry-queries" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.applications</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
@@ -1862,37 +1862,37 @@
 <a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="nb">print</span><span class="p">(</span><span class="n">PRODUCTION_FAMILIES</span><span class="p">)</span>   <span class="c1"># Production-validated families</span>
 <a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="nb">print</span><span class="p">(</span><span class="n">READY_FAMILIES</span><span class="p">)</span>        <span class="c1"># Ready-to-use families</span>
 <a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="n">family</span> <span class="o">=</span> <span class="n">get_model_family</span><span class="p">(</span><span class="s2">&quot;qwen2&quot;</span><span class="p">)</span>  <span class="c1"># &quot;qwen&quot; — maps an HF model_type, not a repo path</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="n">family</span> <span class="o">=</span> <span class="n">get_model_family</span><span class="p">(</span><span class="s2">"qwen2"</span><span class="p">)</span>  <span class="c1"># "qwen" — maps an HF model_type, not a repo path</span>
 <a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="n">head_dim</span> <span class="o">=</span> <span class="n">get_head_dim</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">arch_cfg</span><span class="p">)</span>  <span class="c1"># first arg is a single decoder layer, not the whole model</span>
 </code></pre></div>
 <hr />
 <h2 id="registry-entry-format">Registry Entry Format<a class="headerlink" href="#registry-entry-format" title="Permanent link">&para;</a></h2>
 <p>Each entry in <code>MODEL_ARCH_REGISTRY</code> follows this structure:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;LLaMA / Llama-2 / Llama-3 / Llama-3.1 / CodeLlama&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="s2">&quot;models&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;llama&quot;</span><span class="p">,</span> <span class="s2">&quot;llama2&quot;</span><span class="p">,</span> <span class="s2">&quot;llama3&quot;</span><span class="p">,</span> <span class="s2">&quot;codellama&quot;</span><span class="p">],</span>  <span class="c1"># HF model_type values</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="s2">&quot;layers_path&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;model.layers&quot;</span><span class="p">],</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"LLaMA / Llama-2 / Llama-3 / Llama-3.1 / CodeLlama"</span><span class="p">,</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="s2">"models"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"llama"</span><span class="p">,</span> <span class="s2">"llama2"</span><span class="p">,</span> <span class="s2">"llama3"</span><span class="p">,</span> <span class="s2">"codellama"</span><span class="p">],</span>  <span class="c1"># HF model_type values</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="s2">"layers_path"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"model.layers"</span><span class="p">],</span>
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="s2">&quot;attn&quot;</span><span class="p">:</span> <span class="p">{</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>        <span class="s2">&quot;module&quot;</span><span class="p">:</span> <span class="s2">&quot;self_attn&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>        <span class="s2">&quot;k_proj&quot;</span><span class="p">:</span> <span class="s2">&quot;k_proj&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>        <span class="s2">&quot;v_proj&quot;</span><span class="p">:</span> <span class="s2">&quot;v_proj&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>        <span class="s2">&quot;q_proj&quot;</span><span class="p">:</span> <span class="s2">&quot;q_proj&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>        <span class="s2">&quot;o_proj&quot;</span><span class="p">:</span> <span class="s2">&quot;o_proj&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>        <span class="s2">&quot;head_dim&quot;</span><span class="p">:</span> <span class="s2">&quot;head_dim&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="s2">"attn"</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>        <span class="s2">"module"</span><span class="p">:</span> <span class="s2">"self_attn"</span><span class="p">,</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>        <span class="s2">"k_proj"</span><span class="p">:</span> <span class="s2">"k_proj"</span><span class="p">,</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>        <span class="s2">"v_proj"</span><span class="p">:</span> <span class="s2">"v_proj"</span><span class="p">,</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>        <span class="s2">"q_proj"</span><span class="p">:</span> <span class="s2">"q_proj"</span><span class="p">,</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>        <span class="s2">"o_proj"</span><span class="p">:</span> <span class="s2">"o_proj"</span><span class="p">,</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>        <span class="s2">"head_dim"</span><span class="p">:</span> <span class="s2">"head_dim"</span><span class="p">,</span>
 <a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>    <span class="p">},</span>
 <a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>
-<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>    <span class="s2">&quot;mlp&quot;</span><span class="p">:</span> <span class="p">{</span>
-<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>        <span class="s2">&quot;gate_proj&quot;</span><span class="p">:</span> <span class="s2">&quot;gate_proj&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>        <span class="s2">&quot;up_proj&quot;</span><span class="p">:</span> <span class="s2">&quot;up_proj&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>        <span class="s2">&quot;down_proj&quot;</span><span class="p">:</span> <span class="s2">&quot;down_proj&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>    <span class="s2">"mlp"</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>        <span class="s2">"gate_proj"</span><span class="p">:</span> <span class="s2">"gate_proj"</span><span class="p">,</span>
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>        <span class="s2">"up_proj"</span><span class="p">:</span> <span class="s2">"up_proj"</span><span class="p">,</span>
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>        <span class="s2">"down_proj"</span><span class="p">:</span> <span class="s2">"down_proj"</span><span class="p">,</span>
 <a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>    <span class="p">},</span>
 <a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>
-<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a>    <span class="s2">&quot;gqa_capable&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>   <span class="c1"># Group Query Attention — note: &quot;gqa_capable&quot;, not &quot;gqa&quot;</span>
-<a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a>    <span class="s2">&quot;transformer_lens_support&quot;</span><span class="p">:</span> <span class="s2">&quot;full&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>    <span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;PRODUCTION&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a>    <span class="s2">&quot;priority&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
-<a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a>    <span class="s2">&quot;notes&quot;</span><span class="p">:</span> <span class="s2">&quot;Meta&#39;s flagship model, well-tested&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a>    <span class="s2">"gqa_capable"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>   <span class="c1"># Group Query Attention — note: "gqa_capable", not "gqa"</span>
+<a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a>    <span class="s2">"transformer_lens_support"</span><span class="p">:</span> <span class="s2">"full"</span><span class="p">,</span>
+<a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>    <span class="s2">"status"</span><span class="p">:</span> <span class="s2">"PRODUCTION"</span><span class="p">,</span>
+<a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a>    <span class="s2">"priority"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+<a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a>    <span class="s2">"notes"</span><span class="p">:</span> <span class="s2">"Meta's flagship model, well-tested"</span><span class="p">,</span>
 <a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a><span class="p">}</span>
 </code></pre></div>
 <p>There is no <code>"norm"</code> key anywhere in the registry, and the MLP block has no <code>"module"</code> key (only <code>"attn"</code> does). Both were fabricated in earlier drafts of this doc.</p>
@@ -1901,41 +1901,41 @@
 <p>To add support for a model family not in the registry:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.applications.arch_registry</span><span class="w"> </span><span class="kn">import</span> <span class="n">MODEL_ARCH_REGISTRY</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">MODEL_ARCH_REGISTRY</span><span class="p">[</span><span class="s2">&quot;mymodel&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;MyModel Family&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="s2">&quot;models&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;mymodel-7b&quot;</span><span class="p">,</span> <span class="s2">&quot;mymodel-13b&quot;</span><span class="p">],</span>  <span class="c1"># HF model_type values</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">MODEL_ARCH_REGISTRY</span><span class="p">[</span><span class="s2">"mymodel"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"MyModel Family"</span><span class="p">,</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="s2">"models"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"mymodel-7b"</span><span class="p">,</span> <span class="s2">"mymodel-13b"</span><span class="p">],</span>  <span class="c1"># HF model_type values</span>
 <a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="s2">&quot;layers_path&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;model.layers&quot;</span><span class="p">],</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="s2">"layers_path"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"model.layers"</span><span class="p">],</span>
 <a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="s2">&quot;attn&quot;</span><span class="p">:</span> <span class="p">{</span>
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>        <span class="s2">&quot;module&quot;</span><span class="p">:</span> <span class="s2">&quot;attention&quot;</span><span class="p">,</span>           <span class="c1"># your model&#39;s attention module name</span>
-<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>        <span class="s2">&quot;k_proj&quot;</span><span class="p">:</span> <span class="s2">&quot;key_projection&quot;</span><span class="p">,</span>      <span class="c1"># adjust to your model&#39;s names</span>
-<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>        <span class="s2">&quot;v_proj&quot;</span><span class="p">:</span> <span class="s2">&quot;value_projection&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>        <span class="s2">&quot;q_proj&quot;</span><span class="p">:</span> <span class="s2">&quot;query_projection&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>        <span class="s2">&quot;o_proj&quot;</span><span class="p">:</span> <span class="s2">&quot;output_projection&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>        <span class="s2">&quot;head_dim&quot;</span><span class="p">:</span> <span class="s2">&quot;head_size&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="s2">"attn"</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>        <span class="s2">"module"</span><span class="p">:</span> <span class="s2">"attention"</span><span class="p">,</span>           <span class="c1"># your model's attention module name</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>        <span class="s2">"k_proj"</span><span class="p">:</span> <span class="s2">"key_projection"</span><span class="p">,</span>      <span class="c1"># adjust to your model's names</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>        <span class="s2">"v_proj"</span><span class="p">:</span> <span class="s2">"value_projection"</span><span class="p">,</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>        <span class="s2">"q_proj"</span><span class="p">:</span> <span class="s2">"query_projection"</span><span class="p">,</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>        <span class="s2">"o_proj"</span><span class="p">:</span> <span class="s2">"output_projection"</span><span class="p">,</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>        <span class="s2">"head_dim"</span><span class="p">:</span> <span class="s2">"head_size"</span><span class="p">,</span>
 <a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>    <span class="p">},</span>
 <a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>
-<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>    <span class="s2">&quot;mlp&quot;</span><span class="p">:</span> <span class="p">{</span>
-<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>        <span class="s2">&quot;gate_proj&quot;</span><span class="p">:</span> <span class="s2">&quot;w1&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>        <span class="s2">&quot;up_proj&quot;</span><span class="p">:</span> <span class="s2">&quot;w3&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>        <span class="s2">&quot;down_proj&quot;</span><span class="p">:</span> <span class="s2">&quot;w2&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>    <span class="s2">"mlp"</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>        <span class="s2">"gate_proj"</span><span class="p">:</span> <span class="s2">"w1"</span><span class="p">,</span>
+<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>        <span class="s2">"up_proj"</span><span class="p">:</span> <span class="s2">"w3"</span><span class="p">,</span>
+<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>        <span class="s2">"down_proj"</span><span class="p">:</span> <span class="s2">"w2"</span><span class="p">,</span>
 <a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>    <span class="p">},</span>
 <a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>
-<a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a>    <span class="s2">&quot;gqa_capable&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
-<a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a>    <span class="s2">&quot;transformer_lens_support&quot;</span><span class="p">:</span> <span class="s2">&quot;none&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a>    <span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;NOT_STARTED&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a>    <span class="s2">&quot;priority&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
-<a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a>    <span class="s2">&quot;notes&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a>    <span class="s2">"gqa_capable"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a>    <span class="s2">"transformer_lens_support"</span><span class="p">:</span> <span class="s2">"none"</span><span class="p">,</span>
+<a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a>    <span class="s2">"status"</span><span class="p">:</span> <span class="s2">"NOT_STARTED"</span><span class="p">,</span>
+<a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a>    <span class="s2">"priority"</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+<a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a>    <span class="s2">"notes"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span>
 <a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a><span class="p">}</span>
 </code></pre></div>
 <p>Then test that the registry can find the model family:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="n">AutoModelForCausalLM</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.applications</span><span class="w"> </span><span class="kn">import</span> <span class="n">detect_model_architecture</span><span class="p">,</span> <span class="n">get_arch_config</span>
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">hf_model</span> <span class="o">=</span> <span class="n">AutoModelForCausalLM</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;my-model&quot;</span><span class="p">)</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="n">family</span> <span class="o">=</span> <span class="n">detect_model_architecture</span><span class="p">(</span><span class="n">hf_model</span><span class="p">)</span>   <span class="c1"># should return &quot;mymodel&quot;</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="n">cfg</span> <span class="o">=</span> <span class="n">get_arch_config</span><span class="p">(</span><span class="s2">&quot;mymodel&quot;</span><span class="p">)</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">hf_model</span> <span class="o">=</span> <span class="n">AutoModelForCausalLM</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">"my-model"</span><span class="p">)</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="n">family</span> <span class="o">=</span> <span class="n">detect_model_architecture</span><span class="p">(</span><span class="n">hf_model</span><span class="p">)</span>   <span class="c1"># should return "mymodel"</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="n">cfg</span> <span class="o">=</span> <span class="n">get_arch_config</span><span class="p">(</span><span class="s2">"mymodel"</span><span class="p">)</span>
 <a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="nb">print</span><span class="p">(</span><span class="n">cfg</span><span class="p">)</span>
 </code></pre></div>
 <hr />
@@ -2106,7 +2106,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.top", "navigation.footer", "navigation.prune", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="../../assets/circuitkit.js"></script>
       
