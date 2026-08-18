@@ -381,7 +381,7 @@ jobs:
         run: |
           set -euo pipefail
           : "${TWINE_PASSWORD:?PYPI_API_TOKEN is required to publish the release}"
-          python -m twine upload --non-interactive dist/*
+          python -m twine upload --non-interactive --verbose dist/*
 
       - name: Verify exact version on PyPI
         shell: bash
