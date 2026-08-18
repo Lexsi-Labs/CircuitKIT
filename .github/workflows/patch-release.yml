@@ -288,7 +288,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      id-token: write
     env:
       RELEASE_TAG: ${{ needs.plan.outputs.version }}
     steps:
@@ -373,9 +372,16 @@ jobs:
             gh release create "$RELEASE_TAG" --verify-tag --generate-notes --title "$RELEASE_TAG"
           fi
 
-      - name: Publish validated distributions to PyPI
+      - name: Publish the exact distributions to PyPI
         if: needs.plan.outputs.pypi-exists == 'false'
-        uses: pypa/gh-action-pypi-publish@release/v1
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${TWINE_PASSWORD:?PYPI_API_TOKEN is required to publish the release}"
+          python -m twine upload --non-interactive dist/*
 
       - name: Verify exact version on PyPI
         shell: bash
