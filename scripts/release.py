@@ -20,9 +20,6 @@ from typing import Iterable, Sequence
 
 
 SEMVER_PATTERN = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)")
-BUMP_BRANCH_PATTERN = re.compile(r"release/bump-(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)")
-BUMP_TITLE_PATTERN = re.compile(r"\[release\] Bump version to (.+)")
-BUMP_MARKER = "<!-- circuitkit-version-bump -->"
 
 VERSION_FILES = (
     Path("pyproject.toml"),
@@ -44,7 +41,6 @@ class ReleaseState(str, Enum):
 
 class ReleaseAction(str, Enum):
     RELEASE = "release"
-    BUMP = "bump"
     NOOP = "noop"
 
 
@@ -192,68 +188,24 @@ def classify_release_state(
     return ReleaseState.READY
 
 
-def generated_bump_version(head_ref: str, title: str, body: str) -> str | None:
-    """Recognize only automation PRs whose branch, title, and marker agree."""
-
-    looks_generated = (
-        head_ref.startswith("release/bump-")
-        or title.startswith("[release] Bump version to ")
-        or BUMP_MARKER in body
-    )
-    if not looks_generated:
-        return None
-    branch_match = BUMP_BRANCH_PATTERN.fullmatch(head_ref)
-    title_match = BUMP_TITLE_PATTERN.fullmatch(title)
-    if not branch_match or not title_match or BUMP_MARKER not in body:
-        raise ReleaseError(
-            "PR partially matches release automation but has an invalid branch, title, or marker."
-        )
-    branch_version = ".".join(branch_match.groups())
-    title_version = title_match.group(1)
-    parse_version(title_version)
-    if branch_version != title_version:
-        raise ReleaseError(
-            f"Generated bump PR versions disagree: branch={branch_version}, title={title_version}."
-        )
-    return branch_version
-
-
 def decide_action(
     *,
     trigger: str,
     version: str,
     state: ReleaseState,
-    open_bump_pr: bool = False,
 ) -> Decision:
-    """Choose the only safe action for a merged PR or manual bootstrap run."""
+    """Release the declared version once; completed versions are a no-op."""
 
     parse_version(version)
     if state is ReleaseState.CONFLICT:
         raise ReleaseError(
             f"Release {version} has conflicting tag/GitHub/PyPI state; manual repair is required."
         )
-    if trigger not in {"normal", "generated", "dispatch"}:
+    if trigger not in {"normal", "dispatch"}:
         raise ReleaseError(f"Unknown release trigger: {trigger!r}")
-    if trigger == "generated":
-        if state is ReleaseState.COMPLETE:
-            return Decision(
-                ReleaseAction.NOOP, version, state, "generated release already complete"
-            )
-        return Decision(ReleaseAction.RELEASE, version, state, "merged generated version bump")
-    if trigger == "dispatch":
-        if state is ReleaseState.COMPLETE:
-            return Decision(ReleaseAction.NOOP, version, state, "current release already complete")
-        return Decision(
-            ReleaseAction.RELEASE, version, state, "bootstrap or resume current version"
-        )
-    if state is not ReleaseState.COMPLETE:
-        return Decision(
-            ReleaseAction.RELEASE, version, state, "bootstrap or resume current version"
-        )
-    target = next_patch(version)
-    if open_bump_pr:
-        return Decision(ReleaseAction.NOOP, target, state, "version-bump PR is already open")
-    return Decision(ReleaseAction.BUMP, target, state, "normal merged PR")
+    if state is ReleaseState.COMPLETE:
+        return Decision(ReleaseAction.NOOP, version, state, "current release already complete")
+    return Decision(ReleaseAction.RELEASE, version, state, "create or resume declared version")
 
 
 def _metadata_version(contents: str, filename: Path) -> tuple[str, str]:
@@ -356,15 +308,8 @@ def build_parser() -> argparse.ArgumentParser:
     dist_parser.add_argument("paths", nargs="+", type=Path)
     dist_parser.add_argument("--project-name", default="circuitkit")
 
-    generated_parser = subparsers.add_parser("generated-version")
-    generated_parser.add_argument("--head", required=True)
-    generated_parser.add_argument("--title", required=True)
-    generated_parser.add_argument("--body", default="")
-
     plan_parser = subparsers.add_parser("plan")
-    plan_parser.add_argument(
-        "--trigger", choices=("normal", "generated", "dispatch"), required=True
-    )
+    plan_parser.add_argument("--trigger", choices=("normal", "dispatch"), required=True)
     plan_parser.add_argument("--version", required=True)
     plan_parser.add_argument("--tag", type=_bool, required=True)
     plan_parser.add_argument("--release", type=_bool, required=True)
@@ -372,7 +317,6 @@ def build_parser() -> argparse.ArgumentParser:
     plan_parser.add_argument("--tag-annotated", type=_bool, default=True)
     plan_parser.add_argument("--tag-matches-source", type=_bool, default=True)
     plan_parser.add_argument("--release-matches-tag", type=_bool, default=True)
-    plan_parser.add_argument("--open-bump-pr", type=_bool, default=False)
     return parser
 
 
@@ -389,9 +333,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     elif args.command == "validate-dist":
         validate_requested_version(args.version)
         validate_distributions(args.version, args.paths, project_name=args.project_name)
-    elif args.command == "generated-version":
-        version = generated_bump_version(args.head, args.title, args.body)
-        print(version or "")
     elif args.command == "plan":
         state = classify_release_state(
             Presence(args.tag, args.release, args.pypi),
@@ -403,7 +344,6 @@ def main(argv: Sequence[str] | None = None) -> int:
             trigger=args.trigger,
             version=args.version,
             state=state,
-            open_bump_pr=args.open_bump_pr,
         )
         print(_json_decision(decision))
     return 0
