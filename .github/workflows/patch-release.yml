@@ -117,7 +117,7 @@ jobs:
           valid = (
               release.get("tag_name") == expected
               and release.get("name") == expected
-              and release.get("draft") is False
+              and isinstance(release.get("draft"), bool)
               and release.get("prerelease") is False
           )
           raise SystemExit(0 if valid else 1)
@@ -353,21 +353,32 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if gh release view "$RELEASE_TAG" --json tagName,name,isDraft,isPrerelease > release.json 2>/dev/null; then
-            python - "$RELEASE_TAG" <<'PY'
+          if gh release view "$RELEASE_TAG" \
+            --json databaseId,tagName,name,isDraft,isPrerelease > release.json 2>/dev/null; then
+            release_state=$(python - "$RELEASE_TAG" <<'PY'
           import json
           import sys
 
           release = json.load(open("release.json", encoding="utf-8"))
           expected = sys.argv[1]
-          if release != {
-              "isDraft": False,
-              "isPrerelease": False,
-              "name": expected,
-              "tagName": expected,
-          }:
+          valid = (
+              release.get("tagName") == expected
+              and release.get("name") == expected
+              and isinstance(release.get("isDraft"), bool)
+              and release.get("isPrerelease") is False
+              and isinstance(release.get("databaseId"), int)
+          )
+          if not valid:
               raise SystemExit(f"Existing GitHub release conflicts with {expected}: {release}")
+          print("draft" if release["isDraft"] else "published")
           PY
+            )
+            if [[ "$release_state" == "draft" ]]; then
+              release_id=$(python -c 'import json; print(json.load(open("release.json"))["databaseId"])')
+              gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$release_id" \
+                --field draft=false --silent
+              echo "Published existing draft GitHub release $RELEASE_TAG."
+            fi
           else
             gh release create "$RELEASE_TAG" --verify-tag --generate-notes --title "$RELEASE_TAG"
           fi
