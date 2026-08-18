@@ -3,7 +3,7 @@ CircuitKit: A comprehensive toolkit for circuit discovery in transformer models.
 """
 
 # Version information
-__version__ = "1.0.0"
+__version__ = "0.1.0"
 __author__ = "Pratinav Seth, Hem Gosalia, Aditya Kasliwal, Vinay Kumar Sankarapu"
 __description__ = "Unified Discover, Evaluate, Intervene toolkit for mechanistic interpretability"
 _API_EXPORTS = {"discover_circuit", "evaluate_circuit", "load_circuit"}

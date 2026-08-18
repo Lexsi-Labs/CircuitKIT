@@ -8,7 +8,7 @@ abstract: |
 type: software
 message: "If you use this software, please cite it."
 
-version: 1.0.0
+version: 0.1.0
 date-released: 2026-05-16
 
 # Pratinav Seth, Hem Gosalia, and Aditya Kasliwal are equal co-first authors
