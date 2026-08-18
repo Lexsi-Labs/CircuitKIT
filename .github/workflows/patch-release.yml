@@ -49,9 +49,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           EVENT_NAME: ${{ github.event_name }}
-          PR_HEAD: ${{ github.event.pull_request.head.ref }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_BODY: ${{ github.event.pull_request.body }}
         shell: bash
         run: |
           set -euo pipefail
@@ -61,15 +58,33 @@ jobs:
           requested_version=$current_version
 
           if [[ "$EVENT_NAME" == "pull_request_target" ]]; then
-            generated_version=$(python scripts/release.py generated-version \
-              --head "$PR_HEAD" --title "$PR_TITLE" --body "$PR_BODY")
-            if [[ -n "$generated_version" ]]; then
-              trigger=generated
-              requested_version=$generated_version
-              python scripts/release.py validate-version "$requested_version"
-            else
-              trigger=normal
+            trigger=normal
+          fi
+
+          latest_response=$(mktemp)
+          latest_status=$(curl --silent --show-error --location \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --header "Accept: application/vnd.github+json" \
+            --output "$latest_response" --write-out '%{http_code}' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/latest")
+          if [[ "$latest_status" == "200" ]]; then
+            latest_version=$(python -c \
+              'import json,sys; print(json.load(open(sys.argv[1]))["tag_name"])' \
+              "$latest_response")
+            requested_version=$(python -c \
+              'import sys; from scripts.release import next_patch; print(next_patch(sys.argv[1]))' \
+              "$latest_version")
+
+            if git show-ref --verify --quiet "refs/tags/$latest_version"; then
+              latest_commit=$(git rev-list -n 1 "$latest_version")
+              latest_parent=$(git rev-parse "$latest_commit^" 2>/dev/null || true)
+              if [[ "$latest_commit" == "$source_sha" || "$latest_parent" == "$source_sha" ]]; then
+                requested_version=$latest_version
+              fi
             fi
+          elif [[ "$latest_status" != "404" ]]; then
+            echo "::error::Latest GitHub release lookup failed with HTTP $latest_status."
+            exit 1
           fi
 
           tag_exists=false
@@ -82,8 +97,9 @@ jobs:
             if [[ "$(git cat-file -t "$requested_version")" != "tag" ]]; then
               tag_annotated=false
             fi
-            tag_sha=$(git rev-list -n 1 "$requested_version")
-            if [[ "$trigger" == "generated" && "$tag_sha" != "$source_sha" ]]; then
+            tag_commit=$(git rev-list -n 1 "$requested_version")
+            tag_parent=$(git rev-parse "$tag_commit^" 2>/dev/null || true)
+            if [[ "$tag_commit" != "$source_sha" && "$tag_parent" != "$source_sha" ]]; then
               tag_matches_source=false
             fi
 
@@ -150,46 +166,12 @@ jobs:
             exit 1
           fi
 
-          open_bump_pr=false
-          if [[ "$trigger" == "normal" && "$tag_exists" == "true" \
-            && "$release_exists" == "true" && "$pypi_exists" == "true" ]]; then
-            open_prs=$(mktemp)
-            gh pr list --state open --limit 100 --json headRefName,title,body > "$open_prs"
-            open_bump_pr=$(python - "$open_prs" "$current_version" <<'PY'
-          import json
-          import sys
-
-          from scripts.release import BUMP_MARKER, generated_bump_version, next_patch
-
-          pull_requests = json.load(open(sys.argv[1], encoding="utf-8"))
-          candidates = [
-              pr for pr in pull_requests
-              if pr["headRefName"].startswith("release/bump-")
-              or pr["title"].startswith("[release] Bump version to ")
-              or BUMP_MARKER in (pr.get("body") or "")
-          ]
-          if len(candidates) > 1:
-              raise SystemExit("Multiple open version-bump PRs require manual repair")
-          if not candidates:
-              print("false")
-          else:
-              pr = candidates[0]
-              version = generated_bump_version(pr["headRefName"], pr["title"], pr.get("body") or "")
-              expected = next_patch(sys.argv[2])
-              if version != expected:
-                  raise SystemExit(f"Open bump PR targets {version}, expected {expected}")
-              print("true")
-          PY
-          )
-          fi
-
           decision=$(python scripts/release.py plan \
             --trigger "$trigger" --version "$requested_version" \
             --tag "$tag_exists" --release "$release_exists" --pypi "$pypi_exists" \
             --tag-annotated "$tag_annotated" \
             --tag-matches-source "$tag_matches_source" \
-            --release-matches-tag "$release_matches_tag" \
-            --open-bump-pr "$open_bump_pr")
+            --release-matches-tag "$release_matches_tag")
 
           action=$(python -c 'import json,sys; print(json.loads(sys.argv[1])["action"])' "$decision")
           version=$(python -c 'import json,sys; print(json.loads(sys.argv[1])["version"])' "$decision")
@@ -206,80 +188,6 @@ jobs:
             echo "pypi-exists=$pypi_exists"
           } >> "$GITHUB_OUTPUT"
           echo "Release decision: action=$action version=$version state=$state reason=$reason"
-
-  bump:
-    name: Open patch-version pull request
-    needs: plan
-    if: needs.plan.outputs.action == 'bump'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: read
-    steps:
-      - name: Check out default branch
-        uses: actions/checkout@v6
-        with:
-          ref: main
-          fetch-depth: 0
-          persist-credentials: false
-
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Create or resume version-bump branch and PR
-        env:
-          PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          NEXT_VERSION: ${{ needs.plan.outputs.version }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ -z "$PERSONAL_ACCESS_TOKEN" ]]; then
-            echo "::error::PERSONAL_ACCESS_TOKEN is required to push the bump branch and open its PR."
-            exit 1
-          fi
-          branch="release/bump-$NEXT_VERSION"
-          base_sha=$(git rev-parse HEAD)
-          expected_files=$'CITATION.cff\npyproject.toml\nsrc/circuitkit/__init__.py'
-
-          if git ls-remote --exit-code --heads origin "refs/heads/$branch" >/dev/null 2>&1; then
-            git fetch origin "refs/heads/$branch:refs/remotes/origin/release-bump"
-            branch_sha=$(git rev-parse refs/remotes/origin/release-bump)
-            branch_parent=$(git rev-parse "$branch_sha^")
-            if [[ "$branch_parent" != "$base_sha" ]]; then
-              echo "::error::Existing $branch is not based on the expected default-branch commit."
-              exit 1
-            fi
-            git switch --detach "$branch_sha"
-            python scripts/release.py validate-version "$NEXT_VERSION"
-            actual_files=$(git diff-tree --no-commit-id --name-only -r "$branch_sha" | sort)
-            if [[ "$actual_files" != "$expected_files" ]]; then
-              echo "::error::Existing bump branch changes files outside the authoritative version set."
-              exit 1
-            fi
-          else
-            git switch -c "$branch"
-            python scripts/release.py set-version "$NEXT_VERSION"
-            actual_files=$(git diff --name-only | sort)
-            if [[ "$actual_files" != "$expected_files" ]]; then
-              echo "::error::Version helper changed an unexpected set of files."
-              exit 1
-            fi
-            git config user.name github-actions[bot]
-            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-            git add CITATION.cff pyproject.toml src/circuitkit/__init__.py
-            git commit -m "Bump version to $NEXT_VERSION"
-            basic_auth=$(printf 'x-access-token:%s' "$PERSONAL_ACCESS_TOKEN" | base64 -w0)
-            git -c "http.extraheader=AUTHORIZATION: basic $basic_auth" \
-              push "https://github.com/$GITHUB_REPOSITORY.git" "HEAD:refs/heads/$branch"
-            unset basic_auth
-          fi
-
-          GH_TOKEN="$PERSONAL_ACCESS_TOKEN" gh pr create --base main --head "$branch" \
-            --title "[release] Bump version to $NEXT_VERSION" \
-            --body "$(printf '%s\n\n%s\n' \
-              '<!-- circuitkit-version-bump -->' \
-              "Automated patch-version bump to \`$NEXT_VERSION\`. Merging this PR starts the release.")"
 
   release:
     name: Build, release, and publish
@@ -301,10 +209,27 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Validate source version
-        run: python scripts/release.py validate-version "$RELEASE_TAG"
+      - name: Prepare exact release version
+        shell: bash
+        run: |
+          set -euo pipefail
+          current_version=$(python scripts/release.py current-version)
+          if [[ "$current_version" != "$RELEASE_TAG" ]]; then
+            python scripts/release.py set-version "$RELEASE_TAG"
+            expected_files=$'CITATION.cff\npyproject.toml\nsrc/circuitkit/__init__.py'
+            actual_files=$(git diff --name-only | sort)
+            if [[ "$actual_files" != "$expected_files" ]]; then
+              echo "::error::Version helper changed files outside the authoritative version set."
+              exit 1
+            fi
+            git config user.name github-actions[bot]
+            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+            git add CITATION.cff pyproject.toml src/circuitkit/__init__.py
+            git commit -m "Release $RELEASE_TAG"
+          fi
+          python scripts/release.py validate-version "$RELEASE_TAG"
 
-      # Tests are intentionally skipped in the release workflow to avoid delaying (taking more than 6hours)
+      # Tests are intentionally skipped in the release workflow to avoid delaying
       # GitHub releases and PyPI publication.
       # - name: Install project test dependencies
       #   continue-on-error: true
@@ -428,11 +353,3 @@ jobs:
             }
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-
-  complete:
-    name: Report no-op rerun
-    needs: plan
-    if: needs.plan.outputs.action == 'noop'
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "No release mutation is needed - ${{ needs.plan.outputs.reason }}."

@@ -6,7 +6,6 @@ from pathlib import Path
 import pytest
 
 from scripts.release import (
-    BUMP_MARKER,
     Presence,
     ReleaseAction,
     ReleaseError,
@@ -14,7 +13,6 @@ from scripts.release import (
     classify_release_state,
     current_version,
     decide_action,
-    generated_bump_version,
     next_patch,
     parse_version,
     set_version,
@@ -37,6 +35,17 @@ def _version_tree(root: Path, version: str = "1.0.0") -> Path:
 )
 def test_next_patch_increments_only_patch(current, expected):
     assert next_patch(current) == expected
+
+
+def test_successive_merges_advance_patch_releases():
+    latest = "0.1.0"
+    for expected in ("0.1.1", "0.1.2", "0.1.3"):
+        requested = next_patch(latest)
+        assert requested == expected
+        decision = decide_action(trigger="normal", version=requested, state=ReleaseState.READY)
+        assert decision.action is ReleaseAction.RELEASE
+        assert decision.version == expected
+        latest = requested
 
 
 @pytest.mark.parametrize(
@@ -109,37 +118,10 @@ def test_normal_merge_resumes_partial_current_release():
     assert decision.version == "1.0.0"
 
 
-def test_complete_current_release_creates_patch_bump():
+def test_complete_current_release_is_a_noop():
     decision = decide_action(trigger="normal", version="1.0.0", state=ReleaseState.COMPLETE)
-    assert decision.action is ReleaseAction.BUMP
-    assert decision.version == "1.0.1"
-
-
-def test_existing_open_bump_pr_prevents_duplicate():
-    decision = decide_action(
-        trigger="normal", version="1.0.0", state=ReleaseState.COMPLETE, open_bump_pr=True
-    )
     assert decision.action is ReleaseAction.NOOP
-    assert decision.version == "1.0.1"
-
-
-def test_generated_bump_merge_releases_and_never_recurses():
-    version = generated_bump_version(
-        "release/bump-1.0.1", "[release] Bump version to 1.0.1", BUMP_MARKER
-    )
-    assert version == "1.0.1"
-    decision = decide_action(trigger="generated", version=version, state=ReleaseState.READY)
-    assert decision.action is ReleaseAction.RELEASE
-
-
-def test_partial_generated_marker_is_rejected():
-    with pytest.raises(ReleaseError, match="partially matches"):
-        generated_bump_version("release/bump-1.0.1", "ordinary PR", "")
-
-
-def test_complete_generated_release_is_idempotent_noop():
-    decision = decide_action(trigger="generated", version="1.0.1", state=ReleaseState.COMPLETE)
-    assert decision.action is ReleaseAction.NOOP
+    assert decision.version == "1.0.0"
 
 
 def test_conflicting_state_fails_decision():
