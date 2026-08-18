@@ -110,7 +110,7 @@ docs = [
     "pygments>=2.15",
 ]
 benchmarks = [
-    "lm-eval @ git+https://github.com/EleutherAI/lm-evaluation-harness.git#egg=lm-eval",
+    "lm-eval",
     "datasets>=2.20.0",
 ]
 quantization = [
