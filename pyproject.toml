@@ -164,7 +164,7 @@ include-package-data = true
 where = ["src"]
 
 [tool.setuptools.package-data]
-circuitkit = ["**/*.json", "**/*.csv", "py.typed"]
+circuitkit = ["**/*.json", "**/*.csv", "assets/*.png", "py.typed"]
 
 [tool.black]
 line-length = 100

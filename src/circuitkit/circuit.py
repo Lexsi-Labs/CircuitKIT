@@ -259,6 +259,68 @@ class Circuit:
                 json.dump({"node_scores": self.scores}, f, indent=2)
         return path
 
+    def push_to_hub(
+        self,
+        repo_id: str,
+        private: bool = False,
+        token: Optional[str] = None,
+    ) -> str:
+        """Save this circuit if needed, then upload the artifact folder to the Hub.
+
+        Mirrors AlignTune's ``trainer.push_to_hub`` so catalog notebooks stay
+        a few lines. The Hub repo receives the ``.pt`` artifact and any
+        ``*_scores.json`` side-car.
+        """
+        from .utils.hf_publish import push_folder_to_hub
+
+        path = Path(self.artifact_path) if self.artifact_path else Path("./circuit_hub/circuit.pt")
+        if not path.exists():
+            path = self.save(path)
+        return push_folder_to_hub(
+            path.parent,
+            repo_id,
+            private=private,
+            token=token,
+            kind="circuit",
+            base_model=self.model_name or "",
+            algorithm=self.algorithm or "",
+        )
+
+    def push_quantized_to_hub(
+        self,
+        repo_id: str,
+        quantization: str = "nf4",
+        private: bool = False,
+        token: Optional[str] = None,
+    ) -> str:
+        """BitsAndBytes quant of ``self.model_name`` then Hub push (AlignTune-shaped)."""
+        from .utils.hf_publish import push_quantized_path_to_hub
+
+        src = self.model_name or "gpt2"
+        return push_quantized_path_to_hub(
+            src, repo_id, quantization=quantization, private=private, token=token
+        )
+
+    def push_gguf_to_hub(
+        self,
+        repo_id: str,
+        quantizations: Union[str, List[str]],
+        private: bool = False,
+        token: Optional[str] = None,
+    ) -> str:
+        """GGUF export of ``self.model_name`` then Hub push (AlignTune-shaped)."""
+        from .utils.hf_publish import push_gguf_path_to_hub
+
+        src = self.model_name or "gpt2"
+        if isinstance(quantizations, str):
+            quantizations = [quantizations]
+        url = ""
+        for quant in quantizations:
+            url = push_gguf_path_to_hub(
+                src, repo_id, quantization=quant, private=private, token=token
+            )
+        return url
+
     # ------------------------------------------------------------------ #
     # Visualisation                                                      #
     # ------------------------------------------------------------------ #

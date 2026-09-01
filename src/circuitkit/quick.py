@@ -825,16 +825,9 @@ def _push_checkpoint_to_hub(
         raise ValueError(
             "export_checkpoint(push_to_hub=True) needs hub_repo='org/name'."
         )
-    try:
-        from huggingface_hub import HfApi
-    except ImportError as exc:  # pragma: no cover - optional dependency
-        raise ImportError(
-            "push_to_hub=True needs huggingface_hub: pip install huggingface_hub"
-        ) from exc
+    from .utils.hf_publish import push_folder_to_hub
 
-    api = HfApi()
-    api.create_repo(repo_id=hub_repo, private=hub_private, exist_ok=True)
-    api.upload_folder(folder_path=path, repo_id=hub_repo, repo_type="model")
+    push_folder_to_hub(path, hub_repo, private=hub_private, kind="model")
 
 
 # --------------------------------------------------------------------------- #

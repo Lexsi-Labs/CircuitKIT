@@ -813,7 +813,15 @@ class Pipeline:
         self._history.append("selective_finetune")
         return result
 
-    def export(self, path: str, intervention: Optional[str] = None) -> str:
+    def export(
+        self,
+        path: str,
+        intervention: Optional[str] = None,
+        *,
+        push_to_hub: bool = False,
+        hub_repo: Optional[str] = None,
+        hub_private: bool = False,
+    ) -> str:
         """Export the intervened model as a HuggingFace checkpoint.
 
         Delegates to :func:`circuitkit.quick.export_checkpoint`.
@@ -829,6 +837,9 @@ class Pipeline:
                 — a function that requires a TransformerLens model — and
                 crashed.) Falls back to ``"pruning"`` if no intervention
                 has been recorded.
+            push_to_hub: When ``True``, upload the written checkpoint.
+            hub_repo: Hub id ``org/name``. Required when ``push_to_hub``.
+            hub_private: Create the Hub repo as private.
 
         Returns:
             The checkpoint directory path.
@@ -847,7 +858,15 @@ class Pipeline:
         if intervention is None:
             intervention = self._last_intervention or "pruning"
         artifact = self._circuit if intervention == "pruning" else None
-        result = quick.export_checkpoint(model, artifact, path, intervention=intervention)
+        result = quick.export_checkpoint(
+            model,
+            artifact,
+            path,
+            intervention=intervention,
+            push_to_hub=push_to_hub,
+            hub_repo=hub_repo,
+            hub_private=hub_private,
+        )
         self._history.append("export")
         return result
 
