@@ -6,7 +6,7 @@ hide:
 
 <div class="ck-hero" markdown>
 
-<div class="ck-hero-logo-wrap"><img class="ck-hero-mark ck-lexsi-on-light" src="assets/circuitkit-mark-black.png" alt=""><img class="ck-hero-mark ck-lexsi-on-dark" src="assets/circuitkit-mark-white.png" alt=""></div>
+<div class="ck-hero-logo-wrap"><img class="ck-hero-mark ck-lexsi-on-light" src="assets/circuitkit-mark-black.svg" alt=""><img class="ck-hero-mark ck-lexsi-on-dark" src="assets/circuitkit-mark-white.svg" alt=""></div>
 
 <h1 class="ck-hero-title">Discover a circuit.<br><em>Then act on it.</em></h1>
 

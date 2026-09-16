@@ -35,7 +35,7 @@ copyright: >
 
 theme:
   name: material
-  logo: assets/circuitkit-mark-white.png
+  logo: assets/circuitkit-mark-white.svg
   favicon: assets/favicon.png
   font:
     text: Schibsted Grotesk
