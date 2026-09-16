@@ -35,8 +35,8 @@ copyright: >
 
 theme:
   name: material
-  logo: assets/circuitkit-mark-v3.svg
-  favicon: assets/favicon-v3.svg
+  logo: assets/circuitkit-mark-white.svg
+  favicon: assets/favicon.png
   font:
     text: Schibsted Grotesk
     code: IBM Plex Mono

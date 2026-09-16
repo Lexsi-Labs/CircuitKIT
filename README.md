@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="docs/assets/circuitkit-mark-v3.svg" width="140" alt="CircuitKit">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/circuitkit-logo-white.png">
+    <img src="docs/assets/circuitkit-logo-black.png" width="360" alt="CircuitKit">
+  </picture>
 </p>
 
 <h1 align="center">CircuitKit</h1>
