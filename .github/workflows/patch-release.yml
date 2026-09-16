@@ -319,6 +319,27 @@ jobs:
           : "${TWINE_PASSWORD:?PYPI_API_TOKEN is required to publish the release}"
           python -m twine upload --non-interactive --verbose dist/*
 
+      # The version-bump commit created above (if any) only exists on this
+      # detached checkout so far; fast-forward main with it so the tracked
+      # version files don't silently drift behind the release that was just
+      # tagged and published. This is push-only and never forced: if main
+      # has moved on (a race with a new merge) or branch protection blocks
+      # a direct push, git rejects the push and we just warn instead of
+      # failing an otherwise-successful release.
+      - name: Sync release version bump back to main
+        if: needs.plan.outputs.tag-exists == 'false'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git push origin HEAD:main; then
+            echo "Synced the $RELEASE_TAG version bump back to main."
+          else
+            echo "::warning::Could not fast-forward main with the $RELEASE_TAG version bump (branch protection or a race with a new merge). main's version files may still show the previous version; sync them manually, e.g. via 'python scripts/release.py set-version $RELEASE_TAG'."
+          fi
+
       - name: Send release notes to Slack
         uses: slackapi/slack-github-action@v1.24.0
         continue-on-error: true
