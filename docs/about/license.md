@@ -1,13 +1,14 @@
 # License
 
-CircuitKit is released under the **Lexsi Labs Source Available License (LSAL) v1.1**, a source-available (not open-source) license. It grants free use for research, evaluation, education, and audit; commercial use requires a separate license from Lexsi Labs; and responsible-use conditions apply to safety-relevant behaviors. The full terms are in [LICENSE.md](https://github.com/Lexsi-Labs/circuitkit/blob/main/LICENSE.md).
+CircuitKit is released under the **Lexsi Labs Source Available License (LSAL) v1.2**, a source-available (not open-source) license. It grants academic research and teaching MIT-like permissions; use by any organization requires written acknowledgement or permission from Lexsi Labs (Section 1A); commercial use requires a separate license from Lexsi Labs; and responsible-use conditions apply to safety-relevant behaviors. The full terms are in [LICENSE.md](https://github.com/Lexsi-Labs/circuitkit/blob/main/LICENSE.md).
 
 In short:
 
-- **Free** for noncommercial research, evaluation, education, and auditing.
+- **Free** for academic research and teaching, on MIT-like terms (notice intact).
+- **Organizations** must acknowledge their use or obtain permission (Section 1A) before internal evaluation, red-teaming, benchmarking, or safety auditing.
 - **No commercial use** (SaaS, hosted, embedded, or paid support/consulting) without a separate commercial license.
 - **Responsible use:** do not use CircuitKit to locate, remove, or weaken the safety behaviors of a model for deployment, and re-evaluate any intervention-exported checkpoint's safety before deploying it.
-- **© 2026 Lithasa Technologies Pvt. Ltd.** Contact **support@lexsi.ai** for commercial licensing.
+- **© 2026 Lithasa Technologies Pvt. Ltd.** Contact **support@lexsi.ai** for acknowledgements and permission requests (Section 1A) and for commercial licensing.
 
 ---
 

@@ -1,7 +1,7 @@
 # Third-Party Licenses
 
 CircuitKit is distributed under the Lexsi Labs Source Available License (LSAL)
-v1.1 (see [LICENSE.md](LICENSE.md)). It
+v1.2 (see [LICENSE.md](LICENSE.md)). It
 incorporates or adapts source code from the third-party projects listed below.
 Each remains under its own license, reproduced or linked here as required.
 
