@@ -30,10 +30,19 @@ from __future__ import annotations
 import json
 from typing import Any, Dict
 
+# Level-of-detail thresholds: above either limit, the page renders the graph
+# on <canvas> instead of SVG+ELK (SVG/ELK layout cost and per-element DOM
+# nodes both scale badly past a few hundred nodes / few thousand edges).
+# The render mode is decided here, server-side, from the actual payload size
+# — not re-derived client-side — so it is directly testable without a browser.
+NODE_SVG_LIMIT = 400
+EDGE_SVG_LIMIT = 4000
+
 
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
+
 
 def render_d3_circuit_html(
     graph_data: Dict[str, Any],
@@ -51,8 +60,13 @@ def render_d3_circuit_html(
         default_threshold:  Initial edge threshold slider value [0, 1].
 
     Returns:
-        Complete HTML string.
+        Complete HTML string. Carries a ``data-ck-render-mode="canvas"|"svg"``
+        attribute on ``<body>`` recording which LOD path this payload got.
     """
+    n_nodes = len(graph_data.get("nodes", []))
+    n_edges = len(graph_data.get("edges", []))
+    render_mode = "canvas" if (n_nodes > NODE_SVG_LIMIT or n_edges > EDGE_SVG_LIMIT) else "svg"
+
     # Embed data as JSON constants; json.dumps handles escaping.
     graph_json = json.dumps(graph_data, ensure_ascii=False)
     theme_json = json.dumps(theme, ensure_ascii=False)
@@ -62,6 +76,9 @@ def render_d3_circuit_html(
         graph_json=graph_json,
         theme_json=theme_json,
         default_threshold=default_threshold,
+        render_mode=render_mode,
+        node_svg_limit=NODE_SVG_LIMIT,
+        edge_svg_limit=EDGE_SVG_LIMIT,
     )
 
 
@@ -360,9 +377,18 @@ body {{
 .toolarge-box p {{
   margin-bottom: 8px;
 }}
+
+#graph-canvas {{
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  display: none;
+}}
+
+#graph-canvas:active {{ cursor: grabbing; }}
 </style>
 </head>
-<body>
+<body data-ck-render-mode="{render_mode}">
 
 <!-- Top bar: title + controls -->
 <div id="topbar">
@@ -400,6 +426,10 @@ body {{
       <g id="layer-labels-g"></g>
     </g>
   </svg>
+
+  <!-- Canvas LOD path: used instead of the SVG above once the graph exceeds
+       NODE_SVG_LIMIT / EDGE_SVG_LIMIT (see data-ck-render-mode on <body>). -->
+  <canvas id="graph-canvas"></canvas>
 
   <!-- Tooltip (absolutely positioned) -->
   <div id="tooltip"></div>
@@ -508,10 +538,17 @@ const labelsG = d3.select("#labels-g");
 const layerLabelsG = d3.select("#layer-labels-g");
 
 // ============================================================
-// Size guard — bail out before attempting an interactive layout
+// Size guard — bail out before attempting ANY layout, even canvas
 // ============================================================
-const MAX_RENDERABLE_NODES = 600;
-const MAX_RENDERABLE_EDGES = 1500;
+// RENDER_MODE is decided server-side (see graph_viz.d3_template.
+// render_d3_circuit_html) from the actual node/edge counts, against
+// NODE_SVG_LIMIT / EDGE_SVG_LIMIT ({node_svg_limit} / {edge_svg_limit}).
+// It picks SVG+ELK (rich interactions, small graphs) vs. canvas (cheap
+// per-element cost, large graphs). MAX_RENDERABLE_* below is a much higher
+// absolute ceiling past which even canvas isn't worth attempting.
+const RENDER_MODE = "{render_mode}";
+const MAX_RENDERABLE_NODES = 5000;
+const MAX_RENDERABLE_EDGES = 50000;
 
 function markReady() {{
   // Signal that the page has reached a stable render state, so headless
@@ -532,11 +569,235 @@ function showTooLarge() {{
 
 if (GRAPH.nodes.length > MAX_RENDERABLE_NODES || GRAPH.edges.length > MAX_RENDERABLE_EDGES) {{
   showTooLarge();
+}} else if (RENDER_MODE === "canvas") {{
+  document.getElementById("graph-svg").style.display = "none";
+  document.getElementById("graph-canvas").style.display = "block";
+  try {{
+    initCanvasGraph();
+    markReady();
+  }} catch (err) {{
+    console.error("Circuit graph (canvas) failed to initialise:", err);
+    markReady();
+  }}
 }} else {{
   initGraph().catch(err => {{
     console.error("Circuit graph failed to initialise:", err);
     markReady();  // don't leave capture tools waiting forever
   }});
+}}
+
+// ============================================================
+// Canvas LOD renderer — large graphs (> NODE_SVG_LIMIT nodes or
+// > EDGE_SVG_LIMIT edges). Trades ELK layout, per-element hover, and
+// crossing-minimized routing for O(1)-per-frame drawing: every node/edge is
+// one canvas primitive instead of one DOM element, so this stays responsive
+// well past what SVG+ELK can hold. Uses the Python-computed layout (already
+// shipped in GRAPH.nodes[].x/y) directly rather than re-laying out in ELK.
+// ============================================================
+function initCanvasGraph() {{
+  const canvas = document.getElementById("graph-canvas");
+  const ctx = canvas.getContext("2d");
+  const nodeById = new Map(GRAPH.nodes.map(n => [n.id, n]));
+
+  const FALLBACK_SCALE = 70;
+  GRAPH.nodes.forEach(n => {{
+    n.x = n.x * FALLBACK_SCALE;
+    n.y = n.y * FALLBACK_SCALE;
+  }});
+
+  const scoreExtent = d3.extent(GRAPH.nodes, d => d.log_norm_score);
+  const radiusScale = d3.scaleSqrt()
+    .domain([scoreExtent[0] ?? 0, scoreExtent[1] ?? 1])
+    .range([2, 7])
+    .clamp(true);
+  const edgeWidthScale = d3.scaleLinear().domain([0, 1]).range([0.4, 2]).clamp(true);
+  const edgeColorScale = d3.scaleSequential()
+    .domain([0, 1])
+    .interpolator(d3.interpolateRgb(CK_THEME.palette.edge_low, CK_THEME.palette.edge_high));
+
+  function nodeRadius(node) {{
+    return node.in_circuit ? radiusScale(node.log_norm_score) : 1.5;
+  }}
+
+  const xs = GRAPH.nodes.map(n => n.x);
+  const ys = GRAPH.nodes.map(n => n.y);
+  const xMin = Math.min(...xs), xMax = Math.max(...xs);
+  const yMin = Math.min(...ys), yMax = Math.max(...ys);
+
+  function resizeCanvas() {{
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    canvas.style.width = rect.width + "px";
+    canvas.style.height = rect.height + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }}
+
+  function initialTransform() {{
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const padding = 60;
+    const dataW = (xMax - xMin) || 1;
+    const dataH = (yMax - yMin) || 1;
+    const scale = Math.min(
+      (rect.width - padding * 2) / dataW,
+      (rect.height - padding * 2) / dataH,
+      3,
+    );
+    const tx = padding - xMin * scale + (rect.width - padding * 2 - dataW * scale) / 2;
+    const ty = padding - yMin * scale + (rect.height - padding * 2 - dataH * scale) / 2;
+    return d3.zoomIdentity.translate(tx, ty).scale(scale);
+  }}
+
+  let transform = null;
+  let showBackground = true;
+  let threshold = {default_threshold};
+  let hoveredNode = null;
+
+  function draw() {{
+    const rect = canvas.parentElement.getBoundingClientRect();
+    ctx.clearRect(0, 0, rect.width, rect.height);
+    ctx.save();
+    ctx.translate(transform.x, transform.y);
+    ctx.scale(transform.k, transform.k);
+
+    // Edges (only in-circuit-to-in-circuit, per the shared derivation)
+    const visibleEdges = GRAPH.edges.filter(e => e.normalized_weight >= threshold);
+    for (const e of visibleEdges) {{
+      const src = nodeById.get(e.source), dst = nodeById.get(e.target);
+      if (!src || !dst) continue;
+      ctx.beginPath();
+      ctx.moveTo(src.x, src.y);
+      ctx.lineTo(dst.x, dst.y);
+      ctx.strokeStyle = edgeColorScale(e.normalized_weight);
+      ctx.globalAlpha = 0.25 + e.normalized_weight * 0.65;
+      ctx.lineWidth = edgeWidthScale(e.normalized_weight) / transform.k;
+      ctx.stroke();
+    }}
+    ctx.globalAlpha = 1;
+
+    // Background (pruned) nodes
+    if (showBackground) {{
+      for (const n of GRAPH.nodes) {{
+        if (n.in_circuit) continue;
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, nodeRadius(n) / transform.k, 0, 2 * Math.PI);
+        ctx.fillStyle = CK_THEME.palette.background_node;
+        ctx.globalAlpha = 0.45;
+        ctx.fill();
+      }}
+      ctx.globalAlpha = 1;
+    }}
+
+    // Circuit nodes
+    for (const n of GRAPH.nodes) {{
+      if (!n.in_circuit) continue;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, nodeRadius(n) / transform.k, 0, 2 * Math.PI);
+      ctx.fillStyle = nodeColor(n.type);
+      ctx.globalAlpha = 0.55 + n.log_norm_score * 0.45;
+      ctx.fill();
+      if (n === hoveredNode) {{
+        ctx.lineWidth = 1.5 / transform.k;
+        ctx.strokeStyle = CK_THEME.palette.circuit_stroke;
+        ctx.globalAlpha = 1;
+        ctx.stroke();
+      }}
+    }}
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    updateStats(visibleEdges.length);
+  }}
+
+  resizeCanvas();
+  transform = initialTransform();
+
+  const zoom = d3.zoom()
+    .scaleExtent([0.02, 25])
+    .on("zoom", (event) => {{
+      transform = event.transform;
+      draw();
+    }});
+  d3.select(canvas).call(zoom);
+  d3.select(canvas).call(zoom.transform, transform);
+
+  document.getElementById("reset-zoom").addEventListener("click", () => {{
+    transform = initialTransform();
+    d3.select(canvas).call(zoom.transform, transform);
+  }});
+
+  window.addEventListener("resize", () => {{
+    resizeCanvas();
+    draw();
+  }});
+
+  const slider = document.getElementById("threshold-slider");
+  const thresholdDisplay = document.getElementById("threshold-value");
+  slider.addEventListener("input", () => {{
+    threshold = parseFloat(slider.value);
+    thresholdDisplay.textContent = threshold.toFixed(2);
+    draw();
+  }});
+
+  document.getElementById("toggle-background").addEventListener("change", function () {{
+    showBackground = this.checked;
+    draw();
+  }});
+
+  // Coarse nearest-node hover: map screen coords into data space via the
+  // inverse zoom transform, then pick the closest node within a pixel
+  // tolerance (scaled by zoom level, since node radii shrink on zoom out).
+  // (Local moveTooltip: the SVG path's copy lives inside initGraph()'s own
+  // scope and isn't reachable from here.)
+  const tooltip = document.getElementById("tooltip");
+  function moveTooltip(event) {{
+    const x = event.clientX + 14;
+    const y = event.clientY - 10;
+    const ttW = tooltip.offsetWidth;
+    const ttH = tooltip.offsetHeight;
+    const winW = window.innerWidth;
+    const winH = window.innerHeight;
+    tooltip.style.left = (x + ttW > winW ? x - ttW - 28 : x) + "px";
+    tooltip.style.top = (y + ttH > winH ? y - ttH : y) + "px";
+  }}
+  canvas.addEventListener("mousemove", (event) => {{
+    const rect = canvas.getBoundingClientRect();
+    const [dataX, dataY] = transform.invert([event.clientX - rect.left, event.clientY - rect.top]);
+    let nearest = null, nearestDist = Infinity;
+    for (const n of GRAPH.nodes) {{
+      const d = Math.hypot(n.x - dataX, n.y - dataY);
+      if (d < nearestDist) {{ nearestDist = d; nearest = n; }}
+    }}
+    const pickRadius = 10 / transform.k;
+    if (nearest && nearestDist <= pickRadius) {{
+      if (hoveredNode !== nearest) {{ hoveredNode = nearest; draw(); }}
+      const headInfo = nearest.head !== null
+        ? `<div class="tt-row"><span class="tt-key">Head</span><span>${{nearest.head}}</span></div>`
+        : "";
+      const statusClass = nearest.in_circuit ? "tt-status-in" : "tt-status-out";
+      const statusText = nearest.in_circuit ? "✓ In circuit" : "✗ Pruned";
+      tooltip.innerHTML = `
+        <div class="tt-name">${{nearest.id}}</div>
+        <div class="tt-row"><span class="tt-key">Layer</span><span>${{nearest.layer}}</span></div>
+        ${{headInfo}}
+        <div class="tt-row"><span class="tt-key">Score</span><span>${{fmt(nearest.raw_score, 6)}}</span></div>
+        <div class="tt-row"><span class="tt-key">Rank</span><span>#${{nearest.rank}} / ${{GRAPH.nodes.length}}</span></div>
+        <div class="tt-row"><span class="tt-key">Status</span><span class="${{statusClass}}">${{statusText}}</span></div>`;
+      tooltip.classList.add("visible");
+      moveTooltip(event);
+    }} else {{
+      if (hoveredNode !== null) {{ hoveredNode = null; draw(); }}
+      tooltip.classList.remove("visible");
+    }}
+  }});
+  canvas.addEventListener("mouseleave", () => {{
+    hoveredNode = null;
+    tooltip.classList.remove("visible");
+    draw();
+  }});
+
+  draw();
 }}
 
 async function initGraph() {{
