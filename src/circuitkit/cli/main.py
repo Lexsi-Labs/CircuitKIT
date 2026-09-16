@@ -1549,16 +1549,31 @@ def data_prepare(source, shape, strategy, max_records, output, hf_subset, hf_spl
         f"strategy={chosen_strategy or 'native'})"
     )
 
+
 @data.command("template")
 @click.argument("source", type=click.Path(exists=True))
-@click.option("--clean-prompt", required=True, help="Clean prompt template, e.g. 'The capital of {country} is'")
-@click.option("--corrupt-prompt", default=None, help="Corrupt prompt template, e.g. 'The capital of {other_country} is'. Omit for ibcircuit/cdt.")
+@click.option(
+    "--clean-prompt",
+    required=True,
+    help="Clean prompt template, e.g. 'The capital of {country} is'",
+)
+@click.option(
+    "--corrupt-prompt",
+    default=None,
+    help="Corrupt prompt template, e.g. 'The capital of {other_country} is'. Omit for ibcircuit/cdt.",
+)
 @click.option("--clean-answer", required=True, help="Clean answer template, e.g. '{capital}'")
-@click.option("--corrupt-answer", default=None, help="Corrupt answer template, e.g. '{other_capital}'. Omit for ibcircuit/cdt.")
+@click.option(
+    "--corrupt-answer",
+    default=None,
+    help="Corrupt answer template, e.g. '{other_capital}'. Omit for ibcircuit/cdt.",
+)
 @click.option("--pairing-mode", type=click.Choice(["explicit", "auto_peer"]), default="explicit")
 @click.option("--max-records", type=int, default=256)
 @click.option("--output", required=True, help="Output NormalizedDataset JSON path.")
-@click.option("--validate", "run_validation", is_flag=True, default=False, help="Run worthiness checks.")
+@click.option(
+    "--validate", "run_validation", is_flag=True, default=False, help="Run worthiness checks."
+)
 @click.option(
     "--align-strategy",
     type=click.Choice(["filter", "pad_question", "none"]),
@@ -1643,6 +1658,7 @@ def data_template(
             else:
                 try:
                     from transformers import AutoTokenizer
+
                     tokenizer = AutoTokenizer.from_pretrained(model)
                     click.echo(f"Loaded tokenizer from {model}")
                 except Exception as e:
@@ -1676,7 +1692,9 @@ def data_template(
             pad_region_end=pad_region_end,
         )
         if pair_padding_side != "left":
-            ds.meta.setdefault("_alignment", {})["recommended_pair_padding_side"] = pair_padding_side
+            ds.meta.setdefault("_alignment", {})[
+                "recommended_pair_padding_side"
+            ] = pair_padding_side
 
         _alignment = ds.meta.get("_alignment", {})
         if _alignment:
@@ -1692,6 +1710,7 @@ def data_template(
 
         if run_validation:
             from ..data.worthiness import evaluate_worthiness
+
             report = evaluate_worthiness(ds)
             click.echo(report.render_terminal())
 
@@ -1717,6 +1736,7 @@ def data_template(
 
         if run_validation:
             from ..data.worthiness import evaluate_worthiness
+
             report = evaluate_worthiness(ds)
             click.echo(report.render_terminal())
 
@@ -1728,23 +1748,37 @@ def data_template(
 
     if run_validation:
         from ..data.worthiness import evaluate_worthiness
+
         report = evaluate_worthiness(ds)
         click.echo(report.render_terminal())
 
     ds.save_json(output)
     click.echo(f"Saved {len(ds)} template-paired records to {output} (paired={ds.n_paired})")
 
+
 @data.command("clean-only")
 @click.argument("source", type=click.Path(exists=True))
-@click.option("--prompt-column", default="prompt", show_default=True,
-              help="CSV column name for the clean prompt.")
-@click.option("--answer-column", default="answer", show_default=True,
-              help="CSV column name for the answer. Pass 'none' to skip (valid for CD-T).")
-@click.option("--max-records", type=int, default=None,
-              help="Truncate to this many records.")
+@click.option(
+    "--prompt-column",
+    default="prompt",
+    show_default=True,
+    help="CSV column name for the clean prompt.",
+)
+@click.option(
+    "--answer-column",
+    default="answer",
+    show_default=True,
+    help="CSV column name for the answer. Pass 'none' to skip (valid for CD-T).",
+)
+@click.option("--max-records", type=int, default=None, help="Truncate to this many records.")
 @click.option("--output", required=True, help="Output NormalizedDataset JSON path.")
-@click.option("--validate", "run_validation", is_flag=True, default=False,
-              help="Run worthiness checks after loading.")
+@click.option(
+    "--validate",
+    "run_validation",
+    is_flag=True,
+    default=False,
+    help="Run worthiness checks after loading.",
+)
 def data_clean_only(source, prompt_column, answer_column, max_records, output, run_validation):
     """Load SOURCE CSV as a clean-only dataset (no corrupt partner).
 
@@ -1766,6 +1800,7 @@ def data_clean_only(source, prompt_column, answer_column, max_records, output, r
 
     if run_validation:
         from ..data.worthiness import evaluate_worthiness
+
         report = evaluate_worthiness(ds)
         click.echo(report.render_terminal())
 
@@ -1774,6 +1809,7 @@ def data_clean_only(source, prompt_column, answer_column, max_records, output, r
         f"Saved {len(ds)} clean-only records to {output} "
         f"(compatible algorithms: ibcircuit, cdt)"
     )
+
 
 @data.command("shapes")
 def data_shapes():
@@ -1837,6 +1873,7 @@ def _resolve_source(source, hf_subset, hf_split, max_records):
 # inspect
 # ---------------------------------------------------------------------------
 
+
 @cli.command()
 @click.argument("artifact_path", type=click.Path(exists=True))
 def inspect(artifact_path):
@@ -1874,22 +1911,29 @@ def inspect(artifact_path):
 # prune
 # ---------------------------------------------------------------------------
 
+
 @cli.command()
 @click.option("--model", "-m", required=True, help="Model name or path (e.g., gpt2)")
 @click.option(
-    "--artifact", "-a", required=True, type=click.Path(exists=True),
-    help="Path to circuit artifact (.pt)"
+    "--artifact",
+    "-a",
+    required=True,
+    type=click.Path(exists=True),
+    help="Path to circuit artifact (.pt)",
 )
-@click.option("--sparsity", "-s", type=float, default=0.3, show_default=True,
-              help="Target sparsity (0.0–1.0)")
 @click.option(
-    "--scope", type=click.Choice(["heads", "mlp", "both"]), default="both", show_default=True,
-    help="Which component type to prune"
+    "--sparsity", "-s", type=float, default=0.3, show_default=True, help="Target sparsity (0.0–1.0)"
+)
+@click.option(
+    "--scope",
+    type=click.Choice(["heads", "mlp", "both"]),
+    default="both",
+    show_default=True,
+    help="Which component type to prune",
 )
 @click.option("--output", "-o", required=True, help="Output checkpoint directory path")
 @click.option(
-    "--precision", default="bfloat16", show_default=True,
-    help="Torch dtype for model loading"
+    "--precision", default="bfloat16", show_default=True, help="Torch dtype for model loading"
 )
 def prune(model, artifact, sparsity, scope, output, precision):
     """Prune a model using a discovered circuit and export a HF checkpoint."""
@@ -1903,6 +1947,7 @@ def prune(model, artifact, sparsity, scope, output, precision):
         raise click.Abort()
 
     from ..circuit import Circuit
+
     try:
         circuit = Circuit.from_artifact(artifact)
     except Exception as exc:
@@ -1926,24 +1971,34 @@ def prune(model, artifact, sparsity, scope, output, precision):
 # quantize
 # ---------------------------------------------------------------------------
 
+
 @cli.command()
 @click.option("--model", "-m", required=True, help="Model name or path")
 @click.option(
-    "--artifact", "-a", required=True, type=click.Path(exists=True),
-    help="Path to circuit artifact (.pt)"
+    "--artifact",
+    "-a",
+    required=True,
+    type=click.Path(exists=True),
+    help="Path to circuit artifact (.pt)",
 )
-@click.option("--bits", type=int, default=4, show_default=True,
-              help="Quantization bit-width")
-@click.option("--high-fraction", type=float, default=0.3, show_default=True,
-              help="Fraction of top layers kept at high precision")
+@click.option("--bits", type=int, default=4, show_default=True, help="Quantization bit-width")
 @click.option(
-    "--backend", type=click.Choice(["quanto", "llmcompressor"]), default="quanto",
-    show_default=True, help="Quantization backend"
+    "--high-fraction",
+    type=float,
+    default=0.3,
+    show_default=True,
+    help="Fraction of top layers kept at high precision",
+)
+@click.option(
+    "--backend",
+    type=click.Choice(["quanto", "llmcompressor"]),
+    default="quanto",
+    show_default=True,
+    help="Quantization backend",
 )
 @click.option("--output", "-o", required=True, help="Output checkpoint directory path")
 @click.option(
-    "--precision", default="bfloat16", show_default=True,
-    help="Torch dtype for model loading"
+    "--precision", default="bfloat16", show_default=True, help="Torch dtype for model loading"
 )
 def quantize(model, artifact, bits, high_fraction, backend, output, precision):
     """Apply circuit-guided mixed-precision quantization and export a HF checkpoint."""
@@ -1957,6 +2012,7 @@ def quantize(model, artifact, bits, high_fraction, backend, output, precision):
         raise click.Abort()
 
     from ..circuit import Circuit
+
     try:
         circuit = Circuit.from_artifact(artifact)
     except Exception as exc:
@@ -1969,7 +2025,8 @@ def quantize(model, artifact, bits, high_fraction, backend, output, precision):
     )
     try:
         quantized = quick.quantize(
-            tl_model, circuit,
+            tl_model,
+            circuit,
             bits=bits,
             high_fraction=high_fraction,
             backend=backend,
@@ -1985,26 +2042,41 @@ def quantize(model, artifact, bits, high_fraction, backend, output, precision):
 # export
 # ---------------------------------------------------------------------------
 
+
 @cli.command()
 @click.option("--model", "-m", required=True, help="Model name or path")
 @click.option(
-    "--artifact", "-a", required=True, type=click.Path(exists=True),
-    help="Path to circuit artifact (.pt)"
+    "--artifact",
+    "-a",
+    required=True,
+    type=click.Path(exists=True),
+    help="Path to circuit artifact (.pt)",
 )
 @click.option("--output", "-o", required=True, help="Output checkpoint directory path")
 @click.option(
-    "--intervention", type=click.Choice(["pruning", "quantization"]), default="pruning",
-    show_default=True, help="Intervention type applied before export"
-)
-@click.option("--sparsity", "-s", type=float, default=0.3, show_default=True,
-              help="Sparsity for pruning intervention")
-@click.option(
-    "--scope", type=click.Choice(["heads", "mlp", "both"]), default="both", show_default=True,
-    help="Pruning scope (only used when intervention=pruning)"
+    "--intervention",
+    type=click.Choice(["pruning", "quantization"]),
+    default="pruning",
+    show_default=True,
+    help="Intervention type applied before export",
 )
 @click.option(
-    "--precision", default="bfloat16", show_default=True,
-    help="Torch dtype for model loading"
+    "--sparsity",
+    "-s",
+    type=float,
+    default=0.3,
+    show_default=True,
+    help="Sparsity for pruning intervention",
+)
+@click.option(
+    "--scope",
+    type=click.Choice(["heads", "mlp", "both"]),
+    default="both",
+    show_default=True,
+    help="Pruning scope (only used when intervention=pruning)",
+)
+@click.option(
+    "--precision", default="bfloat16", show_default=True, help="Torch dtype for model loading"
 )
 def export(model, artifact, output, intervention, sparsity, scope, precision):
     """Apply an intervention to a model and export a HuggingFace checkpoint.
@@ -2048,6 +2120,7 @@ def export(model, artifact, output, intervention, sparsity, scope, precision):
 # ---------------------------------------------------------------------------
 # run (YAML pipeline)
 # ---------------------------------------------------------------------------
+
 
 @cli.command()
 @click.argument("config_path", type=click.Path(exists=True))
@@ -2106,6 +2179,14 @@ def run(config_path):
     if disc:
         console.print("[cyan]Step: discovery[/cyan]")
         try:
+            # ig_steps/mlp_hook/chat_template_mode reach Pipeline.discover()'s
+            # **kw only when the YAML sets them, so unset keys behave exactly
+            # as before (no seed override, no extra discovery-config keys).
+            extra_disc_kw = {
+                key: disc[key]
+                for key in ("ig_steps", "mlp_hook", "chat_template_mode")
+                if key in disc
+            }
             pipe.discover(
                 algorithm=disc.get("algorithm", "eap-ig"),
                 level=disc.get("level", "node"),
@@ -2113,6 +2194,8 @@ def run(config_path):
                 n_examples=disc.get("n_examples", 128),
                 batch_size=disc.get("batch_size", 4),
                 scope=disc.get("scope", "both"),
+                seed=disc.get("seed"),
+                **extra_disc_kw,
             )
             console.print(f"  Circuit: {pipe._circuit!r}")
         except Exception as exc:
@@ -2127,6 +2210,8 @@ def run(config_path):
             pipe.evaluate(
                 pillars=eval_cfg.get("pillars"),
                 n_examples=eval_cfg.get("n_examples", 256),
+                n_stability_runs=eval_cfg.get("n_stability_runs", 5),
+                target_task=eval_cfg.get("target_task"),
             )
         except Exception as exc:
             console.print(f"[yellow]Warning: evaluation failed:[/yellow] {exc}")
@@ -2188,9 +2273,18 @@ def run(config_path):
     if viz_cfg and viz_cfg.get("enabled", True) and pipe._circuit is not None:
         console.print("[cyan]Step: visualize[/cyan]")
         try:
+            # max_nodes/max_edges/edge_threshold only apply to a `.json` output
+            # (a bounded graph payload); only forward them when the YAML sets
+            # them, so other visualize modes (comparison/dashboard) are unaffected.
+            extra_viz_kw = {
+                key: viz_cfg[key]
+                for key in ("max_nodes", "max_edges", "edge_threshold")
+                if key in viz_cfg
+            }
             pipe.visualize(
                 mode=viz_cfg.get("mode", "graph"),
                 output=viz_cfg.get("output"),
+                **extra_viz_kw,
             )
         except Exception as exc:
             console.print(f"[yellow]Warning: visualize failed:[/yellow] {exc}")

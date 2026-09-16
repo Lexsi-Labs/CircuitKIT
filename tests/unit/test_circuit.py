@@ -93,6 +93,7 @@ def _write_pt_sidecar(artifact_path: Path, scores=None) -> Path:
 # Construction
 # ---------------------------------------------------------------------------
 
+
 class TestCircuitConstruction:
     def test_init_with_node_list(self):
         c = Circuit(_NODES)
@@ -152,6 +153,7 @@ class TestCircuitConstruction:
 # from_artifact — JSON side-car
 # ---------------------------------------------------------------------------
 
+
 class TestFromArtifactJSON:
     def test_missing_artifact_raises(self):
         with pytest.raises(FileNotFoundError, match="not found"):
@@ -202,6 +204,7 @@ class TestFromArtifactJSON:
 # from_artifact — .pt side-car
 # ---------------------------------------------------------------------------
 
+
 class TestFromArtifactPTSidecar:
     def test_pt_sidecar_loads_scores(self, tmp_path):
         pt = tmp_path / "circuit.pt"
@@ -214,8 +217,8 @@ class TestFromArtifactPTSidecar:
         """JSON side-car is checked before .pt side-car."""
         pt = tmp_path / "circuit.pt"
         _write_artifact(pt)
-        _write_json_sidecar(pt, scores={"A0.1": 0.11})   # JSON
-        _write_pt_sidecar(pt, scores={"A0.1": 0.99})     # PT
+        _write_json_sidecar(pt, scores={"A0.1": 0.11})  # JSON
+        _write_pt_sidecar(pt, scores={"A0.1": 0.99})  # PT
         c = Circuit.from_artifact(pt)
         # JSON is tried first in candidates list
         assert c.scores["A0.1"] == pytest.approx(0.11)
@@ -224,6 +227,7 @@ class TestFromArtifactPTSidecar:
 # ---------------------------------------------------------------------------
 # Neuron-level artifact detection
 # ---------------------------------------------------------------------------
+
 
 class TestNeuronLevelDetection:
     def test_dict_artifact_with_meta_is_neuron_level(self, tmp_path):
@@ -243,6 +247,7 @@ class TestNeuronLevelDetection:
 # ---------------------------------------------------------------------------
 # save / round-trip
 # ---------------------------------------------------------------------------
+
 
 class TestSaveRoundTrip:
     def test_save_creates_file(self, tmp_path):
@@ -290,13 +295,14 @@ class TestSaveRoundTrip:
 # top_nodes
 # ---------------------------------------------------------------------------
 
+
 class TestTopNodes:
     def test_top_nodes_correct_order(self):
         c = Circuit(_NODES, dict(_SCORES))
         top = c.top_nodes(2)
         keys = list(top.keys())
-        assert keys[0] == "A0.1"   # score 0.9 — highest
-        assert keys[1] == "A0.2"   # score 0.5
+        assert keys[0] == "A0.1"  # score 0.9 — highest
+        assert keys[1] == "A0.2"  # score 0.5
 
     def test_top_nodes_respects_k(self):
         c = Circuit(_NODES, dict(_SCORES))
@@ -312,6 +318,7 @@ class TestTopNodes:
 # ---------------------------------------------------------------------------
 # Dunders: __len__, __iter__, __contains__, __repr__
 # ---------------------------------------------------------------------------
+
 
 class TestDunders:
     # --- __len__ ---
@@ -379,6 +386,7 @@ class TestDunders:
 # plot() — graceful degradation without viz dependencies
 # ---------------------------------------------------------------------------
 
+
 class TestPlotGracefulDegradation:
     def test_plot_with_no_scores_returns_none(self, caplog):
         import logging
@@ -401,3 +409,19 @@ class TestPlotGracefulDegradation:
         # Either the call succeeded with HTML or degraded gracefully — either
         # outcome must not raise.
         assert result is None or isinstance(result, str)
+
+    def test_plot_json_path_dispatches_to_json_with_bounds(self, tmp_path):
+        """A .json output_path must call CircuitGraphVisualizer.to_json (not
+        to_html), forwarding max_nodes/max_edges/edge_threshold (PR-L2)."""
+        c = Circuit(_NODES, dict(_SCORES))
+        out_path = tmp_path / "circuit.json"
+        mock_viz = MagicMock()
+        mock_viz.to_json.return_value = {"nodes": [], "edges": []}
+        with patch("circuitkit.visualize.graph_viz.CircuitGraphVisualizer", return_value=mock_viz):
+            result = c.plot(str(out_path), max_nodes=300, max_edges=3000, edge_threshold=0.1)
+
+        mock_viz.to_json.assert_called_once_with(
+            str(out_path), max_nodes=300, max_edges=3000, edge_threshold=0.1
+        )
+        mock_viz.to_html.assert_not_called()
+        assert result == {"nodes": [], "edges": []}
