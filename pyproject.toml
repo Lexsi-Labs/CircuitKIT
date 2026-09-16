@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "circuitkit"
-version = "0.1.0"
+version = "0.1.2"
 # Pratinav Seth, Hem Gosalia, and Aditya Kasliwal are equal co-first authors.
 # Pratinav Seth is the corresponding author. Author order is kept consistent
 # with src/circuitkit/__init__.py and CITATION.cff.
@@ -19,7 +19,7 @@ maintainers = [
 ]
 description = "Unified Discover, Evaluate, Intervene toolkit for mechanistic interpretability: 13 circuit discovery algorithms, 6-pillar faithfulness evaluation, and pruning / quantization / knowledge editing / unlearning / activation steering / contrastive weight steering interventions behind one API."
 readme = "README.md"
-license = { text="LSAL-1.1" }
+license = { text="LSAL-1.2" }
 requires-python = ">=3.10"
 keywords = [
     "mechanistic-interpretability",

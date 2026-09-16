@@ -427,7 +427,7 @@ Contributors are recognized in:
 
 ## License
 
-By contributing to CircuitKit, you agree that your contributions will be licensed under the Lexsi Labs Source Available License (LSAL) v1.1 (see [LICENSE.md](LICENSE.md), Section 6).
+By contributing to CircuitKit, you agree that your contributions will be licensed under the Lexsi Labs Source Available License (LSAL) v1.2 (see [LICENSE.md](LICENSE.md), Section 6).
 
 ---
 

@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg" alt="Python 3.10+"></a>
   <a href="https://pytorch.org/"><img src="https://img.shields.io/badge/PyTorch-2.0%2B-ee4c2c.svg" alt="PyTorch 2.0+"></a>
-  <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-LSAL%20v1.1-blue.svg" alt="License: LSAL v1.1 (source-available)"></a>
+  <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-LSAL%20v1.2-blue.svg" alt="License: LSAL v1.2 (source-available)"></a>
   <a href="https://lexsi-labs.github.io/CircuitKIT/"><img src="https://img.shields.io/badge/docs-mkdocs%20material-EC5A2C.svg" alt="Docs"></a>
 </p>
 
@@ -103,5 +103,5 @@ pytest tests/ -q
 
 ## License
 
-Lexsi Labs Source Available License (LSAL) v1.1: free for research, evaluation, education, and audit; commercial use requires a separate license; responsible-use conditions apply. See [LICENSE.md](LICENSE.md).
+Lexsi Labs Source Available License (LSAL) v1.2: free for academic research and teaching on MIT-like terms; use by any organization requires written acknowledgement or permission (Section 1A); commercial use requires a separate license; responsible-use conditions apply. See [LICENSE.md](LICENSE.md).
 

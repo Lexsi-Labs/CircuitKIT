@@ -20,7 +20,7 @@ CircuitKit is a unified framework for mechanistic interpretability.<br>
 
 <p class="ck-chips">
 <span>v1.0.0</span>
-<span>LSAL v1.1</span>
+<span>LSAL v1.2</span>
 <span>Python 3.10+</span>
 <span>13 algorithms</span>
 <span>6 pillars</span>

@@ -190,4 +190,4 @@ do?"* — by discovering it, scoring its faithfulness six ways, compressing the 
 down to it, and handing you a checkpoint you can reload and benchmark. The loop is
 closed.
 
-*CircuitKit is source-available (LSAL v1.1) — [github.com/Lexsi-Labs/circuitkit](https://github.com/Lexsi-Labs/circuitkit).*
+*CircuitKit is source-available (LSAL v1.2) — [github.com/Lexsi-Labs/circuitkit](https://github.com/Lexsi-Labs/circuitkit).*

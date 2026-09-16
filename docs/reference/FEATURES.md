@@ -165,7 +165,7 @@ distribution the model is never run on. Override it with the `--chat-template-mo
 |------|--------|---------|
 | Semantic Versioning | ✅ Full | v1.0.0 (first stable release) |
 | Changelog | ✅ Full | See CHANGELOG.md |
-| License | ✅ Full | LSAL v1.1 (source-available) |
+| License | ✅ Full | LSAL v1.2 (source-available) |
 | Contributing Guide | ✅ Full | Development guidelines |
 | Citation Info | ✅ Full | CITATION.cff |
 | Python Support | ✅ Full | Python 3.10+ |
