@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -43,57 +44,72 @@ import plotly.graph_objects as go
 from ..artifacts.scores import CircuitScores
 from .theme import PALETTE, FONT_FAMILY, FONT_MONO, get_node_color, get_plotly_layout, get_d3_theme
 
-
 # ---------------------------------------------------------------------------
 # Internal data model
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class _NodeData:
     """All per-node values needed for rendering."""
+
     name: str
-    node_type: str          # "attn_head" | "mlp" | "unknown"
+    node_type: str  # "attn_head" | "mlp" | "unknown"
     layer: int
-    head: Optional[int]     # None for MLP nodes
+    head: Optional[int]  # None for MLP nodes
     raw_score: float
-    log_norm_score: float   # log1p(raw) normalized to [0, 1] across all nodes
-    in_circuit: bool        # True = kept (not pruned)
-    rank: int               # rank by raw score descending (1 = most important)
-    x: float                # layout x coordinate
-    y: float                # layout y coordinate
+    log_norm_score: float  # log1p(raw) normalized to [0, 1] across all nodes
+    in_circuit: bool  # True = kept (not pruned)
+    rank: int  # rank by raw score descending (1 = most important)
+    x: float  # layout x coordinate
+    y: float  # layout y coordinate
 
 
 @dataclass
 class _EdgeData:
     """All per-edge values needed for rendering."""
+
     src: str
     dst: str
     # weight = product of raw scores, log1p-normalized across edge set to [0,1]
     normalized_weight: float
-    raw_weight: float       # raw score product, for tooltip display
+    raw_weight: float  # raw score product, for tooltip display
 
 
 @dataclass
 class _GraphData:
     """Complete graph ready for rendering. Built once, consumed by both renderers."""
+
     nodes: List[_NodeData]
     edges: List[_EdgeData]
     n_layers: int
     circuit_node_ids: Set[str]
-    metadata: Dict[str, Any]   # task, model, algorithm, timestamp
+    metadata: Dict[str, Any]  # task, model, algorithm, timestamp
 
 
 # ---------------------------------------------------------------------------
 # Node name parser
 # ---------------------------------------------------------------------------
 
+
 def _parse_node_name(name: str) -> Tuple[str, int, Optional[int]]:
     """
     Parse a node name into (node_type, layer, head).
 
     Supported formats:
-        ``"A0.1"``  → ``("attn_head", 0, 1)``
-        ``"MLP 3"`` → ``("mlp", 3, None)``
+        ``"A0.1"``  → ``("attn_head", 0, 1)``   (node-level convention)
+        ``"MLP 3"`` → ``("mlp", 3, None)``      (node-level convention)
+        ``"a0.h1"`` → ``("attn_head", 0, 1)``   (neuron-level convention)
+        ``"m3"``    → ``("mlp", 3, None)``      (neuron-level convention)
+
+    Node-level and neuron-level discovery (see
+    :func:`circuitkit.api.discover_circuit`) independently produce
+    differently-cased/-shaped node names for the same component kind
+    (uppercase "A0.1"/"MLP 3" vs. lowercase "a0.h1"/"m3") — both must be
+    recognized here, or every neuron-level node silently falls through to
+    ``("unknown", 0, None)``, collapsing every node into one layer and
+    producing a graph with zero edges (nothing left in an "adjacent layer"
+    to connect to).
 
     Returns:
         Tuple of (node_type, layer, head_index_or_None).
@@ -112,12 +128,18 @@ def _parse_node_name(name: str) -> Tuple[str, int, Optional[int]]:
                 return "mlp", int(parts[1]), None
             except ValueError:
                 pass
+    elif re.match(r"^a\d+\.h\d+$", name):
+        layer_str, head_str = name[1:].split(".h")
+        return "attn_head", int(layer_str), int(head_str)
+    elif re.match(r"^m\d+$", name):
+        return "mlp", int(name[1:]), None
     return "unknown", 0, None
 
 
 # ---------------------------------------------------------------------------
 # Layout engine
 # ---------------------------------------------------------------------------
+
 
 def _compute_layout(
     nodes: List[_NodeData],
@@ -147,6 +169,7 @@ def _compute_layout(
     """
     # Group by layer
     from collections import defaultdict
+
     by_layer: Dict[int, List[_NodeData]] = defaultdict(list)
     for nd in nodes:
         by_layer[nd.layer].append(nd)
@@ -185,11 +208,12 @@ def _compute_layout(
 # Color helpers
 # ---------------------------------------------------------------------------
 
+
 def _lerp_hex(c1: str, c2: str, t: float) -> str:
     """Linearly interpolate between two ``#RRGGBB`` colors at t ∈ [0, 1]."""
     t = min(max(t, 0.0), 1.0)
-    r1, g1, b1 = (int(c1[i:i + 2], 16) for i in (1, 3, 5))
-    r2, g2, b2 = (int(c2[i:i + 2], 16) for i in (1, 3, 5))
+    r1, g1, b1 = (int(c1[i : i + 2], 16) for i in (1, 3, 5))
+    r2, g2, b2 = (int(c2[i : i + 2], 16) for i in (1, 3, 5))
     return "#{:02X}{:02X}{:02X}".format(
         round(r1 + (r2 - r1) * t),
         round(g1 + (g2 - g1) * t),
@@ -200,6 +224,7 @@ def _lerp_hex(c1: str, c2: str, t: float) -> str:
 # ---------------------------------------------------------------------------
 # Score normalization helpers
 # ---------------------------------------------------------------------------
+
 
 def _log_normalize(values: List[float]) -> List[float]:
     """
@@ -239,9 +264,14 @@ def _log_normalize(values: List[float]) -> List[float]:
 # Graph builder
 # ---------------------------------------------------------------------------
 
+
 def _build_graph_data(
     scores: CircuitScores,
     pruned_node_names: Optional[List[str]] = None,
+    *,
+    max_nodes: Optional[int] = None,
+    max_edges: Optional[int] = None,
+    edge_threshold: float = 0.0,
 ) -> _GraphData:
     """
     Build a ``_GraphData`` from a ``CircuitScores`` artifact.
@@ -255,11 +285,29 @@ def _build_graph_data(
         dst is in the immediately adjacent layer (layer(dst) == layer(src)+1),
         create an edge with weight = raw_score(src) * raw_score(dst).
         Weights are then log1p-normalized across all edges to [0, 1].
+        Nodes are bucketed by layer first, so only adjacent-layer buckets are
+        ever compared against each other, instead of scanning every node pair.
+
+    Bounding (all optional; defaults reproduce the unbounded behavior):
+        ``max_nodes``:      keep only the top-``max_nodes`` nodes by
+                             ``|raw_score|`` (ties broken by name for
+                             determinism); the rest are dropped entirely and
+                             counted in ``metadata["n_nodes_hidden"]``.
+        ``max_edges``:      after ``edge_threshold`` filtering, keep only the
+                             top-``max_edges`` edges by ``normalized_weight``;
+                             the rest are counted in
+                             ``metadata["n_edges_hidden"]``.
+        ``edge_threshold``: drop edges whose ``normalized_weight`` is below
+                             this value before the ``max_edges`` cap is
+                             applied.
 
     Args:
         scores:             CircuitScores with all node_scores.
         pruned_node_names:  List of node names that were pruned (removed).
                             Defaults to empty (all nodes considered in circuit).
+        max_nodes:          Optional cap on the number of nodes kept.
+        max_edges:          Optional cap on the number of edges kept.
+        edge_threshold:     Minimum normalized edge weight to keep [0, 1].
 
     Returns:
         A fully populated _GraphData instance.
@@ -267,7 +315,9 @@ def _build_graph_data(
     pruned_set: Set[str] = set(pruned_node_names or [])
     raw_scores: Dict[str, float] = dict(scores.node_scores)
 
-    # --- Rank by raw score descending ---
+    # --- Rank by raw score descending (rank is over ALL nodes, unaffected
+    #     by max_nodes elision, so a node's rank stays meaningful even when
+    #     it is dropped from the payload) ---
     ranked = sorted(raw_scores.keys(), key=lambda k: raw_scores[k], reverse=True)
     rank_map = {name: i + 1 for i, name in enumerate(ranked)}
 
@@ -276,34 +326,54 @@ def _build_graph_data(
     log_norms = _log_normalize([raw_scores[n] for n in all_names])
     log_norm_map = {n: v for n, v in zip(all_names, log_norms)}
 
-    # --- Build NodeData list ---
+    # --- Select the node set to actually render ---
+    n_nodes_hidden = 0
+    kept_names = all_names
+    if max_nodes is not None and len(all_names) > max_nodes:
+        by_importance = sorted(all_names, key=lambda n: (-abs(raw_scores[n]), n))
+        kept_names = by_importance[:max_nodes]
+        n_nodes_hidden = len(all_names) - len(kept_names)
+    kept_name_set = set(kept_names)
+
+    # --- Build NodeData list (kept nodes only) ---
     node_list: List[_NodeData] = []
-    for name in all_names:
+    for name in kept_names:
         ntype, layer, head = _parse_node_name(name)
-        node_list.append(_NodeData(
-            name=name,
-            node_type=ntype,
-            layer=layer,
-            head=head,
-            raw_score=raw_scores[name],
-            log_norm_score=log_norm_map[name],
-            in_circuit=(name not in pruned_set),
-            rank=rank_map[name],
-            x=0.0,  # filled by layout
-            y=0.0,
-        ))
+        node_list.append(
+            _NodeData(
+                name=name,
+                node_type=ntype,
+                layer=layer,
+                head=head,
+                raw_score=raw_scores[name],
+                log_norm_score=log_norm_map[name],
+                in_circuit=(name not in pruned_set),
+                rank=rank_map[name],
+                x=0.0,  # filled by layout
+                y=0.0,
+            )
+        )
 
     # --- Assign layout positions ---
     node_list = _compute_layout(node_list)
 
     # --- Build EdgeData list (circuit nodes only, adjacent layers) ---
-    circuit_nodes = {nd.name: nd for nd in node_list if nd.in_circuit}
+    # Bucket in-circuit nodes by layer so edge construction only ever visits
+    # adjacent-layer pairs, instead of an O(n^2) scan over every node pair.
+    circuit_by_layer: Dict[int, List[Tuple[str, _NodeData]]] = {}
+    for nd in node_list:
+        if nd.in_circuit:
+            circuit_by_layer.setdefault(nd.layer, []).append((nd.name, nd))
+
     raw_edge_weights: List[float] = []
     proto_edges: List[Tuple[str, str, float]] = []
 
-    for src_name, src_nd in circuit_nodes.items():
-        for dst_name, dst_nd in circuit_nodes.items():
-            if dst_nd.layer == src_nd.layer + 1:
+    for layer, src_bucket in circuit_by_layer.items():
+        dst_bucket = circuit_by_layer.get(layer + 1)
+        if not dst_bucket:
+            continue
+        for src_name, _src_nd in src_bucket:
+            for dst_name, _dst_nd in dst_bucket:
                 raw_w = raw_scores[src_name] * raw_scores[dst_name]
                 proto_edges.append((src_name, dst_name, raw_w))
                 raw_edge_weights.append(raw_w)
@@ -314,7 +384,7 @@ def _build_graph_data(
     else:
         log_edge_norms = []
 
-    edge_list: List[_EdgeData] = [
+    all_edges: List[_EdgeData] = [
         _EdgeData(
             src=src,
             dst=dst,
@@ -323,6 +393,16 @@ def _build_graph_data(
         )
         for i, (src, dst, raw_w) in enumerate(proto_edges)
     ]
+
+    # --- Apply edge_threshold, then cap to max_edges by weight ---
+    filtered_edges = [e for e in all_edges if e.normalized_weight >= edge_threshold]
+    n_edges_hidden = len(all_edges) - len(filtered_edges)
+    if max_edges is not None and len(filtered_edges) > max_edges:
+        filtered_edges = sorted(filtered_edges, key=lambda e: e.normalized_weight, reverse=True)[
+            :max_edges
+        ]
+        n_edges_hidden = len(all_edges) - len(filtered_edges)
+    edge_list = filtered_edges
 
     n_layers = max((nd.layer for nd in node_list), default=0) + 1
 
@@ -340,7 +420,9 @@ def _build_graph_data(
             "timestamp": scores.timestamp,
             "n_total_nodes": len(node_list),
             "n_circuit_nodes": len(circuit_ids),
-            "n_pruned_nodes": len(pruned_set),
+            "n_pruned_nodes": len(pruned_set & kept_name_set),
+            "n_nodes_hidden": n_nodes_hidden,
+            "n_edges_hidden": n_edges_hidden,
         },
     )
 
@@ -348,6 +430,7 @@ def _build_graph_data(
 # ---------------------------------------------------------------------------
 # Plotly renderer (for Jupyter notebooks)
 # ---------------------------------------------------------------------------
+
 
 def _make_plotly_figure(
     graph: _GraphData,
@@ -390,22 +473,24 @@ def _make_plotly_figure(
         # with alpha keeping every edge at least faintly visible.
         alpha = 0.35 + edge.normalized_weight * 0.65  # 0.35 … 1.0
         hex_color = _lerp_hex(PALETTE.edge_low, PALETTE.edge_high, edge.normalized_weight)
-        r, g, b = (int(hex_color[i:i + 2], 16) for i in (1, 3, 5))
+        r, g, b = (int(hex_color[i : i + 2], 16) for i in (1, 3, 5))
         color = f"rgba({r}, {g}, {b}, {alpha:.2f})"
 
-        traces.append(go.Scatter(
-            x=[src_nd.x, dst_nd.x],
-            y=[src_nd.y, dst_nd.y],
-            mode="lines",
-            line=dict(width=0.8 + edge.normalized_weight * 3.0, color=color),
-            hovertemplate=(
-                f"<b>{edge.src} → {edge.dst}</b><br>"
-                f"Edge strength: {edge.normalized_weight:.3f}<br>"
-                f"Raw weight: {edge.raw_weight:.6f}"
-                "<extra></extra>"
-            ),
-            showlegend=False,
-        ))
+        traces.append(
+            go.Scatter(
+                x=[src_nd.x, dst_nd.x],
+                y=[src_nd.y, dst_nd.y],
+                mode="lines",
+                line=dict(width=0.8 + edge.normalized_weight * 3.0, color=color),
+                hovertemplate=(
+                    f"<b>{edge.src} → {edge.dst}</b><br>"
+                    f"Edge strength: {edge.normalized_weight:.3f}<br>"
+                    f"Raw weight: {edge.raw_weight:.6f}"
+                    "<extra></extra>"
+                ),
+                showlegend=False,
+            )
+        )
 
     # --- Build node index for O(1) lookup ---
     node_map = {nd.name: nd for nd in graph.nodes}
@@ -429,51 +514,52 @@ def _make_plotly_figure(
 
     # --- Background (pruned) nodes ---
     if background_nodes:
-        traces.append(go.Scatter(
-            x=[nd.x for nd in background_nodes],
-            y=[nd.y for nd in background_nodes],
-            mode="markers",
-            marker=dict(
-                size=6,
-                color=PALETTE.background_node,
-                line=dict(color=PALETTE.background_node_stroke, width=1),
-                opacity=0.45,
-            ),
-            hovertemplate=[_node_hover(nd) for nd in background_nodes],
-            showlegend=False,
-            name="pruned",
-        ))
+        traces.append(
+            go.Scatter(
+                x=[nd.x for nd in background_nodes],
+                y=[nd.y for nd in background_nodes],
+                mode="markers",
+                marker=dict(
+                    size=6,
+                    color=PALETTE.background_node,
+                    line=dict(color=PALETTE.background_node_stroke, width=1),
+                    opacity=0.45,
+                ),
+                hovertemplate=[_node_hover(nd) for nd in background_nodes],
+                showlegend=False,
+                name="pruned",
+            )
+        )
 
     # --- In-circuit nodes (colored by type) ---
     if circuit_nodes:
-        sizes = [
-            max(9.0, node_size_scale * nd.log_norm_score + 6.0)
-            for nd in circuit_nodes
-        ]
+        sizes = [max(9.0, node_size_scale * nd.log_norm_score + 6.0) for nd in circuit_nodes]
         colors = [get_node_color(nd.node_type) for nd in circuit_nodes]
         opacity = [0.55 + nd.log_norm_score * 0.45 for nd in circuit_nodes]
 
-        traces.append(go.Scatter(
-            x=[nd.x for nd in circuit_nodes],
-            y=[nd.y for nd in circuit_nodes],
-            mode="markers+text",
-            text=[nd.name for nd in circuit_nodes],
-            textposition="top center",
-            textfont=dict(
-                family=FONT_MONO,
-                size=9,
-                color=PALETTE.text_primary,
-            ),
-            marker=dict(
-                size=sizes,
-                color=colors,
-                opacity=opacity,
-                line=dict(color=PALETTE.circuit_stroke, width=1.5),
-            ),
-            hovertemplate=[_node_hover(nd) for nd in circuit_nodes],
-            showlegend=False,
-            name="circuit",
-        ))
+        traces.append(
+            go.Scatter(
+                x=[nd.x for nd in circuit_nodes],
+                y=[nd.y for nd in circuit_nodes],
+                mode="markers+text",
+                text=[nd.name for nd in circuit_nodes],
+                textposition="top center",
+                textfont=dict(
+                    family=FONT_MONO,
+                    size=9,
+                    color=PALETTE.text_primary,
+                ),
+                marker=dict(
+                    size=sizes,
+                    color=colors,
+                    opacity=opacity,
+                    line=dict(color=PALETTE.circuit_stroke, width=1.5),
+                ),
+                hovertemplate=[_node_hover(nd) for nd in circuit_nodes],
+                showlegend=False,
+                name="circuit",
+            )
+        )
 
     # --- Layer annotation ticks along the bottom ---
     annotations = []
@@ -483,14 +569,16 @@ def _make_plotly_figure(
     label_y = min((nd.y for nd in graph.nodes), default=0.0) - 1.5 * 0.72
     for layer_idx in range(n_layers):
         x_coord = layer_idx * 1.8  # must match x_spacing in _compute_layout
-        annotations.append(dict(
-            x=x_coord,
-            y=label_y,
-            text=f"L{layer_idx}",
-            showarrow=False,
-            font=dict(family=FONT_FAMILY, size=10, color=PALETTE.text_secondary),
-            xanchor="center",
-        ))
+        annotations.append(
+            dict(
+                x=x_coord,
+                y=label_y,
+                text=f"L{layer_idx}",
+                showarrow=False,
+                font=dict(family=FONT_FAMILY, size=10, color=PALETTE.text_secondary),
+                xanchor="center",
+            )
+        )
 
     if title is None:
         m = graph.metadata
@@ -514,6 +602,7 @@ def _make_plotly_figure(
 # ---------------------------------------------------------------------------
 # Public visualizer class
 # ---------------------------------------------------------------------------
+
 
 class CircuitGraphVisualizer:
     """
@@ -566,10 +655,7 @@ class CircuitGraphVisualizer:
         # The graph dict is still accepted for API compatibility, but we
         # ignore its edges and derive our own from the score data.
         self.graph = graph
-        self.node_types = {
-            name: _parse_node_name(name)[0]
-            for name in scores.node_scores.keys()
-        }
+        self.node_types = {name: _parse_node_name(name)[0] for name in scores.node_scores.keys()}
 
         # Build the internal graph representation once.
         self._graph_data: _GraphData = _build_graph_data(scores, self.pruned_nodes)
@@ -744,15 +830,19 @@ class CircuitGraphVisualizer:
     # Export helpers
     # ------------------------------------------------------------------
 
-    def _build_export_data(self) -> Dict[str, Any]:
+    def _build_export_data(self, graph_data: Optional[_GraphData] = None) -> Dict[str, Any]:
         """
         Build the JSON-serializable graph payload for the D3.js renderer.
+
+        Args:
+            graph_data: Graph to export. Defaults to the instance's own
+                (unbounded) graph, built at construction time.
 
         Returns:
             Dict with keys ``metadata``, ``nodes``, ``edges``,
             ``n_layers``, ``circuit_node_ids``.
         """
-        gd = self._graph_data
+        gd = graph_data if graph_data is not None else self._graph_data
         nodes_payload = [
             {
                 "id": nd.name,
@@ -798,6 +888,47 @@ class CircuitGraphVisualizer:
         with open(out, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
 
+    def to_json(
+        self,
+        path: str,
+        *,
+        max_nodes: Optional[int] = None,
+        max_edges: Optional[int] = None,
+        edge_threshold: float = 0.0,
+    ) -> Dict[str, Any]:
+        """
+        Export a bounded graph payload as JSON, suitable for a browser UI
+        that cannot render an unbounded circuit (e.g. CircuitKIT Studio).
+
+        Unlike ``export_graph_data`` (which always exports the instance's
+        full, unbounded graph), this rebuilds the graph with ``max_nodes``/
+        ``max_edges``/``edge_threshold`` applied, so large circuits produce a
+        small, renderable payload with elision counts recorded in
+        ``metadata["n_nodes_hidden"]`` / ``metadata["n_edges_hidden"]``.
+
+        Args:
+            path:           Path to write the JSON file.
+            max_nodes:      Optional cap on the number of nodes kept.
+            max_edges:      Optional cap on the number of edges kept.
+            edge_threshold: Minimum normalized edge weight to keep [0, 1].
+
+        Returns:
+            The exported payload dict (also written to ``path``).
+        """
+        bounded_graph = _build_graph_data(
+            self.scores,
+            self.pruned_nodes,
+            max_nodes=max_nodes,
+            max_edges=max_edges,
+            edge_threshold=edge_threshold,
+        )
+        data = self._build_export_data(bounded_graph)
+        out = Path(path)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        with open(out, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+        return data
+
     # ------------------------------------------------------------------
     # Legacy compatibility helpers (retained from original API)
     # ------------------------------------------------------------------
@@ -815,9 +946,7 @@ class CircuitGraphVisualizer:
         """
         Return the top-k highest-scoring nodes as ``{name: normalized_score}``.
         """
-        ranked = sorted(
-            self.node_scores.items(), key=lambda x: x[1], reverse=True
-        )
+        ranked = sorted(self.node_scores.items(), key=lambda x: x[1], reverse=True)
         return dict(ranked[:k])
 
     def get_node_degree_stats(self) -> Dict[str, Dict[str, int]]:
@@ -825,8 +954,7 @@ class CircuitGraphVisualizer:
         Return per-node ``{in_degree, out_degree}`` from the circuit edge set.
         """
         degrees: Dict[str, Dict[str, int]] = {
-            nd.name: {"in_degree": 0, "out_degree": 0}
-            for nd in self._graph_data.nodes
+            nd.name: {"in_degree": 0, "out_degree": 0} for nd in self._graph_data.nodes
         }
         for edge in self._graph_data.edges:
             if edge.src in degrees:
@@ -853,9 +981,7 @@ class CircuitGraphVisualizer:
             New ``CircuitGraphVisualizer`` instance.
         """
         filtered_scores_dict = {
-            name: score
-            for name, score in self.node_scores.items()
-            if score >= threshold
+            name: score for name, score in self.node_scores.items() if score >= threshold
         }
         filtered_cs = CircuitScores(
             task=self.scores.task,
@@ -868,12 +994,8 @@ class CircuitGraphVisualizer:
             discovery_cfg=self.scores.discovery_cfg,
         )
         filtered_graph = {"nodes": {k: {} for k in filtered_scores_dict}, "edges": []}
-        filtered_pruned = [
-            n for n in self.pruned_nodes if n in filtered_scores_dict
-        ]
-        viz = CircuitGraphVisualizer(
-            filtered_graph, filtered_cs, self.edge_scores, filtered_pruned
-        )
+        filtered_pruned = [n for n in self.pruned_nodes if n in filtered_scores_dict]
+        viz = CircuitGraphVisualizer(filtered_graph, filtered_cs, self.edge_scores, filtered_pruned)
         if output_path:
             viz.to_html(output_path, title=title)
         return viz

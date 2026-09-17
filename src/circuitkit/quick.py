@@ -39,7 +39,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
     from transformer_lens import HookedTransformer
 
     from .evaluation.report import FaithfulnessReport
-    
+
     from pathlib import Path
 
 __all__ = [
@@ -656,9 +656,7 @@ def quantize(
     import re
 
     if backend not in ("quanto", "llmcompressor"):
-        raise ValueError(
-            f"backend must be 'quanto' or 'llmcompressor', got {backend!r}"
-        )
+        raise ValueError(f"backend must be 'quanto' or 'llmcompressor', got {backend!r}")
 
     if not circuit.scores:
         raise ValueError(
@@ -688,9 +686,7 @@ def quantize(
         n_layers = getattr(cfg, "num_hidden_layers", None)
         if n_layers is None and cfg is not None:
             # Gemma-3 / multimodal configs nest the decoder under text_config.
-            n_layers = getattr(
-                getattr(cfg, "text_config", None), "num_hidden_layers", None
-            )
+            n_layers = getattr(getattr(cfg, "text_config", None), "num_hidden_layers", None)
         if n_layers is None and max_layer >= 0:
             n_layers = max_layer + 1
     if not n_layers:
@@ -702,9 +698,9 @@ def quantize(
         if tokenizer is None:
             from transformers import AutoTokenizer
 
-            repo_id = getattr(
-                getattr(model, "config", None), "_name_or_path", None
-            ) or circuit.model_name
+            repo_id = (
+                getattr(getattr(model, "config", None), "_name_or_path", None) or circuit.model_name
+            )
             if not repo_id:
                 raise ValueError(
                     "quantize(backend='llmcompressor') needs a tokenizer; pass "
@@ -812,9 +808,7 @@ def export_checkpoint(
     return path
 
 
-def _push_checkpoint_to_hub(
-    path: str, hub_repo: Optional[str], hub_private: bool
-) -> None:
+def _push_checkpoint_to_hub(path: str, hub_repo: Optional[str], hub_private: bool) -> None:
     """Upload a written checkpoint directory to the HuggingFace Hub.
 
     Opt-in archival path for :func:`export_checkpoint`. The local checkpoint is
@@ -822,9 +816,7 @@ def _push_checkpoint_to_hub(
     authenticated token (``huggingface-cli login`` or ``HF_TOKEN``).
     """
     if not hub_repo:
-        raise ValueError(
-            "export_checkpoint(push_to_hub=True) needs hub_repo='org/name'."
-        )
+        raise ValueError("export_checkpoint(push_to_hub=True) needs hub_repo='org/name'.")
     try:
         from huggingface_hub import HfApi
     except ImportError as exc:  # pragma: no cover - optional dependency
@@ -898,7 +890,8 @@ def benchmark(
         dtype=dtype,
         **kw,
     )
-    
+
+
 # --------------------------------------------------------------------------- #
 # load_scores                                                                  #
 # --------------------------------------------------------------------------- #
@@ -1026,6 +1019,7 @@ def selective_finetune(
             )
         try:
             from transformers import AutoConfig
+
             hf_cfg = AutoConfig.from_pretrained(resolved_model)
             if n_layers is None:
                 n_layers = hf_cfg.num_hidden_layers
@@ -1105,7 +1099,7 @@ def visualize_circuit(
         ...              second_circuit=circuit2, output="compare.html")
     """
     if mode == "graph":
-        return circuit.plot(output)
+        return circuit.plot(output, **kw)
 
     if mode == "comparison":
         from .visualize.comparison import ComparisonDashboard
@@ -1152,6 +1146,5 @@ def visualize_circuit(
         return None
 
     raise ValueError(
-        f"Unknown visualization mode: {mode!r}. "
-        "Use 'graph', 'comparison', or 'dashboard'."
+        f"Unknown visualization mode: {mode!r}. " "Use 'graph', 'comparison', or 'dashboard'."
     )

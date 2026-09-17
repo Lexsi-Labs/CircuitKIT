@@ -262,7 +262,14 @@ class Circuit:
     # ------------------------------------------------------------------ #
     # Visualisation                                                      #
     # ------------------------------------------------------------------ #
-    def plot(self, output_path: Optional[Union[str, Path]] = None) -> Optional[str]:
+    def plot(
+        self,
+        output_path: Optional[Union[str, Path]] = None,
+        *,
+        max_nodes: Optional[int] = None,
+        max_edges: Optional[int] = None,
+        edge_threshold: float = 0.0,
+    ) -> Union[str, Dict[str, Any], None]:
         """Render the circuit as an interactive graph.
 
         Delegates to :class:`circuitkit.visualize.graph_viz.CircuitGraphVisualizer`.
@@ -271,15 +278,26 @@ class Circuit:
         returns ``None`` instead of raising.
 
         Args:
-            output_path: Optional path for an HTML export. When omitted, an
-                in-Jupyter interactive widget is returned where supported.
+            output_path: Optional export path. A ``.json`` extension writes a
+                bounded graph payload via
+                :meth:`CircuitGraphVisualizer.to_json` (see ``max_nodes`` /
+                ``max_edges`` / ``edge_threshold`` below); any other
+                extension (or ``None``) writes/returns the interactive HTML
+                export as before. Omitted entirely, an in-Jupyter interactive
+                widget is returned where supported.
+            max_nodes: For ``.json`` output only — cap on nodes kept.
+            max_edges: For ``.json`` output only — cap on edges kept.
+            edge_threshold: For ``.json`` output only — minimum normalized
+                edge weight to keep.
 
         Returns:
-            The HTML string when ``output_path`` is given and rendering
-            succeeded, otherwise ``None``.
+            The HTML string when ``output_path`` is an HTML/other path and
+            rendering succeeded; the exported dict when ``output_path`` is a
+            ``.json`` path; otherwise ``None``.
 
         Example:
             >>> circuit.plot("ioi_circuit.html")   # writes an interactive HTML
+            >>> circuit.plot("ioi_circuit.json", max_nodes=300, max_edges=3000)
         """
         if not self.scores:
             logger.info(
@@ -290,7 +308,6 @@ class Circuit:
         try:
             from .artifacts.scores import CircuitScores
             from .visualize.graph_viz import CircuitGraphVisualizer
-
 
             cs = self.circuit_scores
             if cs is None:
@@ -312,9 +329,8 @@ class Circuit:
                 pruned_nodes = self.nodes
             elif isinstance(self.nodes, dict):
                 # neuron-level artifact: flatten mlp + heads keys
-                pruned_nodes = (
-                    list(self.nodes.get("mlp", {}).keys())
-                    + list(self.nodes.get("heads", {}).keys())
+                pruned_nodes = list(self.nodes.get("mlp", {}).keys()) + list(
+                    self.nodes.get("heads", {}).keys()
                 )
 
             graph_dict = {"nodes": {name: {} for name in self.scores}, "edges": []}
@@ -323,6 +339,13 @@ class Circuit:
             if output_path is not None:
                 out = Path(output_path)
                 out.parent.mkdir(parents=True, exist_ok=True)
+                if out.suffix.lower() == ".json":
+                    return viz.to_json(
+                        str(out),
+                        max_nodes=max_nodes,
+                        max_edges=max_edges,
+                        edge_threshold=edge_threshold,
+                    )
                 title = f"Circuit ({self.task or 'unknown'} / {self.algorithm or 'eap-ig'})"
                 return viz.to_html(str(out), title=title)
             return viz.interactive_widget()
