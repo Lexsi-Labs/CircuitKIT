@@ -76,3 +76,30 @@ def test_yaml_run(tmp_path):
 
     result = CliRunner().invoke(cli, ["run", str(yaml_path)])
     assert result.exit_code == 0, result.output
+
+
+def test_neuron_level_pipeline_discovery_populates_circuit_scores(tmp_path):
+    """Regression test: neuron-level discovery's scores side-car only ever
+    saved a raw `neurons_scores` tensor, never the `node_scores` dict shape
+    `Circuit.from_artifact()` actually knows how to read -- so
+    `pipe.circuit.scores` silently ended up `{}` for every neuron-level run,
+    including this very call (`Pipeline.discover()` constructs its `Circuit`
+    via `Circuit.from_artifact()` immediately, not just on a later reload).
+    An empty `Circuit.scores` in turn made `Circuit.plot()` refuse to render
+    at all (`if not self.scores: ... return None`), which is why a real
+    neuron-level circuit graph was observed not to draw.
+    """
+    from circuitkit import Pipeline
+
+    pipe = Pipeline("gpt2", task="ioi", output_dir=str(tmp_path))
+    pipe.discover(algorithm="eap-ig", level="neuron", sparsity=0.3, n_examples=4, batch_size=2)
+
+    assert pipe.circuit.scores, "Circuit.scores must be populated for a neuron-level circuit too"
+
+    graph = pipe.circuit.plot(str(tmp_path / "graph.json"), max_nodes=300, max_edges=3000)
+    assert graph is not None
+    assert len(graph["nodes"]) > 0
+    assert len(graph["edges"]) > 0, (
+        "neuron-level node names (e.g. 'a0.h0'/'m0') must be recognized by the "
+        "graph layout so nodes span every real layer, not just layer 0"
+    )

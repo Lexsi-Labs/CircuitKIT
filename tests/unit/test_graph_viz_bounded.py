@@ -7,7 +7,34 @@ import tempfile
 from pathlib import Path
 
 from circuitkit.artifacts.scores import CircuitScores
-from circuitkit.visualize.graph_viz import CircuitGraphVisualizer, _build_graph_data
+from circuitkit.visualize.graph_viz import CircuitGraphVisualizer, _build_graph_data, _parse_node_name
+
+
+def _make_gpt2_style_neuron_level_scores() -> CircuitScores:
+    """156-node synthetic graph matching GPT-2 *neuron-level* discovery's own
+    node-naming convention (lowercase "a{layer}.h{head}" / "m{layer}") --
+    distinct from node-level's uppercase "A{layer}.{head}" / "MLP {layer}",
+    which the other synthetic-scores helper in this file uses. Regression
+    coverage for the bug where `_parse_node_name` only recognized the
+    node-level convention: every neuron-level node silently parsed as
+    ("unknown", 0, None), collapsing all nodes into one layer and producing
+    zero edges (no "layer + 1" bucket to connect to)."""
+    node_scores = {}
+    i = 0
+    for layer in range(12):
+        for head in range(12):
+            i += 1
+            node_scores[f"a{layer}.h{head}"] = 1.0 / i
+        i += 1
+        node_scores[f"m{layer}"] = 1.0 / i
+    return CircuitScores(
+        task="ioi",
+        model="gpt2",
+        algorithm="eap-ig",
+        level="neuron",
+        node_scores=node_scores,
+        timestamp=CircuitScores.create_timestamp(),
+    )
 
 
 def _make_gpt2_style_scores() -> CircuitScores:
@@ -148,3 +175,36 @@ class TestToJsonSize:
 
             assert len(bounded_data["nodes"]) == len(legacy_data["nodes"])
             assert len(bounded_data["edges"]) == len(legacy_data["edges"])
+
+
+class TestNeuronLevelNodeNameParsing:
+    """Regression coverage: neuron-level discovery names nodes with a
+    different convention ("a0.h1"/"m3") than node-level ("A0.1"/"MLP 3"),
+    and `_parse_node_name` originally only recognized the latter."""
+
+    def test_parse_node_name_recognizes_neuron_level_attn_head(self):
+        assert _parse_node_name("a3.h7") == ("attn_head", 3, 7)
+
+    def test_parse_node_name_recognizes_neuron_level_mlp(self):
+        assert _parse_node_name("m5") == ("mlp", 5, None)
+
+    def test_parse_node_name_still_recognizes_node_level_formats(self):
+        assert _parse_node_name("A3.7") == ("attn_head", 3, 7)
+        assert _parse_node_name("MLP 5") == ("mlp", 5, None)
+
+    def test_parse_node_name_unrecognized_falls_back_to_unknown(self):
+        assert _parse_node_name("???") == ("unknown", 0, None)
+
+    def test_neuron_level_graph_spans_every_layer_with_real_edges(self):
+        # Before the fix, every neuron-level node parsed as ("unknown", 0,
+        # None): all 156 nodes collapsed into a single layer, and edge
+        # construction (which only connects adjacent-layer buckets) produced
+        # zero edges for every neuron-level circuit.
+        scores = _make_gpt2_style_neuron_level_scores()
+        graph = _build_graph_data(scores)
+
+        layers = {node.layer for node in graph.nodes}
+        types = {node.node_type for node in graph.nodes}
+        assert layers == set(range(12))
+        assert types == {"attn_head", "mlp"}
+        assert len(graph.edges) > 0

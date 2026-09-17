@@ -1399,6 +1399,24 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
                                     (abs(score.item()), (node.name, neuron_idx))
                                 )
 
+                    # Per-node aggregate (max abs score among a node's neurons) so
+                    # `Circuit.from_artifact()` -- which only ever looks for a
+                    # "node_scores" key in the scores side-car, the same shape
+                    # node-level discovery produces -- gets a non-empty
+                    # `Circuit.scores` for neuron-level circuits too. Without
+                    # this, `Circuit.scores` silently ends up `{}` for every
+                    # neuron-level run (including Pipeline.discover()'s own
+                    # first, in-process Circuit construction, not just a later
+                    # reload), which is why neuron-level circuit graphs render
+                    # with every node/edge looking unscored. `neurons_scores`
+                    # (the full per-neuron tensor) is kept in the side-car
+                    # alongside this for anyone who needs the finer-grained
+                    # detail.
+                    node_scores: Dict[str, float] = {}
+                    for abs_score, (node_name, _neuron_idx) in all_neuron_scores:
+                        if abs_score > node_scores.get(node_name, float("-inf")):
+                            node_scores[node_name] = abs_score
+
                     all_neuron_scores.sort(key=lambda x: x[0])  # Sort by absolute score, ascending
                     num_to_prune = int(len(all_neuron_scores) * pruning_cfg["target_sparsity"])
 
@@ -1433,6 +1451,7 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
                         {
                             "algo": algo,
                             "level": "neuron",
+                            "node_scores": node_scores,
                             "neurons_scores": graph.neurons_scores.cpu(),
                             "total_neurons": len(all_neuron_scores),
                         },

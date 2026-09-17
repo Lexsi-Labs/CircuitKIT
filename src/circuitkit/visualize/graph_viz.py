@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -96,8 +97,19 @@ def _parse_node_name(name: str) -> Tuple[str, int, Optional[int]]:
     Parse a node name into (node_type, layer, head).
 
     Supported formats:
-        ``"A0.1"``  → ``("attn_head", 0, 1)``
-        ``"MLP 3"`` → ``("mlp", 3, None)``
+        ``"A0.1"``  → ``("attn_head", 0, 1)``   (node-level convention)
+        ``"MLP 3"`` → ``("mlp", 3, None)``      (node-level convention)
+        ``"a0.h1"`` → ``("attn_head", 0, 1)``   (neuron-level convention)
+        ``"m3"``    → ``("mlp", 3, None)``      (neuron-level convention)
+
+    Node-level and neuron-level discovery (see
+    :func:`circuitkit.api.discover_circuit`) independently produce
+    differently-cased/-shaped node names for the same component kind
+    (uppercase "A0.1"/"MLP 3" vs. lowercase "a0.h1"/"m3") — both must be
+    recognized here, or every neuron-level node silently falls through to
+    ``("unknown", 0, None)``, collapsing every node into one layer and
+    producing a graph with zero edges (nothing left in an "adjacent layer"
+    to connect to).
 
     Returns:
         Tuple of (node_type, layer, head_index_or_None).
@@ -116,6 +128,11 @@ def _parse_node_name(name: str) -> Tuple[str, int, Optional[int]]:
                 return "mlp", int(parts[1]), None
             except ValueError:
                 pass
+    elif re.match(r"^a\d+\.h\d+$", name):
+        layer_str, head_str = name[1:].split(".h")
+        return "attn_head", int(layer_str), int(head_str)
+    elif re.match(r"^m\d+$", name):
+        return "mlp", int(name[1:]), None
     return "unknown", 0, None
 
 
