@@ -473,6 +473,11 @@ class Pipeline:
         if seed is not None:
             discovery_block["seed"] = seed
         discovery_block.update(kw)
+        # Tasks that must tokenize while building their examples (MMLU, WMDP)
+        # read the model from the discovery block; the pipeline already knows
+        # it, so callers -- the YAML runner included -- should not have to
+        # repeat it there.
+        discovery_block.setdefault("model_name", self.model_name)
 
         config: Dict[str, Any] = {
             "model": {"name": self.model_name, "precision": self.precision},
