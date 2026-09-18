@@ -313,6 +313,19 @@ class MMLUTaskSpec:
         if not all_examples_with_subjects:
             raise ValueError("No valid MMLU examples loaded from any subject")
 
+        # Honour data_params.num_examples -- the generic size cap every other
+        # task respects. Without it a run asking for 8 examples still built
+        # 56 subjects x samples_per_subject (1120 examples: hours on a laptop).
+        # Deterministic subsample across subjects, keyed on the run seed.
+        num_examples = (discovery_cfg.get("data_params") or {}).get("num_examples")
+        if num_examples and len(all_examples_with_subjects) > num_examples:
+            rng = _random.Random(seed)
+            all_examples_with_subjects = rng.sample(all_examples_with_subjects, num_examples)
+            logger.info(
+                f"Capped to data_params.num_examples={num_examples} examples "
+                f"(sampled across subjects, seed={seed})"
+            )
+
         total_before_filtering = len(all_examples_with_subjects)
         logger.info(
             f"Total examples collected: {total_before_filtering} from {len(subjects)} subjects"

@@ -335,6 +335,28 @@ class TestDiscoverValidation:
         assert "seed" not in cfg["discovery"]["data_params"]
         assert "seed" not in cfg["discovery"]
 
+    def test_model_name_is_in_the_discovery_block(self, tmp_path):
+        """Tasks that tokenize while building examples (MMLU, WMDP) read
+        ``discovery.model_name``; the pipeline knows the model, so the YAML
+        runner (which cannot inject arbitrary discovery keys) must not have
+        to. Regression: `circuitkit run` on an MMLU pipeline.yaml failed with
+        "missing the required key 'model_name'".
+        """
+        p = Pipeline("gpt2", task="ioi", output_dir=str(tmp_path))
+        with patch(
+            "circuitkit.api.discover_circuit", return_value=self._MOCK_RETURN
+        ) as mock_dc:
+            p.discover()
+        assert mock_dc.call_args[0][0]["discovery"]["model_name"] == "gpt2"
+
+    def test_explicit_model_name_kw_wins(self, tmp_path):
+        p = Pipeline("gpt2", task="ioi", output_dir=str(tmp_path))
+        with patch(
+            "circuitkit.api.discover_circuit", return_value=self._MOCK_RETURN
+        ) as mock_dc:
+            p.discover(model_name="other/model")
+        assert mock_dc.call_args[0][0]["discovery"]["model_name"] == "other/model"
+
     def test_discover_returns_self_for_chaining(self, tmp_path):
         p = Pipeline("gpt2", task="ioi", output_dir=str(tmp_path))
         with patch("circuitkit.api.discover_circuit", return_value=self._MOCK_RETURN):
