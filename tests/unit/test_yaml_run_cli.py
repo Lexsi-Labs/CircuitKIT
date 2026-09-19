@@ -484,3 +484,20 @@ class TestRunAdvancedParamsThreaded:
             runner.invoke(cli, ["run", cfg_path])
 
         mock_benchmark.assert_called_once()
+
+
+class TestPinnedDeviceReachesDiscovery:
+    def test_pipeline_device_is_in_the_discovery_config(self):
+        """Pipeline(device=...) must reach discover_circuit's config; without it
+        discovery auto-detected and ignored the pinned device."""
+        from circuitkit.pipeline import Pipeline
+
+        assert Pipeline("gpt2", task="ioi", device="cpu")._model_cfg()["device"] == "cpu"
+        assert "device" not in Pipeline("gpt2", task="ioi")._model_cfg()
+
+    def test_resolving_device_does_not_pin_it(self):
+        from circuitkit.pipeline import Pipeline
+
+        pipe = Pipeline("gpt2", task="ioi")
+        assert pipe.device in ("cuda", "cpu")
+        assert "device" not in pipe._model_cfg()

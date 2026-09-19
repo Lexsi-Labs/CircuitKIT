@@ -1101,7 +1101,8 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
         validate_discovery_algorithm(discovery_cfg["algorithm"])
 
         progress.step("Setting up model", model=model_cfg["name"])
-        device = get_device()
+        # config["model"]["device"] pins the device; absent -> auto-detect.
+        device = get_device(model_cfg.get("device") or "auto")
         # Use default from DEFAULT_CONFIG (single source of truth)
         default_model = DEFAULT_CONFIG["model"]
         dtype = getattr(t, model_cfg.get("precision", default_model.get("precision")))
@@ -1991,7 +1992,7 @@ def evaluate_circuit(
         validate_file_exists(scores_path, "discovery scores")
 
         # Load model and data
-        device = get_device()
+        device = get_device(config["model"].get("device") or "auto")
         dtype = getattr(t, config["model"].get("precision", "bfloat16"))
         if _model is not None:
             # Reuse the caller's already-loaded model (e.g. discover_circuit's

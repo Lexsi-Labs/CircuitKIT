@@ -303,6 +303,14 @@ class Pipeline:
     # Lazy model loading                                                  #
     # ------------------------------------------------------------------ #
 
+    def _model_cfg(self) -> Dict[str, Any]:
+        """The ``model`` block of an api config. A device the caller pinned is
+        passed on; otherwise discovery and evaluation auto-detect one."""
+        cfg: Dict[str, Any] = {"name": self.model_name, "precision": self.precision}
+        if self._device is not None:
+            cfg["device"] = self._device
+        return cfg
+
     def _ensure_model(self) -> Any:
         """Load model lazily, reusing the cached instance."""
         if self._model is None:
@@ -351,7 +359,9 @@ class Pipeline:
         if self._device is None:
             import torch
 
-            self._device = "cuda" if torch.cuda.is_available() else "cpu"
+            # Resolved, not stored: storing it would pin later discover() /
+            # evaluate() calls to a device the caller never asked for.
+            return "cuda" if torch.cuda.is_available() else "cpu"
         return self._device
 
     @property
@@ -480,7 +490,7 @@ class Pipeline:
         discovery_block.setdefault("model_name", self.model_name)
 
         config: Dict[str, Any] = {
-            "model": {"name": self.model_name, "precision": self.precision},
+            "model": self._model_cfg(),
             "discovery": discovery_block,
             "pruning": {"target_sparsity": sparsity, "scope": scope},
             "output_path": output_path,
@@ -631,7 +641,7 @@ class Pipeline:
 
             tasks = kw.pop("tasks")
             template = self._discovery_cfg or {
-                "model": {"name": self.model_name, "precision": self.precision},
+                "model": self._model_cfg(),
                 "discovery": {"algorithm": "eap-ig", "level": "node"},
             }
             model = self._ensure_model()
@@ -983,7 +993,7 @@ class Pipeline:
         else:
             # Minimal fallback when pipeline was loaded from artifact
             base = {
-                "model": {"name": self.model_name, "precision": self.precision},
+                "model": self._model_cfg(),
                 "discovery": {
                     "algorithm": (self._circuit.algorithm if self._circuit else "eap-ig"),
                     "task": self.task or "unknown",
