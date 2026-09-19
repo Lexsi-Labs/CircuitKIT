@@ -9,9 +9,10 @@ This page answers the question [scope.md](scope.md) does not: an algorithm is *s
 - **Models**: GPT-2 (124M), Llama-3.2-1B-Instruct, Llama-3.2-3B-Instruct, Gemma-2-2B-it
 - **Tasks**: IOI, SVA, Gender Bias, Greater-Than, BoolQ — the 5 core evaluation tasks
 - **Metrics**: Each pillar produces a normalised faithfulness ratio in [0, 1]. The table below reports the normalized faithfulness ratio (`ablation_score`, Pillar 2) — higher is more faithful.
-- **All runs**: Single seed (seed 42), 256 examples. EAP-family rows use `eap-ig` defaults; experimental algorithms (`acdc`, `ibcircuit`) use their own defaults and required data regime.
+- **All runs**: Single seed (seed 42), 256 examples. EAP-family rows use `eap-ig` defaults; `acdc` and `ibcircuit` use their own defaults and required data regime.
+- **Not covered**: `eap-gp` and `cdt` are Stable tier but have no scores on this page.
 
-## Stable-tier results (EAP family)
+## Stable-tier results (`eap`, `eap-ig`)
 
 | Algorithm | GPT-2 IOI | Llama-1B IOI | Llama-3B IOI | Gemma-2B IOI |
 |---|---|---|---|---|
@@ -35,14 +36,14 @@ This page answers the question [scope.md](scope.md) does not: an algorithm is *s
 !!! note "Missing values (—)"
     Generalization (Pillar 6) requires a `target_task`. It was only run for IOI (target: SVA). Baselines data for non-IOI tasks is preliminary — treat as directional.
 
-## Experimental-tier results
+## Stable-tier results (ACDC, IBCircuit)
 
 | Algorithm | GPT-2 IOI | Notes |
 |---|---|---|
 | `acdc` | 0.76 | Produces smaller circuits (~5% of heads vs. ~15% for EAP) |
 | `ibcircuit` | 0.72 | Requires clean-only data; OOM at 3B (safe below) |
 
-**Read:** Experimental algorithms produce lower faithfulness scores but also smaller circuits. They are useful for research but not yet at parity with EAP family.
+**Read:** ACDC and IBCircuit produce lower faithfulness scores but also smaller circuits. On this score they are not at parity with the EAP family. The audit scored them on GPT-2 IOI only.
 
 ## Research-tier results (EAP variants)
 

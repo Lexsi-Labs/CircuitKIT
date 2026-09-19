@@ -2,16 +2,16 @@
 
 **Contextual Decomposition through Transformers** (CD-T) adapts the classical Contextual Decomposition (CD) approach to transformer attention layers. It decomposes a layer's contribution into components attributable to specific input tokens.
 
-**Stability tier:**  Research — validated on GPT-2 IOI only. Uses a frozen-RoPE approximation and a 50/50 gated-MLP cross-term split that are not valid for GQA or SwiGLU architectures.
+**Stability tier:**  Stable. Tested across the GPT-2, Llama, Gemma, and Qwen families. Works from clean inputs only. Uses a frozen-RoPE attention approximation and a 50/50 gated-MLP cross-term split, so its scores on RoPE models are approximate.
 
 ---
 
 ## Important Caveats
 
-!!! warning "Research-tier only"
-    CD-T is implemented for algorithm comparison and research purposes. It uses a frozen RoPE attention approximation (Q/K are not decomposed) and a simplified MLP cross-term split. These approximations are specific to GPT-2's attention and MLP structure and are **not valid for modern architectures** (Llama, Gemma, Qwen, etc.).
+!!! warning "Approximate scores on RoPE models"
+    CD-T works from clean inputs only. It uses a frozen-RoPE attention approximation (Q/K are not decomposed) and a 50/50 gated-MLP cross-term split. On RoPE models (Llama, Gemma, Qwen, etc.) its scores are therefore **approximate**.
     
-    For non-GPT-2 models: use `eap-ig` (Stable).
+    If the approximation matters for your use case, use `eap-ig` (Stable).
 
 ---
 
@@ -44,9 +44,9 @@ circuit = discover_circuit({
 |--------|------|--------|
 | Approach | Contextual decomposition | Gradient attribution |
 | Data | Clean only (or paired) | Paired |
-| Architecture scope | GPT-2 only | GPT-2 through 4B |
+| Architecture scope | GPT-2, Llama, Gemma, Qwen (approximate on RoPE models) | GPT-2 through 4B |
 | Level | Node only | Node or neuron |
-| Tier |  Research |  Stable |
+| Tier |  Stable |  Stable |
 
 ---
 

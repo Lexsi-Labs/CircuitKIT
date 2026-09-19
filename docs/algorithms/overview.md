@@ -1,6 +1,6 @@
 # Algorithm Overview
 
-CircuitKit ships **13 discovery algorithms** across 4 backends. This page explains how to choose the right one. Note that "ships" is not "validated": only 2 are validated at production scale — `eap` and `eap-ig` (Stable). `acdc` and `ibcircuit` are Experimental (GPT-2 scale; `ibcircuit` OOMs above ~3B), and the remaining 9 are Research (validated only on GPT-2 IOI).
+CircuitKit ships **13 discovery algorithms** across 4 backends. This page explains how to choose the right one. Note that "ships" is not "validated". Six are Stable (`eap`, `eap-ig`, `eap-gp`, `acdc`, `ibcircuit`, `cdt`) and have been tested across the GPT-2, Llama, Gemma, and Qwen families. The remaining seven are Research: implemented and validated on GPT-2/IOI but not yet exercised at scale or across architectures. Three of the Stable algorithms carry documented caveats: `acdc` is node-only by construction and slow, `ibcircuit` has a memory ceiling on multi-billion-parameter models at aggressive settings, and `cdt` scores on RoPE models are approximate.
 
 <div class="grid cards" markdown>
 
@@ -12,15 +12,15 @@ CircuitKit ships **13 discovery algorithms** across 4 backends. This page explai
 
     [:octicons-arrow-right-24: EAP variants](eap.md)
 
--   :material-scissors-cutting:{ .lg .middle } **ACDC**  Experimental
+-   :material-scissors-cutting:{ .lg .middle } **ACDC**  Stable
 
     ---
 
-    Greedy edge-pruning. Produces minimal circuits at GPT-2 scale.
+    Greedy edge-pruning. Produces minimal circuits. Node-only and slow.
 
     [:octicons-arrow-right-24: ACDC details](acdc.md)
 
--   :material-bottle-tonic:{ .lg .middle } **IBCircuit**  Experimental
+-   :material-bottle-tonic:{ .lg .middle } **IBCircuit**  Stable
 
     ---
 
@@ -28,11 +28,11 @@ CircuitKit ships **13 discovery algorithms** across 4 backends. This page explai
 
     [:octicons-arrow-right-24: IBCircuit details](ibcircuit.md)
 
--   :material-puzzle:{ .lg .middle } **CD-T**  Research
+-   :material-puzzle:{ .lg .middle } **CD-T**  Stable
 
     ---
 
-    Contextual decomposition through transformers. GPT-2 only.
+    Contextual decomposition through transformers. Clean inputs only. Scores on RoPE models are approximate.
 
     [:octicons-arrow-right-24: CD-T details](cdt.md)
 
@@ -44,9 +44,9 @@ CircuitKit ships **13 discovery algorithms** across 4 backends. This page explai
 |---|---|---|
 | New to CircuitKit, any model | `eap-ig` | Stable, fast, validated across model families |
 | Speed over precision | `eap` | ~30% faster; slightly noisier |
-| GPT-2 exploratory | `acdc` | Minimal circuits via greedy edge-pruning |
+| Minimal circuit | `acdc` | Greedy edge-pruning. Node-only and slow |
 | Information-flow analysis | `ibcircuit` | No paired data needed |
-| Large model (3B+) | `eap-ig` | Only Stable-tier validated at this scale |
+| Large model (3B+) | `eap-ig` | Validated at this scale. `ibcircuit` has a memory ceiling here and `acdc` is slow |
 
 ## All 13 algorithms
 
@@ -56,11 +56,11 @@ CircuitKit ships **13 discovery algorithms** across 4 backends. This page explai
 |---|---|---|
 | `eap-ig` |  Stable | EAP + Integrated Gradients — **default** |
 | `eap` |  Stable | Vanilla EAP — fast baseline |
+| `eap-gp` |  Stable | EAP-GP / GradPath |
 | `eap-ig-activations` |  Research | IG over node activations |
 | `eap-clean-corrupted` |  Research | EAP with both clean/corrupted passes |
 | `eap-exact` |  Research | Exact EAP (quadratic cost) |
 | `atp-gd` |  Research | Attribution Patching with GradDrop (AtP+GD) |
-| `eap-gp` |  Research | EAP-GP / GradPath |
 | `relp` |  Research | Relevance Patching (LRP-style) |
 | `peap` |  Research | Position-aware EAP (PEAP) |
 | `eap-ifr` |  Research | Information Flow Routes (IFR) |
@@ -71,28 +71,28 @@ CircuitKit ships **13 discovery algorithms** across 4 backends. This page explai
 
 | Algorithm | Tier | Description |
 |---|---|---|
-| `acdc` |  Experimental | Greedy edge-pruning; GPT-2 scale |
+| `acdc` |  Stable | Greedy edge-pruning; node-only by construction (edge search); slow |
 
-When you want a minimal circuit and you're working at GPT-2 scale.
+When you want a minimal circuit and can afford a slow search.
 
 ### IBCircuit
 
 | Algorithm | Tier | Description |
 |---|---|---|
-| `ibcircuit` |  Experimental | Noise-model approach; clean-only data |
+| `ibcircuit` |  Stable | Noise-model approach; clean-only data |
 
 When paired (clean, corrupted) examples are hard to construct.
 
-!!! warning "OOM risk above ~3B"
-    IBCircuit trains a noise model end-to-end, doubling memory. Known to OOM above ~3B parameters.
+!!! warning "Memory ceiling on multi-billion-parameter models"
+    IBCircuit trains a noise model end-to-end, doubling memory. At aggressive settings it can OOM on models above ~3B parameters.
 
 ### CD-T
 
 | Algorithm | Tier | Description |
 |---|---|---|
-| `cdt` |  Research | Frozen-RoPE attention approximation; GPT-2 IOI only |
+| `cdt` |  Stable | Clean inputs only; frozen-RoPE attention approximation |
 
-Only for research replication.
+CD-T uses a frozen-RoPE attention approximation (Q/K are not decomposed) and a 50/50 gated-MLP cross-term split, so its scores on RoPE models are approximate.
 
 ## Model compatibility
 
@@ -100,14 +100,19 @@ Only for research replication.
 |---|---|---|---|---|
 | `eap-ig` | ✅ | ✅ | ✅ | ✅ |
 | `eap` | ✅ | ✅ | ✅ | ✅ |
+| `eap-gp` | ✅ | ✅ | ✅ | ✅ |
+| `acdc` | ✅ | ⚠️ | ⚠️ | ⚠️ |
+| `ibcircuit` | ✅ | ⚠️ | ⚠️ | ⚠️ |
+| `cdt` | ✅ | ⚠️ | ⚠️ | ⚠️ |
 | `eap-ig-activations` | ✅ | ❌ | ❌ | ❌ |
 | `eap-clean-corrupted` | ✅ | ❌ | ❌ | ❌ |
-| `acdc` | ✅ | ⚠️ | ⚠️ | ⚠️ |
-| `ibcircuit` | ✅ | ⚠️ | ❌ | ❌ |
-| `cdt` | ✅ | ❌ | ❌ | ❌ |
 | Research tier | ✅ | ❌ | ❌ | ❌ |
 
-✅ Validated  ⚠️ Experimental  ❌ Not validated
+✅ Tested  ⚠️ Tested, with a documented caveat  ❌ Not validated
+
+Marks outside the GPT-2 column for `eap-gp`, `acdc`, `ibcircuit`, and `cdt` restate the stable-tier statement at family level. Faithfulness scores beyond GPT-2 are published only for `eap` and `eap-ig` (see [Audit Results](../trust/results.md)).
+
+Caveats: `acdc` is slow above GPT-2 scale, `ibcircuit` has a memory ceiling on multi-billion-parameter models at aggressive settings, and `cdt` scores on RoPE models (Llama, Gemma, Qwen) are approximate.
 
 ## Algorithm-specific config keys
 

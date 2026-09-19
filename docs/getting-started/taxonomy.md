@@ -14,10 +14,10 @@ CircuitKit — discover · evaluate · intervene
 │   │   output: circuit artifact (.pt + scores)
 │   │
 │   ├── Algorithms (pick one):
-│   │   ├── EAP family (Stable): eap-ig, eap
-│   │   ├── EAP research (Research): eap-ig-activations, eap-clean-corrupted, eap-exact, atp-gd, eap-gp, relp, peap, eap-ifr
-│   │   ├── ACDC / IBCircuit (Experimental)
-│   │   └── CD-T (Research)
+│   │   ├── EAP family (Stable): eap-ig, eap, eap-gp
+│   │   ├── EAP research (Research): eap-ig-activations, eap-clean-corrupted, eap-exact, atp-gd, relp, peap, eap-ifr
+│   │   ├── ACDC / IBCircuit (Stable)
+│   │   └── CD-T (Stable)
 │   │
 │   └── Granularity:
 │       ├── Node-level → list of component names (fast, default)

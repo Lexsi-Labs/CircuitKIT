@@ -4,7 +4,7 @@ These guidelines summarize the current capabilities, configuration options, test
 
 ### Supported features (alpha)
 - Unified API for discovery and evaluation via `circuitkit.api`:
-  - `discover_circuit(config)` supports 13 discovery algorithms with explicit stability tiers (see `circuitkit.backends`): **Stable** — `eap`, `eap-ig`; **Experimental** — `acdc`, `ibcircuit`; **Research** (GPT-2 IOI only) — `eap-ig-activations`, `eap-clean-corrupted`, `eap-exact`, `atp-gd`, `eap-gp`, `relp`, `peap`, `eap-ifr`, `cdt`. Experimental/research algorithms emit a `UserWarning`.
+  - `discover_circuit(config)` supports 13 discovery algorithms with explicit stability tiers (see `circuitkit.backends`): **Stable** — `eap`, `eap-ig`, `eap-gp`, `acdc`, `ibcircuit`, `cdt`; **Experimental** — none currently; **Research** (GPT-2 IOI only) — `eap-ig-activations`, `eap-clean-corrupted`, `eap-exact`, `atp-gd`, `relp`, `peap`, `eap-ifr`. Experimental/research algorithms emit a `UserWarning`.
   - `evaluate_circuit(...)` for LM evaluation harness integration
   - LM evaluation harness integration with popular benchmarks (GSM8K, MMLU, TruthfulQA, HumanEval, HellaSwag)
 - Pruning modes:

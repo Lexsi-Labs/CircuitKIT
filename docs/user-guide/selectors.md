@@ -19,10 +19,10 @@ Run the full discovery pipeline — load data, run attribution, return `{node_na
 |---|---|---|---|
 | `eap-ig` | EAP |  Stable | EAP + Integrated Gradients. **Default.** |
 | `eap` | EAP |  Stable | Edge Attribution Patching |
-| `eap-gp` | EAP |  Research | EAP with GradPath adaptive integration path |
+| `eap-gp` | EAP |  Stable | EAP with GradPath adaptive integration path |
 | `relp` | EAP |  Research | Relevance Patching via LRP-style detach hooks |
-| `ibcircuit` | IBCircuit |  Experimental | Information-Bottleneck noise model |
-| `cdt` | CD-T |  Research | Contextual Decomposition |
+| `ibcircuit` | IBCircuit |  Stable | Information-Bottleneck noise model |
+| `cdt` | CD-T |  Stable | Contextual Decomposition. Scores on RoPE models are approximate |
 
 ### Compression selectors
 

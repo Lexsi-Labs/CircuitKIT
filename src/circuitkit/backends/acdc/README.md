@@ -26,5 +26,5 @@ edge-patchable TransformerLens model.
 
 ## How it fits
 
-Dispatched from `api.discover_circuit` (`acdc`, experimental tier); its ACDC
+Dispatched from `api.discover_circuit` (`acdc`, stable tier, node-only by construction); its ACDC
 prune-score entry point is imported from `prune_algos.ACDC`.

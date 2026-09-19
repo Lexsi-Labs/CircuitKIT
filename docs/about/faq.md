@@ -14,7 +14,7 @@ For circuit discovery, any model supported by TransformerLens (GPT-2, GPT-Neo, P
 
 **Is CircuitKit production-ready?**
 
-The Stable-tier discovery path (EAP, EAP-IG) is validated. Experimental and research tier backends — including EAP-IG-Activations and EAP-Clean-Corrupted, which are Research tier despite the similar name — are not production-ready. Applications are validated on production families but have known limitations (see release notes).
+The six Stable-tier discovery algorithms (`eap`, `eap-ig`, `eap-gp`, `acdc`, `ibcircuit`, `cdt`) have been tested across the GPT-2, Llama, Gemma, and Qwen families. The seven Research-tier algorithms are not production-ready. They include EAP-IG-Activations and EAP-Clean-Corrupted, which are Research tier despite the similar name. Applications are validated on production families but have known limitations (see release notes).
 
 ---
 

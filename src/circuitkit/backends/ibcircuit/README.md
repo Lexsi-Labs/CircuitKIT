@@ -21,7 +21,7 @@ importance, then averages them into task-general component scores.
 
 ## How it fits
 
-Dispatched from `api.discover_circuit` (`ibcircuit`, experimental tier) via
+Dispatched from `api.discover_circuit` (`ibcircuit`, stable tier) via
 `trainer.run_ib_discovery`. Reference: Bian, Niu, Yuan et al., "IBCircuit:
 Towards Holistic Circuit Discovery with Information Bottleneck" (ICML 2025),
 https://github.com/ivanniu/IBCircuit. Note: single-batch training, may OOM on 3B models.

@@ -8,13 +8,19 @@ The backends module provides the stability tier registry, algorithm enumeration,
 
 ## Stability Tiers
 
-CircuitKit ships **13 discovery algorithms** across 4 backends, each with an explicit stability tier. Only 2 are validated at production scale (`eap`, `eap-ig`); `acdc` and `ibcircuit` are experimental (GPT-2 scale; `ibcircuit` OOMs above ~3B) and the other 9 are research (GPT-2 IOI only).
+CircuitKit ships **13 discovery algorithms** across 4 backends, each with an explicit stability tier. Six are stable and have been tested across the GPT-2, Llama, Gemma, and Qwen families. The other seven are research: implemented and validated on GPT-2/IOI but not yet exercised at scale or across architectures. No discovery algorithm is in the experimental tier at the moment.
 
 | Tier | Algorithms |
 |------|-----------|
-| **Stable** | `eap`, `eap-ig` |
-| **Experimental** | `acdc`, `ibcircuit` |
-| **Research** | `eap-ig-activations`, `eap-clean-corrupted`, `eap-exact`, `atp-gd`, `eap-gp`, `relp`, `peap`, `eap-ifr`, `cdt` |
+| **Stable** | `eap`, `eap-ig`, `eap-gp`, `acdc`, `ibcircuit`, `cdt` |
+| **Experimental** | none currently |
+| **Research** | `eap-ig-activations`, `eap-clean-corrupted`, `eap-exact`, `atp-gd`, `relp`, `peap`, `eap-ifr` |
+
+Caveats on stable-tier algorithms:
+
+- `acdc` is node-only by construction (edge search) and slow.
+- `ibcircuit` has a memory ceiling on multi-billion-parameter models at aggressive settings.
+- `cdt` works from clean inputs only. It uses a frozen-RoPE attention approximation (Q/K are not decomposed) and a 50/50 gated-MLP cross-term split, so its scores on RoPE models are approximate.
 
 ---
 
@@ -45,8 +51,8 @@ from circuitkit.backends import (
 from circuitkit.backends import STABILITY
 
 print(STABILITY["eap-ig"])   # "stable"
-print(STABILITY["acdc"])     # "experimental"
-print(STABILITY["cdt"])      # "research"
+print(STABILITY["acdc"])     # "stable"
+print(STABILITY["relp"])     # "research"
 ```
 
 ### `DISCOVERY_ALGORITHMS`
@@ -69,8 +75,11 @@ Tier subsets derived from the full `ALGORITHMS`/`STABILITY` map (not just `DISCO
 from circuitkit.backends import STABLE_ALGORITHMS, EXPERIMENTAL_ALGORITHMS
 
 print(sorted(STABLE_ALGORITHMS))
-# ['awq', 'eap', 'eap-ig', 'gptq', 'magnitude',
-#  'multi_granular', 'random', 'tacq', 'taylor', 'wanda']
+# ['acdc', 'awq', 'cdt', 'eap', 'eap-gp', 'eap-ig', 'gptq', 'ibcircuit',
+#  'magnitude', 'multi_granular', 'random', 'tacq', 'taylor', 'wanda']
+
+print(sorted(EXPERIMENTAL_ALGORITHMS))
+# []
 ```
 
 ---
@@ -83,14 +92,14 @@ print(sorted(STABLE_ALGORITHMS))
 from circuitkit.backends import is_stable
 
 is_stable("eap-ig")   # True
-is_stable("acdc")     # False
+is_stable("relp")     # False
 ```
 
 ### `is_experimental(algo: str) -> bool`
 
 ```python
 from circuitkit.backends import is_experimental
-is_experimental("acdc")     # True
+is_experimental("acdc")     # False (no discovery algorithm is experimental currently)
 is_experimental("eap-ig")   # False
 ```
 
@@ -98,7 +107,7 @@ is_experimental("eap-ig")   # False
 
 ```python
 from circuitkit.backends import is_research
-is_research("cdt")      # True
+is_research("relp")     # True
 is_research("eap-ig")   # False
 ```
 
@@ -118,14 +127,10 @@ default_algorithm()   # "eap-ig"
 `discover_circuit` automatically emits a `UserWarning` when you request a non-stable algorithm:
 
 ```text
-UserWarning: Algorithm 'acdc' is experimental. May fail on larger models or non-IOI tasks. Use 'eap-ig' for production.
+UserWarning: Algorithm 'relp' is research-quality (only validated on GPT-2 IOI). Use 'eap-ig' for production.
 ```
 
-Research-tier algorithms get a similar warning:
-
-```text
-UserWarning: Algorithm 'cdt' is research-quality (only validated on GPT-2 IOI). Use 'eap-ig' for production.
-```
+Experimental-tier algorithms get a similar warning. No discovery algorithm is in that tier currently.
 
 To suppress:
 

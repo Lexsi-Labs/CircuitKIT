@@ -2,7 +2,7 @@
 
 **Information-Bottleneck Circuit** (IBCircuit) takes a different approach to circuit discovery: instead of computing gradients with respect to a metric, it trains a **noise model** that learns which activations are necessary for the task.
 
-**Stability tier:**  Experimental — validated on GPT-2 IOI; OOM risk above ~3B parameters.
+**Stability tier:**  Stable. Tested across the GPT-2, Llama, Gemma, and Qwen families. Memory ceiling on multi-billion-parameter models at aggressive settings (OOM risk above ~3B parameters).
 
 ---
 
@@ -38,8 +38,8 @@ circuit = discover_circuit({
 })
 ```
 
-!!! warning "IBCircuit emits a UserWarning"
-    Since IBCircuit is Experimental-tier, `discover_circuit` emits a `UserWarning` when you request it. This is expected.
+!!! warning "Memory ceiling"
+    IBCircuit trains a noise model alongside the frozen model, which roughly doubles memory. Peak memory grows with batch size and sequence length, so aggressive settings can OOM on multi-billion-parameter models.
 
 ---
 
@@ -80,8 +80,8 @@ pipe.discover(algorithm="ibcircuit", n_examples=64, num_epochs=500)
 | Mechanism | Learned noise gates | Gradient attribution |
 | Runtime | Slower (trains a model) | Fast (gradient passes) |
 | Memory | 2× model size (OOM risk) | ~1.5× model size |
-| Model size | GPT-2 scale (~124M) | Validated to 4B |
-| Tier |  Experimental |  Stable |
+| Model size | Memory ceiling above ~3B | Validated to 4B |
+| Tier |  Stable |  Stable |
 
 ---
 
@@ -96,7 +96,6 @@ pipe.discover(algorithm="ibcircuit", n_examples=64, num_epochs=500)
 ## Known Limitations
 
 - **OOM above ~3B** — the noise model doubles memory requirements
-- **GPT-2 validated only** — GQA and SwiGLU architectures are untested
 - **Slower** than EAP — requires training the noise model, not just a gradient pass
 
 ---
@@ -105,4 +104,4 @@ pipe.discover(algorithm="ibcircuit", n_examples=64, num_epochs=500)
 
 - [EAP Family](eap.md) — faster, stable alternative
 - [Custom Data](../user-guide/custom-data.md) — clean-only dataset setup
-- [Stability Tiers](stability-tiers.md) — understanding experimental-tier risks
+- [Stability Tiers](stability-tiers.md) — full tier table

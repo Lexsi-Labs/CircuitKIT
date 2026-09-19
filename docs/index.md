@@ -38,9 +38,11 @@ or fine-tune — then export a reloadable HuggingFace checkpoint.</p>
 
     ---
 
-    EAP family (stable), ACDC and IBCircuit (experimental), CD-T (research) — each with
-    explicit stability tiers. Only 2 (`eap`, `eap-ig`) are validated at production scale;
-    the other 11 (2 experimental, 9 research) are not yet. Default: `eap-ig`.
+    EAP family, ACDC, IBCircuit and CD-T, each with an explicit stability tier. Six are
+    stable (`eap`, `eap-ig`, `eap-gp`, `acdc`, `ibcircuit`, `cdt`) and have been tested
+    across the GPT-2, Llama, Gemma, and Qwen families. The other seven are research:
+    validated on GPT-2/IOI but not yet exercised at scale or across architectures.
+    Default: `eap-ig`.
 
     [:octicons-arrow-right-24: Algorithm overview](algorithms/overview.md)
 
@@ -135,9 +137,9 @@ flowchart LR
 
     subgraph backends["13 algorithms / 4 backends"]
         direction TB
-        B1["EAP family  Stable<br/>eap, eap-ig, ..."]
-        B2["ACDC / IBCircuit  Experimental"]
-        B3["CD-T, RelP, ...  Research"]
+        B1["EAP family  Stable<br/>eap, eap-ig, eap-gp"]
+        B2["ACDC / IBCircuit / CD-T  Stable"]
+        B3["RelP, PEAP, ...  Research"]
     end
     B --> B1 & B2 & B3
 

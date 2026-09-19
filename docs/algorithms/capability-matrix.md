@@ -17,6 +17,8 @@ Algorithm × model scale × expected outcome with rough runtime and memory estim
 
 ✅ Validated  ⚠️ May fail or be slow  ❌ Known failure
 
+Per-scale cells record what was run for the audit and predate the current tier assignment. `eap-gp`, `acdc`, `ibcircuit` and `cdt` are now Stable tier (see [Stability Tiers](stability-tiers.md)), and `eap-gp` has no row of its own here.
+
 All runtimes: `n_examples=128`, `batch_size=4`, `level="node"`, A100 40GB.
 
 ## Memory requirements

@@ -25,6 +25,7 @@ forward-pass method that attributes predictions to source nodes by propagating a
 
 ## How it fits
 
-Dispatched from `api.discover_circuit` (`cdt`, research tier) via
-`adapter.run_cdt_discovery`. Note: RoPE handling and the gated-MLP split are
-approximations and unvalidated (see registry comment in `backends/__init__.py`).
+Dispatched from `api.discover_circuit` (`cdt`, stable tier) via
+`adapter.run_cdt_discovery`. Note: clean-only. RoPE handling and the gated-MLP
+split are approximations, so scores on RoPE models are approximate (see registry
+comment in `backends/__init__.py`).

@@ -54,7 +54,7 @@ A **circuit** is the minimal set of attention heads and MLP layers in a transfor
 
 | Capability | What it means |
 |---|---|
-| **Discover** | 13 algorithms across maturity tiers — 2 stable (EAP, EAP-IG), 2 experimental (ACDC, IBCircuit), 9 research |
+| **Discover** | 13 algorithms across maturity tiers: 6 stable (EAP, EAP-IG, EAP-GP, ACDC, IBCircuit, CD-T), tested across the GPT-2, Llama, Gemma, and Qwen families, and 7 research |
 | **Evaluate** | 6-pillar faithfulness: causal patching, ablation, stability, robustness, baselines, generalization |
 | **Prune** | Structural weight pruning down to the circuit |
 | **Quantize** | Circuit-aware mixed-precision quantization (3/4-bit + protect tiers) |

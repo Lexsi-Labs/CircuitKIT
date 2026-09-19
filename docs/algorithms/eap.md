@@ -1,6 +1,6 @@
 # EAP Family
 
-**Edge Attribution Patching** (EAP) and its variants power most of CircuitKit's discovery. Both Stable-tier algorithms, `eap` and `eap-ig`, belong to this family, alongside the Research-tier `eap-ig-activations` and `eap-clean-corrupted` and several other Research variants.
+**Edge Attribution Patching** (EAP) and its variants power most of CircuitKit's discovery. Three of the six Stable-tier algorithms, `eap`, `eap-ig` and `eap-gp`, belong to this family, alongside the Research-tier `eap-ig-activations` and `eap-clean-corrupted` and five other Research variants.
 
 ---
 
@@ -23,7 +23,7 @@ approximated with `ig_steps` steps (default: 5).
 
 ---
 
-## The Two Stable Variants
+## The Stable Variants
 
 ### `eap-ig` — Default
 
@@ -61,6 +61,16 @@ Vanilla EAP — one gradient step at the clean activation point. ~30% faster tha
 
 ---
 
+### `eap-gp` (GradPath)
+
+```python
+"discovery": {"algorithm": "eap-gp", "task": "ioi", "level": "node", ...}
+```
+
+EAP-GP / GradPath uses an adaptive integration path instead of straight-line IG (Zhang et al. 2025). Stable tier, tested across the GPT-2, Llama, Gemma, and Qwen families.
+
+---
+
 ## Research-Tier EAP Variants
 
 These are implemented for algorithm comparison studies. Only validated on GPT-2 IOI — do not use for standard circuit discovery:
@@ -71,7 +81,6 @@ These are implemented for algorithm comparison studies. Only validated on GPT-2 
 | `eap-clean-corrupted` | Uses both clean and corrupted forward passes in the gradient computation |
 | `eap-exact` | Exact leave-one-out patching; used as reference baseline |
 | `atp-gd` | Attribution Patching with GradDrop (Kramár et al. 2024) |
-| `eap-gp` | EAP-GP / GradPath — adaptive integration path instead of straight-line IG (Zhang et al. 2025) |
 | `relp` | Relevance Patching — LRP-ε-style gradient re-routing (Rezaei Jafari et al. 2025) |
 | `peap` | Position-aware EAP — retains the position dimension (Haklay et al. 2025) |
 | `eap-ifr` | Information Flow Routes — proximity scores from a single clean forward pass (Ferrando et al. 2024) |
