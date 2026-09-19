@@ -256,10 +256,23 @@ def _build_corrupted_dataloader(
     n_length_mismatch = 0
     last_error: Optional[str] = None
 
+    tagger = getattr(strategy, "_default_tagger", None)
+    metadata = {"tagger": tagger} if tagger is not None else None
+
+    # Dataset-derived strategies (entity pools, POS vocabularies) draw their
+    # replacements from the clean prompts, so they must see all of them before
+    # the per-example loop; without this every prompt comes back unchanged.
+    prepare = getattr(strategy, "prepare", None)
+    if callable(prepare):
+        try:
+            prepare([{"prompt": clean_text} for clean_text, _, _ in triples], metadata)
+        except Exception as e:
+            raise CorruptionUnavailableError(
+                f"could not prepare '{corruption_variant}' corruption strategy: {e}"
+            ) from e
+
     for clean_text, corrupted_text, label in triples:
         try:
-            tagger = getattr(strategy, "_default_tagger", None)
-            metadata = {"tagger": tagger} if tagger is not None else None
             result = strategy.corrupt({"prompt": clean_text}, rng=rng, metadata=metadata)
         except Exception as e:
             n_failures += 1

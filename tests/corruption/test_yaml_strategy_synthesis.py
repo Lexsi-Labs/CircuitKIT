@@ -93,3 +93,22 @@ def test_role_swap_runs_through_the_yaml_task_path(tmp_path):
     ]
     corrupted = task._apply_corruptions(clean, {"seed": 42})
     assert [x["answer"] for x in corrupted] == ["nurse", "judge"]
+
+
+@pytest.mark.parametrize("variant", ["entity_swap", "token_swap"])
+def test_robustness_pillar_generates_dataset_derived_variants(variant):
+    """Pillar 4 corrupts one prompt at a time too, so it must prepare the
+    strategy first; otherwise these variants are skipped as "no modified prompts"."""
+    from circuitkit.evaluation.pillars.robustness import _build_corrupted_dataloader
+
+    clean = [f"The capital of {c} is" for c, _ in CAPITALS]
+    corrupted = list(reversed(clean))
+    original = [(clean, corrupted, [[0, 1]] * len(clean))]  # one (clean, corrupted, label) batch
+
+    generated = _build_corrupted_dataloader(original, variant, model=None)
+
+    new_clean = [text for batch in generated for text in batch[0]]
+    # The generator drops no-op corruptions, so a full-length result means
+    # every prompt was actually rewritten.
+    assert len(new_clean) == len(clean)
+    assert all(new != old for new, old in zip(new_clean, clean))
