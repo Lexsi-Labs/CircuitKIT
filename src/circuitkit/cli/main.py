@@ -2221,7 +2221,12 @@ def run(config_path):
             console.print(f"[yellow]Warning: evaluation failed:[/yellow] {exc}")
 
     # --- Applications ---
-    for app in cfg.get("applications", []):
+    # Accept both spellings: a list of {type: prune, ...} entries, and a
+    # mapping keyed by type (applications: {prune: {sparsity: 0.3}}).
+    applications = cfg.get("applications") or []
+    if isinstance(applications, dict):
+        applications = [{"type": k, **(v or {})} for k, v in applications.items()]
+    for app in applications:
         app_type = app.get("type", "")
         console.print(f"[cyan]Step: {app_type}[/cyan]")
         try:

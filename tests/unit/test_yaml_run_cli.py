@@ -501,3 +501,27 @@ class TestPinnedDeviceReachesDiscovery:
         pipe = Pipeline("gpt2", task="ioi")
         assert pipe.device in ("cuda", "cpu")
         assert "device" not in pipe._model_cfg()
+
+
+class TestBlockSpellings:
+    def test_applications_mapping_keyed_by_type(self, runner, tmp_path):
+        """applications may be a mapping keyed by type as well as a list; the
+        mapping form used to crash with "'str' object has no attribute 'get'"."""
+        cfg = {
+            "model": "gpt2",
+            "task": "ioi",
+            "output_dir": str(tmp_path / "out"),
+            "discovery": {"algorithm": "eap-ig", "level": "node"},
+            "applications": {"prune": {"sparsity": 0.3, "scope": "both"}},
+        }
+        cfg_path = _write_yaml(cfg, tmp_path / "pipeline.yaml")
+
+        with (
+            patch("circuitkit.api.discover_circuit", return_value=["A0.1"]),
+            patch("circuitkit.pipeline.Pipeline._ensure_model", return_value=MagicMock()),
+            patch("circuitkit.pipeline.Pipeline.prune") as mock_prune,
+        ):
+            result = runner.invoke(cli, ["run", cfg_path])
+
+        assert result.exit_code == 0, result.output
+        assert mock_prune.call_args.kwargs["sparsity"] == 0.3
