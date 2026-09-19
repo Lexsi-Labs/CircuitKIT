@@ -1101,7 +1101,8 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
         validate_discovery_algorithm(discovery_cfg["algorithm"])
 
         progress.step("Setting up model", model=model_cfg["name"])
-        device = get_device()
+        # config["model"]["device"] pins the device; absent -> auto-detect.
+        device = get_device(model_cfg.get("device") or "auto")
         # Use default from DEFAULT_CONFIG (single source of truth)
         default_model = DEFAULT_CONFIG["model"]
         dtype = getattr(t, model_cfg.get("precision", default_model.get("precision")))
@@ -1991,7 +1992,7 @@ def evaluate_circuit(
         validate_file_exists(scores_path, "discovery scores")
 
         # Load model and data
-        device = get_device()
+        device = get_device(config["model"].get("device") or "auto")
         dtype = getattr(t, config["model"].get("precision", "bfloat16"))
         if _model is not None:
             # Reuse the caller's already-loaded model (e.g. discover_circuit's
@@ -2090,31 +2091,13 @@ def evaluate_circuit(
             else:
                 intervention_dataloader = task_spec.build_dataloader(model, dl_cfg, device)
 
+        # Pillar 4 generates each corruption variant itself from the clean
+        # prompts, and skips a variant it cannot generate. Do not pre-build
+        # "variant" dataloaders here: no task spec reads a corruption-variant
+        # key, so such a loader is the *uncorrupted* data, and scoring it
+        # reports a robustness_ratio of 1.0 that tested nothing.
         corruption_dataloaders = {}
         pillars_to_run = eval_cfg.get("pillars")
-        if pillars_to_run is None or "robustness" in pillars_to_run:
-            corruption_variants = eval_cfg.get("corruption_variants", ["paraphrase"])
-            for variant in corruption_variants:
-                var_cfg = dl_cfg.copy()
-                var_cfg["data_params"] = var_cfg.get("data_params", {}).copy()
-                var_cfg["data_params"]["corruption_variant"] = variant
-                try:
-                    corruption_dataloaders[variant] = task_spec.build_dataloader(
-                        model, var_cfg, device
-                    )
-                except Exception as e:
-                    logger.warning(f"Could not build corruption dataloader for '{variant}': {e}")
-
-        if not corruption_dataloaders and (
-            pillars_to_run is None or "robustness" in pillars_to_run
-        ):
-            logger.error(
-                f"Robustness pillar requested but no corruption dataloaders could be built "
-                f"for variants {corruption_variants}. Skipping robustness evaluation."
-            )
-            # Remove 'robustness' from pillars to prevent meaningless zero-delta results
-            if pillars_to_run:
-                pillars_to_run = [p for p in pillars_to_run if p != "robustness"]
         target_task_name = eval_cfg.get("target_task", None)
         target_task_spec = None
         target_dataloader = None

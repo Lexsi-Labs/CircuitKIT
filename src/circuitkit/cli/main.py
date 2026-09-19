@@ -1427,7 +1427,7 @@ def data():
     "--shape",
     default=None,
     help="Force a specific dataset shape "
-    "(qa/mcq/pairwise/conversational/instruction/forget_retain). "
+    "(qa/mcq/pairwise/conversational/instruction/forget_retain/math/code/refusal). "
     "Default: auto-detect.",
 )
 @click.option("--max-records", type=int, default=128, help="How many records to inspect.")
@@ -1466,9 +1466,12 @@ def data_check(source, shape, max_records, model, device, output, hf_subset, hf_
     detected = forced or detect_shape(raw)
     click.echo(f"detected shape: {detected.value}" + (" (forced)" if forced else ""))
 
-    ds = auto_normalize(
-        raw, max_records=max_records, name=source, source=source, force_shape=forced
-    )
+    try:
+        ds = auto_normalize(
+            raw, max_records=max_records, name=source, source=source, force_shape=forced
+        )
+    except ValueError as exc:  # unrecognised columns: a usage error, not a crash
+        raise click.ClickException(str(exc)) from exc
     click.echo(f"loaded {len(ds)} records from {source} (n_paired={ds.n_paired})")
 
     tokenizer = mod = None
@@ -1520,9 +1523,12 @@ def data_prepare(source, shape, strategy, max_records, output, hf_subset, hf_spl
             f"Could not auto-detect shape for {source}. " "Pass --shape explicitly."
         )
 
-    ds = auto_normalize(
-        raw, max_records=max_records, name=source, source=source, force_shape=forced
-    )
+    try:
+        ds = auto_normalize(
+            raw, max_records=max_records, name=source, source=source, force_shape=forced
+        )
+    except ValueError as exc:  # unrecognised columns: a usage error, not a crash
+        raise click.ClickException(str(exc)) from exc
     chosen_strategy = strategy or default_strategy_for(actual_shape)
     if chosen_strategy is None and not ds.fully_paired:
         click.echo(
@@ -2154,6 +2160,7 @@ def run(config_path):
     task = cfg.get("task")
     precision = cfg.get("precision", "bfloat16")
     output_dir = cfg.get("output_dir", "./pipeline_output")
+    device = cfg.get("device")  # None -> auto-detect (cuda > mps > cpu)
 
     # Handle custom data
     custom_data = cfg.get("custom_data")
@@ -2166,10 +2173,13 @@ def run(config_path):
             corrupt_prompt=custom_data.get("corrupt_prompt"),
             corrupt_answer=custom_data.get("corrupt_answer"),
             precision=precision,
+            device=device,
             output_dir=output_dir,
         )
     else:
-        pipe = Pipeline(model_name, task=task, precision=precision, output_dir=output_dir)
+        pipe = Pipeline(
+            model_name, task=task, precision=precision, device=device, output_dir=output_dir
+        )
 
     console.print(f"[bold green]Running pipeline:[/bold green] {config_path}")
     console.print(f"  Model: {model_name} | Task: {task or '(custom)'}")
@@ -2179,14 +2189,13 @@ def run(config_path):
     if disc:
         console.print("[cyan]Step: discovery[/cyan]")
         try:
-            # ig_steps/mlp_hook/chat_template_mode reach Pipeline.discover()'s
-            # **kw only when the YAML sets them, so unset keys behave exactly
-            # as before (no seed override, no extra discovery-config keys).
-            extra_disc_kw = {
-                key: disc[key]
-                for key in ("ig_steps", "mlp_hook", "chat_template_mode")
-                if key in disc
-            }
+            # Every other discovery key (ig_steps, mlp_hook, chat_template_mode,
+            # IBCircuit's num_epochs/learning_rate/alpha/beta, data_params, ...)
+            # reaches Pipeline.discover()'s **kw, which puts it in the discovery
+            # config. Only keys the YAML sets are passed, so unset keys keep
+            # their defaults. (A three-key whitelist used to drop the rest.)
+            named = {"algorithm", "level", "sparsity", "n_examples", "batch_size", "scope", "seed"}
+            extra_disc_kw = {k: v for k, v in disc.items() if k not in named and k != "enabled"}
             pipe.discover(
                 algorithm=disc.get("algorithm", "eap-ig"),
                 level=disc.get("level", "node"),
@@ -2213,11 +2222,22 @@ def run(config_path):
                 n_stability_runs=eval_cfg.get("n_stability_runs", 5),
                 target_task=eval_cfg.get("target_task"),
             )
+            # Machine-readable result next to the artifacts, so nothing has to
+            # be recovered from log text.
+            if pipe.report is not None:
+                report_path = Path(output_dir) / "faithfulness_report.json"
+                pipe.report.to_json(report_path)
+                console.print(f"  Report: {report_path}")
         except Exception as exc:
             console.print(f"[yellow]Warning: evaluation failed:[/yellow] {exc}")
 
     # --- Applications ---
-    for app in cfg.get("applications", []):
+    # Accept both spellings: a list of {type: prune, ...} entries, and a
+    # mapping keyed by type (applications: {prune: {sparsity: 0.3}}).
+    applications = cfg.get("applications") or []
+    if isinstance(applications, dict):
+        applications = [{"type": k, **(v or {})} for k, v in applications.items()]
+    for app in applications:
         app_type = app.get("type", "")
         console.print(f"[cyan]Step: {app_type}[/cyan]")
         try:
@@ -2225,6 +2245,7 @@ def run(config_path):
                 pipe.prune(
                     sparsity=app.get("sparsity", 0.3),
                     scope=app.get("scope", "both"),
+                    protect_layers=app.get("protect_layers"),
                 )
             elif app_type == "quantize":
                 pipe.quantize(
@@ -2258,7 +2279,10 @@ def run(config_path):
 
     # --- Benchmark ---
     bench_cfg = cfg.get("benchmark", {})
-    if bench_cfg and bench_cfg.get("enabled", False):
+    # A present block runs unless it says enabled: false -- the same rule as
+    # evaluate: and visualize:. (It used to need enabled: true, so a bare
+    # "benchmark: {tasks: [...]}" benchmarked nothing, silently.)
+    if bench_cfg and bench_cfg.get("enabled", True):
         console.print("[cyan]Step: benchmark[/cyan]")
         try:
             pipe.benchmark(

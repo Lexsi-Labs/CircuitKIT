@@ -6,6 +6,7 @@ These tests demonstrate real-world usage patterns for both strategies.
 
 import os
 import random
+from unittest.mock import patch
 import re
 
 import pytest
@@ -252,16 +253,23 @@ class TestMetadataHandling:
         result = strategy.corrupt(example, rng=rng, metadata=None)
         assert isinstance(result, dict)
 
-    def test_token_swap_metadata_required(self):
-        """Test TokenSwapCorruption requires tagger in metadata."""
+    def test_token_swap_default_tagger(self):
+        """Without metadata['tagger'] TokenSwapCorruption falls back to the spaCy
+        tagger, and says how to install it when that is unavailable."""
         strategy = TokenSwapCorruption(vocab={"NUM": ["1", "2"]})
-
-        example = {"prompt": "5"}
         rng = random.Random(42)
 
-        # Should raise if tagger not in metadata
-        with pytest.raises(ValueError, match="tagger"):
-            strategy.corrupt(example, rng=rng, metadata={})
+        TokenSwapCorruption._default_tagger = None
+        with patch.dict("sys.modules", {"spacy": None}):
+            with pytest.raises(ValueError, match="tagger"):
+                strategy.corrupt({"prompt": "5"}, rng=rng, metadata={})
+
+        TokenSwapCorruption._default_tagger = staticmethod(lambda text: ([text], ["NUM"]))
+        try:
+            result = strategy.corrupt({"prompt": "5"}, rng=rng, metadata={})
+        finally:
+            TokenSwapCorruption._default_tagger = None
+        assert result["prompt"] in ("1", "2")
 
     def test_token_swap_metadata_override(self):
         """Test TokenSwapCorruption metadata vocab override."""

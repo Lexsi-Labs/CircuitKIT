@@ -1958,6 +1958,32 @@ class TestRunFullFaithfulness:
         assert report.baseline_comparison is None
         assert report.generalization is None
 
+    @patch("circuitkit.evaluation.full.Pillar1_CausalPatching")
+    def test_signed_ratio_survives_in_report_metadata(self, mock_p1):
+        """The headline score is clipped to [0, 1]; the signed ratio behind an
+        inverted circuit must still be in the report (it used to be dropped)."""
+        mock_p1.run.return_value = {
+            "score": 0.0,
+            "raw_score": 0.023,
+            "raw_ratio": -12.21,
+            "clean_score": 0.0415,
+            "corrupt_score": 0.0401,
+            "degenerate_denominator": False,
+        }
+
+        report = run_full_faithfulness(
+            model=_make_mock_model(),
+            graph=_make_mock_graph(),
+            task_spec=_make_mock_task_spec(),
+            discovery_cfg=_make_discovery_cfg(),
+            dataloader=MagicMock(),
+            pillars=["patching"],
+        )
+
+        assert report.patching_score == 0.0
+        assert report.metadata["patching_raw_ratio"] == -12.21
+        assert report.metadata["pillars_computed"] == ["patching"]
+
     @patch("circuitkit.evaluation.full.Pillar2_Ablation")
     @patch("circuitkit.evaluation.full.Pillar1_CausalPatching")
     def test_two_pillars(self, mock_p1, mock_p2):

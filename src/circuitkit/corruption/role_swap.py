@@ -173,6 +173,16 @@ class RoleSwapCorruption:
         corrupted_example = example.copy()
         corrupted_example["prompt"] = corrupted_prompt
 
+        # When the answer names one of the two swapped roles, the counterfactual
+        # answer is the other one ("the doctor called the nurse; who called?").
+        answer = example.get("answer")
+        if isinstance(answer, str):
+            roles = {subject_token.text.lower(): object_token.text,
+                     object_token.text.lower(): subject_token.text}
+            other = roles.get(answer.strip().lower())
+            if other is not None:
+                corrupted_example["answer"] = answer.replace(answer.strip(), other)
+
         if "role_swap_metadata" not in corrupted_example:
             corrupted_example["role_swap_metadata"] = {}
 

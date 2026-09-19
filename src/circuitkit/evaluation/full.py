@@ -266,6 +266,9 @@ def run_full_faithfulness(  # noqa: C901 - complex function, refactor out of sco
             # direction: clean < corrupt) — the report renders that as "N/A".
             patching_score = patching_result["score"]
             report.patching_score = patching_score
+            # The headline is clipped to [0, 1]; keep the signed ratio too, so an
+            # inverted or over-sufficient circuit is not read as a bland 0 or 1.
+            report.metadata["patching_raw_ratio"] = patching_result.get("raw_ratio")
             timing["patching"] = time.time() - start
             _p_score = f"{patching_score:.4f}" if patching_score is not None else "invalid"
             logger.info(
@@ -313,6 +316,9 @@ def run_full_faithfulness(  # noqa: C901 - complex function, refactor out of sco
             # when status='invalid' (inverted metric direction) — see Pillar 1.
             ablation_score = ablation_result["score"]
             report.ablation_score = ablation_score
+            # The headline is clipped to [0, 1]; keep the signed ratio too, so an
+            # inverted or over-sufficient circuit is not read as a bland 0 or 1.
+            report.metadata["ablation_raw_ratio"] = ablation_result.get("raw_ratio")
             timing["ablation"] = time.time() - start
             _a_score = f"{ablation_score:.4f}" if ablation_score is not None else "invalid"
             logger.info(
@@ -528,21 +534,24 @@ def run_full_faithfulness(  # noqa: C901 - complex function, refactor out of sco
 
     total_time = time.time() - total_start
 
-    # Add metadata
-    report.metadata = {
-        "algorithm": discovery_cfg.get("algorithm", "unknown"),
-        "model": model_name,
-        "task": discovery_cfg.get("task", "unknown"),
-        "level": discovery_cfg.get("level", "node"),
-        "scope": discovery_cfg.get("scope", "unknown"),
-        "sparsity": (pruning_cfg or {}).get(
-            "target_sparsity", discovery_cfg.get("pruning", {}).get("target_sparsity", 0.0)
-        ),
-        "pillars_computed": pillars,
-        "timestamp": time.time(),
-        "total_duration_seconds": total_time,
-        "per_pillar_duration_seconds": timing,
-    }
+    # Add metadata (update, not replace: the pillars above already recorded
+    # their signed ratios here)
+    report.metadata.update(
+        {
+            "algorithm": discovery_cfg.get("algorithm", "unknown"),
+            "model": model_name,
+            "task": discovery_cfg.get("task", "unknown"),
+            "level": discovery_cfg.get("level", "node"),
+            "scope": discovery_cfg.get("scope", "unknown"),
+            "sparsity": (pruning_cfg or {}).get(
+                "target_sparsity", discovery_cfg.get("pruning", {}).get("target_sparsity", 0.0)
+            ),
+            "pillars_computed": pillars,
+            "timestamp": time.time(),
+            "total_duration_seconds": total_time,
+            "per_pillar_duration_seconds": timing,
+        }
+    )
 
     logger.info("=" * 70)
     logger.info("FAITHFULNESS EVALUATION COMPLETE")

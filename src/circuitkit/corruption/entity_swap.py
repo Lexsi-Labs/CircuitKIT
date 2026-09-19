@@ -141,6 +141,15 @@ class EntitySwapCorruption:
         self.entity_pool = pool
         self._pool_built = True
 
+    def prepare(
+        self,
+        examples: List[Dict[str, Any]],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Build the entity pool from the dataset unless one was supplied."""
+        if not self._pool_built and self.entity_pool is None:
+            self._build_pool_from_examples(examples)
+
     def corrupt(
         self,
         example: Dict[str, Any],
@@ -234,8 +243,8 @@ class EntitySwapCorruption:
             List of corrupted examples.
         """
         # If entity pool not yet built and we have "auto" mode, build it now
-        if not self._pool_built and self.entity_pool is None and self.nlp is not None:
-            self._build_pool_from_examples(examples)
+        if self.nlp is not None:
+            self.prepare(examples, metadata)
 
         return [self.corrupt(ex, rng=rng, metadata=metadata) for ex in examples]
 

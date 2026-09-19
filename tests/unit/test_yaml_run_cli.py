@@ -362,6 +362,57 @@ class TestRunAdvancedParamsThreaded:
         assert kwargs["n_stability_runs"] == 3
         assert kwargs["target_task"] == "greater_than"
 
+    def test_prune_protect_layers_forwarded(self, runner, tmp_path):
+        """applications[].protect_layers reaches Pipeline.prune()."""
+        cfg = {
+            "model": "gpt2",
+            "task": "ioi",
+            "output_dir": str(tmp_path / "out"),
+            "discovery": {"algorithm": "eap-ig", "level": "node"},
+            "applications": [{"type": "prune", "sparsity": 0.2, "protect_layers": [0, 1]}],
+        }
+        cfg_path = _write_yaml(cfg, tmp_path / "pipeline.yaml")
+
+        with (
+            patch("circuitkit.api.discover_circuit", return_value=["A0.1"]),
+            patch("circuitkit.pipeline.Pipeline._ensure_model", return_value=MagicMock()),
+            patch("circuitkit.pipeline.Pipeline.prune") as mock_prune,
+        ):
+            runner.invoke(cli, ["run", cfg_path])
+
+        mock_prune.assert_called_once()
+        assert mock_prune.call_args.kwargs["protect_layers"] == [0, 1]
+
+    def test_device_forwarded_to_pipeline(self, runner, tmp_path):
+        """The top-level device key reaches Pipeline.__init__ (absent -> None, auto-detect)."""
+        from circuitkit.pipeline import Pipeline
+
+        seen = []
+        original_init = Pipeline.__init__
+
+        def capturing_init(self, model_name, *, device=None, **kw):
+            seen.append(device)
+            original_init(self, model_name, device=device, **kw)
+
+        for device in ("cpu", None):
+            cfg = {
+                "model": "gpt2",
+                "task": "ioi",
+                "output_dir": str(tmp_path / "out"),
+                "discovery": {"algorithm": "eap-ig", "level": "node"},
+            }
+            if device:
+                cfg["device"] = device
+            cfg_path = _write_yaml(cfg, tmp_path / "pipeline.yaml")
+            with (
+                patch("circuitkit.pipeline.Pipeline.__init__", capturing_init),
+                patch("circuitkit.api.discover_circuit", return_value=["A0.1"]),
+                patch("circuitkit.pipeline.Pipeline._ensure_model", return_value=MagicMock()),
+            ):
+                runner.invoke(cli, ["run", cfg_path])
+
+        assert seen == ["cpu", None]
+
     def test_visualize_bounding_kwargs_forwarded_only_when_set(self, runner, tmp_path):
         """visualize.max_nodes/max_edges/edge_threshold reach Pipeline.visualize()
         only when present in the YAML."""
@@ -393,15 +444,17 @@ class TestRunAdvancedParamsThreaded:
         assert kwargs["max_edges"] == 3000
         assert "edge_threshold" not in kwargs
 
-    def test_benchmark_skipped_without_enabled_true(self, runner, tmp_path):
-        """benchmark: without enabled: true must NOT run (existing gotcha,
-        still honored after the L2 threading changes)."""
+    @pytest.mark.parametrize("block, runs", [
+        ({"tasks": ["ioi"]}, True),  # present block runs, like evaluate:/visualize:
+        ({"tasks": ["ioi"], "enabled": False}, False),
+    ])
+    def test_benchmark_block_runs_unless_disabled(self, runner, tmp_path, block, runs):
         cfg = {
             "model": "gpt2",
             "task": "ioi",
             "output_dir": str(tmp_path / "out"),
             "discovery": {"algorithm": "eap-ig", "level": "node"},
-            "benchmark": {"tasks": ["ioi"]},
+            "benchmark": block,
         }
         cfg_path = _write_yaml(cfg, tmp_path / "pipeline.yaml")
 
@@ -412,7 +465,7 @@ class TestRunAdvancedParamsThreaded:
         ):
             runner.invoke(cli, ["run", cfg_path])
 
-        mock_benchmark.assert_not_called()
+        assert mock_benchmark.called is runs
 
     def test_benchmark_runs_with_enabled_true(self, runner, tmp_path):
         """benchmark: {enabled: true} must run."""
@@ -433,3 +486,106 @@ class TestRunAdvancedParamsThreaded:
             runner.invoke(cli, ["run", cfg_path])
 
         mock_benchmark.assert_called_once()
+
+
+class TestPinnedDeviceReachesDiscovery:
+    def test_pipeline_device_is_in_the_discovery_config(self):
+        """Pipeline(device=...) must reach discover_circuit's config; without it
+        discovery auto-detected and ignored the pinned device."""
+        from circuitkit.pipeline import Pipeline
+
+        assert Pipeline("gpt2", task="ioi", device="cpu")._model_cfg()["device"] == "cpu"
+        assert "device" not in Pipeline("gpt2", task="ioi")._model_cfg()
+
+    def test_resolving_device_does_not_pin_it(self):
+        from circuitkit.pipeline import Pipeline
+
+        pipe = Pipeline("gpt2", task="ioi")
+        assert pipe.device in ("cuda", "cpu")
+        assert "device" not in pipe._model_cfg()
+
+
+class TestBlockSpellings:
+    def test_applications_mapping_keyed_by_type(self, runner, tmp_path):
+        """applications may be a mapping keyed by type as well as a list; the
+        mapping form used to crash with "'str' object has no attribute 'get'"."""
+        cfg = {
+            "model": "gpt2",
+            "task": "ioi",
+            "output_dir": str(tmp_path / "out"),
+            "discovery": {"algorithm": "eap-ig", "level": "node"},
+            "applications": {"prune": {"sparsity": 0.3, "scope": "both"}},
+        }
+        cfg_path = _write_yaml(cfg, tmp_path / "pipeline.yaml")
+
+        with (
+            patch("circuitkit.api.discover_circuit", return_value=["A0.1"]),
+            patch("circuitkit.pipeline.Pipeline._ensure_model", return_value=MagicMock()),
+            patch("circuitkit.pipeline.Pipeline.prune") as mock_prune,
+        ):
+            result = runner.invoke(cli, ["run", cfg_path])
+
+        assert result.exit_code == 0, result.output
+        assert mock_prune.call_args.kwargs["sparsity"] == 0.3
+
+
+class TestDiscoveryKeysAndReport:
+    def test_algorithm_hyperparameters_reach_discover(self, runner, tmp_path):
+        """Discovery keys beyond the named ones are passed through, so IBCircuit's
+        num_epochs / learning_rate can be set from YAML (a whitelist used to drop them)."""
+        cfg = {
+            "model": "gpt2",
+            "task": "ioi",
+            "output_dir": str(tmp_path / "out"),
+            "discovery": {
+                "algorithm": "ibcircuit",
+                "level": "node",
+                "num_epochs": 50,
+                "learning_rate": 0.05,
+            },
+        }
+        cfg_path = _write_yaml(cfg, tmp_path / "pipeline.yaml")
+
+        with (
+            patch("circuitkit.pipeline.Pipeline.discover") as mock_discover,
+            patch("circuitkit.pipeline.Pipeline._ensure_model", return_value=MagicMock()),
+        ):
+            runner.invoke(cli, ["run", cfg_path])
+
+        kwargs = mock_discover.call_args.kwargs
+        assert kwargs["num_epochs"] == 50 and kwargs["learning_rate"] == 0.05
+        assert kwargs["algorithm"] == "ibcircuit" and "enabled" not in kwargs
+
+    def test_evaluate_writes_the_report_json(self, runner, tmp_path):
+        """`circuitkit run` leaves faithfulness_report.json in output_dir."""
+        from circuitkit.evaluation.report import FaithfulnessReport
+        from circuitkit.pipeline import Pipeline
+
+        out = tmp_path / "out"
+        cfg = {
+            "model": "gpt2",
+            "task": "ioi",
+            "output_dir": str(out),
+            "discovery": {"algorithm": "eap-ig", "level": "node"},
+            "evaluate": {"pillars": [1]},
+        }
+        cfg_path = _write_yaml(cfg, tmp_path / "pipeline.yaml")
+
+        def fake_evaluate(self, **kw):
+            self._eval_report = FaithfulnessReport(
+                patching_score=0.0, metadata={"patching_raw_ratio": -12.21}
+            )
+            return self
+
+        with (
+            patch("circuitkit.api.discover_circuit", return_value=["A0.1"]),
+            patch("circuitkit.pipeline.Pipeline._ensure_model", return_value=MagicMock()),
+            patch.object(Pipeline, "evaluate", fake_evaluate),
+        ):
+            runner.invoke(cli, ["run", cfg_path])
+
+        import json
+
+        saved = json.loads((out / "faithfulness_report.json").read_text())
+        assert saved["patching_score"] == 0.0
+        assert saved["metadata"]["patching_raw_ratio"] == -12.21

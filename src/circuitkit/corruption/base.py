@@ -75,6 +75,20 @@ class CorruptionStrategy(Protocol):
         """
         ...
 
+    def prepare(
+        self,
+        examples: List[Dict[str, Any]],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Build any dataset-derived state before per-example ``corrupt()`` calls.
+
+        Callers that corrupt one example at a time (rather than through
+        ``batch_corrupt``) call this once with the full clean dataset. The
+        default is a no-op; strategies that draw replacements from the dataset
+        itself (entity pools, POS vocabularies) override it.
+        """
+        return None
+
     def batch_corrupt(
         self,
         examples: List[Dict[str, Any]],

@@ -144,9 +144,10 @@ class TestApplicationsExports:
         from circuitkit import applications
         assert "quantization" in applications.__all__
 
-    def test_common_in_all(self):
+    def test_common_utils_in_all(self):
+        # the submodule is `common_utils` (renamed from `common`)
         from circuitkit import applications
-        assert "common" in applications.__all__
+        assert "common_utils" in applications.__all__
 
     def test_arch_registry_exports_present(self):
         """arch_registry re-exports are untouched per Phase 6 handoff."""
