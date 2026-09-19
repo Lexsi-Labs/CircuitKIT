@@ -30,6 +30,7 @@ _ADAPTER_MODULES = (
     "circuitkit.data.adapters.forget_retain",
     "circuitkit.data.adapters.math",
     "circuitkit.data.adapters.code",
+    "circuitkit.data.adapters.qa",
     "circuitkit.data.adapters.safety_prompt",
 )
 _STRATEGY_MODULES = (
@@ -67,6 +68,9 @@ _DETECTION_ORDER: Tuple[DatasetShape, ...] = (
     DatasetShape.MCQ,
     DatasetShape.MATH,
     DatasetShape.CODE,
+    # Plain {question, answer} tables: after every more specific shape, since
+    # GSM8K (MATH) and Alpaca-style sets also carry question/answer-like columns.
+    DatasetShape.QA,
     # REFUSAL shape: AdvBench / HarmBench / Sorry-Bench / JailbreakBench
     # detected by SafetyPromptAdapter.fits(). Tried last because it
     # matches a single-column-prompt fallback that other adapters might

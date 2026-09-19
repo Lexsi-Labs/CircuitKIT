@@ -7,7 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_Nothing yet._
+### Changed
+- `circuitkit run`: a `benchmark:` block now runs when present and is skipped
+  only with `enabled: false`, matching `evaluate:` and `visualize:`. It used to
+  need `enabled: true`, so `benchmark: {tasks: [boolq]}` on its own did nothing.
+  Pipeline files that carry a benchmark block they do not want run should set
+  `enabled: false`.
+- `circuitkit run` passes every `discovery:` key through to the discovery
+  config (it used to keep three and drop the rest, so IBCircuit's
+  `num_epochs` / `learning_rate` / `alpha` / `beta` could not be set), accepts
+  `applications:` as a mapping keyed by type as well as a list, forwards
+  `protect_layers` and a top-level `device`, and writes
+  `faithfulness_report.json` to `output_dir` after evaluation.
+
+### Added
+- `qa` dataset shape: plain `{question, answer}` tables, optionally with
+  `corrupted_question` / `corrupted_answer`. `circuitkit data check` and
+  `data prepare` listed `qa` in their help but had no adapter, so a
+  two-column CSV failed with "Could not auto-detect dataset shape".
+- `FaithfulnessReport.metadata` carries `patching_raw_ratio` and
+  `ablation_raw_ratio`, the signed ratios behind the [0, 1]-clipped scores.
+- Corruption strategies have a `prepare(examples)` hook for dataset-derived
+  state.
+
+### Fixed
+- `corruption: {strategy: entity_swap | token_swap | role_swap}` in a task YAML
+  could never produce a corrupt half ("100% corrupted prompts are identical").
+- The robustness pillar scored uncorrupted data as a `paraphrase` variant
+  (`robustness_ratio=1.0` for every circuit) and skipped `entity_swap` /
+  `token_swap`, which it can generate.
+- A pinned device was ignored by discovery and evaluation.
 
 ## [1.0.0] - 2026-07-03
 

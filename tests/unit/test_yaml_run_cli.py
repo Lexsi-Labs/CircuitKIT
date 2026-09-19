@@ -444,15 +444,17 @@ class TestRunAdvancedParamsThreaded:
         assert kwargs["max_edges"] == 3000
         assert "edge_threshold" not in kwargs
 
-    def test_benchmark_skipped_without_enabled_true(self, runner, tmp_path):
-        """benchmark: without enabled: true must NOT run (existing gotcha,
-        still honored after the L2 threading changes)."""
+    @pytest.mark.parametrize("block, runs", [
+        ({"tasks": ["ioi"]}, True),  # present block runs, like evaluate:/visualize:
+        ({"tasks": ["ioi"], "enabled": False}, False),
+    ])
+    def test_benchmark_block_runs_unless_disabled(self, runner, tmp_path, block, runs):
         cfg = {
             "model": "gpt2",
             "task": "ioi",
             "output_dir": str(tmp_path / "out"),
             "discovery": {"algorithm": "eap-ig", "level": "node"},
-            "benchmark": {"tasks": ["ioi"]},
+            "benchmark": block,
         }
         cfg_path = _write_yaml(cfg, tmp_path / "pipeline.yaml")
 
@@ -463,7 +465,7 @@ class TestRunAdvancedParamsThreaded:
         ):
             runner.invoke(cli, ["run", cfg_path])
 
-        mock_benchmark.assert_not_called()
+        assert mock_benchmark.called is runs
 
     def test_benchmark_runs_with_enabled_true(self, runner, tmp_path):
         """benchmark: {enabled: true} must run."""
@@ -525,3 +527,65 @@ class TestBlockSpellings:
 
         assert result.exit_code == 0, result.output
         assert mock_prune.call_args.kwargs["sparsity"] == 0.3
+
+
+class TestDiscoveryKeysAndReport:
+    def test_algorithm_hyperparameters_reach_discover(self, runner, tmp_path):
+        """Discovery keys beyond the named ones are passed through, so IBCircuit's
+        num_epochs / learning_rate can be set from YAML (a whitelist used to drop them)."""
+        cfg = {
+            "model": "gpt2",
+            "task": "ioi",
+            "output_dir": str(tmp_path / "out"),
+            "discovery": {
+                "algorithm": "ibcircuit",
+                "level": "node",
+                "num_epochs": 50,
+                "learning_rate": 0.05,
+            },
+        }
+        cfg_path = _write_yaml(cfg, tmp_path / "pipeline.yaml")
+
+        with (
+            patch("circuitkit.pipeline.Pipeline.discover") as mock_discover,
+            patch("circuitkit.pipeline.Pipeline._ensure_model", return_value=MagicMock()),
+        ):
+            runner.invoke(cli, ["run", cfg_path])
+
+        kwargs = mock_discover.call_args.kwargs
+        assert kwargs["num_epochs"] == 50 and kwargs["learning_rate"] == 0.05
+        assert kwargs["algorithm"] == "ibcircuit" and "enabled" not in kwargs
+
+    def test_evaluate_writes_the_report_json(self, runner, tmp_path):
+        """`circuitkit run` leaves faithfulness_report.json in output_dir."""
+        from circuitkit.evaluation.report import FaithfulnessReport
+        from circuitkit.pipeline import Pipeline
+
+        out = tmp_path / "out"
+        cfg = {
+            "model": "gpt2",
+            "task": "ioi",
+            "output_dir": str(out),
+            "discovery": {"algorithm": "eap-ig", "level": "node"},
+            "evaluate": {"pillars": [1]},
+        }
+        cfg_path = _write_yaml(cfg, tmp_path / "pipeline.yaml")
+
+        def fake_evaluate(self, **kw):
+            self._eval_report = FaithfulnessReport(
+                patching_score=0.0, metadata={"patching_raw_ratio": -12.21}
+            )
+            return self
+
+        with (
+            patch("circuitkit.api.discover_circuit", return_value=["A0.1"]),
+            patch("circuitkit.pipeline.Pipeline._ensure_model", return_value=MagicMock()),
+            patch.object(Pipeline, "evaluate", fake_evaluate),
+        ):
+            runner.invoke(cli, ["run", cfg_path])
+
+        import json
+
+        saved = json.loads((out / "faithfulness_report.json").read_text())
+        assert saved["patching_score"] == 0.0
+        assert saved["metadata"]["patching_raw_ratio"] == -12.21
