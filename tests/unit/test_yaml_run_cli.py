@@ -362,6 +362,57 @@ class TestRunAdvancedParamsThreaded:
         assert kwargs["n_stability_runs"] == 3
         assert kwargs["target_task"] == "greater_than"
 
+    def test_prune_protect_layers_forwarded(self, runner, tmp_path):
+        """applications[].protect_layers reaches Pipeline.prune()."""
+        cfg = {
+            "model": "gpt2",
+            "task": "ioi",
+            "output_dir": str(tmp_path / "out"),
+            "discovery": {"algorithm": "eap-ig", "level": "node"},
+            "applications": [{"type": "prune", "sparsity": 0.2, "protect_layers": [0, 1]}],
+        }
+        cfg_path = _write_yaml(cfg, tmp_path / "pipeline.yaml")
+
+        with (
+            patch("circuitkit.api.discover_circuit", return_value=["A0.1"]),
+            patch("circuitkit.pipeline.Pipeline._ensure_model", return_value=MagicMock()),
+            patch("circuitkit.pipeline.Pipeline.prune") as mock_prune,
+        ):
+            runner.invoke(cli, ["run", cfg_path])
+
+        mock_prune.assert_called_once()
+        assert mock_prune.call_args.kwargs["protect_layers"] == [0, 1]
+
+    def test_device_forwarded_to_pipeline(self, runner, tmp_path):
+        """The top-level device key reaches Pipeline.__init__ (absent -> None, auto-detect)."""
+        from circuitkit.pipeline import Pipeline
+
+        seen = []
+        original_init = Pipeline.__init__
+
+        def capturing_init(self, model_name, *, device=None, **kw):
+            seen.append(device)
+            original_init(self, model_name, device=device, **kw)
+
+        for device in ("cpu", None):
+            cfg = {
+                "model": "gpt2",
+                "task": "ioi",
+                "output_dir": str(tmp_path / "out"),
+                "discovery": {"algorithm": "eap-ig", "level": "node"},
+            }
+            if device:
+                cfg["device"] = device
+            cfg_path = _write_yaml(cfg, tmp_path / "pipeline.yaml")
+            with (
+                patch("circuitkit.pipeline.Pipeline.__init__", capturing_init),
+                patch("circuitkit.api.discover_circuit", return_value=["A0.1"]),
+                patch("circuitkit.pipeline.Pipeline._ensure_model", return_value=MagicMock()),
+            ):
+                runner.invoke(cli, ["run", cfg_path])
+
+        assert seen == ["cpu", None]
+
     def test_visualize_bounding_kwargs_forwarded_only_when_set(self, runner, tmp_path):
         """visualize.max_nodes/max_edges/edge_threshold reach Pipeline.visualize()
         only when present in the YAML."""

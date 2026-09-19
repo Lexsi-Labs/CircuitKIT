@@ -2154,6 +2154,7 @@ def run(config_path):
     task = cfg.get("task")
     precision = cfg.get("precision", "bfloat16")
     output_dir = cfg.get("output_dir", "./pipeline_output")
+    device = cfg.get("device")  # None -> auto-detect (cuda > mps > cpu)
 
     # Handle custom data
     custom_data = cfg.get("custom_data")
@@ -2166,10 +2167,13 @@ def run(config_path):
             corrupt_prompt=custom_data.get("corrupt_prompt"),
             corrupt_answer=custom_data.get("corrupt_answer"),
             precision=precision,
+            device=device,
             output_dir=output_dir,
         )
     else:
-        pipe = Pipeline(model_name, task=task, precision=precision, output_dir=output_dir)
+        pipe = Pipeline(
+            model_name, task=task, precision=precision, device=device, output_dir=output_dir
+        )
 
     console.print(f"[bold green]Running pipeline:[/bold green] {config_path}")
     console.print(f"  Model: {model_name} | Task: {task or '(custom)'}")
@@ -2225,6 +2229,7 @@ def run(config_path):
                 pipe.prune(
                     sparsity=app.get("sparsity", 0.3),
                     scope=app.get("scope", "both"),
+                    protect_layers=app.get("protect_layers"),
                 )
             elif app_type == "quantize":
                 pipe.quantize(
