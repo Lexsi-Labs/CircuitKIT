@@ -1805,7 +1805,7 @@
 
 
 <h1 id="algorithm-overview">Algorithm Overview<a class="headerlink" href="#algorithm-overview" title="Permanent link">&para;</a></h1>
-<p>CircuitKit ships <strong>13 discovery algorithms</strong> across 4 backends. This page explains how to choose the right one. Note that "ships" is not "validated": only 2 are validated at production scale — <code>eap</code> and <code>eap-ig</code> (Stable). <code>acdc</code> and <code>ibcircuit</code> are Experimental (GPT-2 scale; <code>ibcircuit</code> OOMs above ~3B), and the remaining 9 are Research (validated only on GPT-2 IOI).</p>
+<p>CircuitKit ships <strong>13 discovery algorithms</strong> across 4 backends. This page explains how to choose the right one. Note that "ships" is not "validated". Six are Stable (<code>eap</code>, <code>eap-ig</code>, <code>eap-gp</code>, <code>acdc</code>, <code>ibcircuit</code>, <code>cdt</code>) and have been tested across the GPT-2, Llama, Gemma, and Qwen families. The remaining seven are Research: implemented and validated on GPT-2/IOI but not yet exercised at scale or across architectures. Three of the Stable algorithms carry documented caveats: <code>acdc</code> is node-only by construction and slow, <code>ibcircuit</code> has a memory ceiling on multi-billion-parameter models at aggressive settings, and <code>cdt</code> scores on RoPE models are approximate.</p>
 <div class="grid cards">
 <ul>
 <li>
@@ -1815,21 +1815,21 @@
 <p><a href="../eap/"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13.22 19.03a.75.75 0 0 1 0-1.06L18.19 13H3.75a.75.75 0 0 1 0-1.5h14.44l-4.97-4.97a.749.749 0 0 1 .326-1.275.75.75 0 0 1 .734.215l6.25 6.25a.75.75 0 0 1 0 1.06l-6.25 6.25a.75.75 0 0 1-1.06 0"/></svg></span> EAP variants</a></p>
 </li>
 <li>
-<p><span class="twemoji lg middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M11 21H7v-2h4zm4.5-2H17v2h-4v-2h.2l-1.4-6.1-2.5.6c-.1.5-.3.9-.5 1.3-.9 1.5-2.8 1.9-4.3 1s-1.9-2.8-1-4.3 2.8-1.9 4.3-1c.4.2.7.6.9.9l2.5-.6-.6-2.5c-.4-.1-.8-.3-1.2-.5C8 6.9 7.5 5 8.4 3.5s2.8-1.9 4.3-1 1.9 2.8 1 4.3c-.2.4-.6.7-.9.9zM7 11.8c-.7-.5-1.7-.2-2.2.5s-.2 1.7.5 2.1c.7.5 1.7.3 2.2-.5.4-.7.2-1.7-.5-2.1M12.4 6c.5-.7.2-1.7-.5-2.2s-1.7-.2-2.2.5c-.4.7-.2 1.7.6 2.2.7.4 1.7.2 2.1-.5m.4 5.3c-.2-.1-.4-.1-.5.1s-.1.4.1.5.4.1.5-.1c.2-.2.1-.4-.1-.5M21 8.5 14.5 10l.5 2.2 7.5-1.8.5-.7zM23 19h-4v2h4zM5 19H1v2h4z"/></svg></span> <strong>ACDC</strong>  Experimental</p>
+<p><span class="twemoji lg middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M11 21H7v-2h4zm4.5-2H17v2h-4v-2h.2l-1.4-6.1-2.5.6c-.1.5-.3.9-.5 1.3-.9 1.5-2.8 1.9-4.3 1s-1.9-2.8-1-4.3 2.8-1.9 4.3-1c.4.2.7.6.9.9l2.5-.6-.6-2.5c-.4-.1-.8-.3-1.2-.5C8 6.9 7.5 5 8.4 3.5s2.8-1.9 4.3-1 1.9 2.8 1 4.3c-.2.4-.6.7-.9.9zM7 11.8c-.7-.5-1.7-.2-2.2.5s-.2 1.7.5 2.1c.7.5 1.7.3 2.2-.5.4-.7.2-1.7-.5-2.1M12.4 6c.5-.7.2-1.7-.5-2.2s-1.7-.2-2.2.5c-.4.7-.2 1.7.6 2.2.7.4 1.7.2 2.1-.5m.4 5.3c-.2-.1-.4-.1-.5.1s-.1.4.1.5.4.1.5-.1c.2-.2.1-.4-.1-.5M21 8.5 14.5 10l.5 2.2 7.5-1.8.5-.7zM23 19h-4v2h4zM5 19H1v2h4z"/></svg></span> <strong>ACDC</strong>  Stable</p>
 <hr />
-<p>Greedy edge-pruning. Produces minimal circuits at GPT-2 scale.</p>
+<p>Greedy edge-pruning. Produces minimal circuits. Node-only and slow.</p>
 <p><a href="../acdc/"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13.22 19.03a.75.75 0 0 1 0-1.06L18.19 13H3.75a.75.75 0 0 1 0-1.5h14.44l-4.97-4.97a.749.749 0 0 1 .326-1.275.75.75 0 0 1 .734.215l6.25 6.25a.75.75 0 0 1 0 1.06l-6.25 6.25a.75.75 0 0 1-1.06 0"/></svg></span> ACDC details</a></p>
 </li>
 <li>
-<p><span class="twemoji lg middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 4h-2l-1-2h4zm6 9v9H5v-9c0-2.76 2.24-5 5-5V6H9V5h6v1h-1v2c2.76 0 5 2.24 5 5"/></svg></span> <strong>IBCircuit</strong>  Experimental</p>
+<p><span class="twemoji lg middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 4h-2l-1-2h4zm6 9v9H5v-9c0-2.76 2.24-5 5-5V6H9V5h6v1h-1v2c2.76 0 5 2.24 5 5"/></svg></span> <strong>IBCircuit</strong>  Stable</p>
 <hr />
 <p>Information-bottleneck noise model. No paired corruption data needed.</p>
 <p><a href="../ibcircuit/"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13.22 19.03a.75.75 0 0 1 0-1.06L18.19 13H3.75a.75.75 0 0 1 0-1.5h14.44l-4.97-4.97a.749.749 0 0 1 .326-1.275.75.75 0 0 1 .734.215l6.25 6.25a.75.75 0 0 1 0 1.06l-6.25 6.25a.75.75 0 0 1-1.06 0"/></svg></span> IBCircuit details</a></p>
 </li>
 <li>
-<p><span class="twemoji lg middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.5 11H19V7a2 2 0 0 0-2-2h-4V3.5A2.5 2.5 0 0 0 10.5 1 2.5 2.5 0 0 0 8 3.5V5H4a2 2 0 0 0-2 2v3.8h1.5c1.5 0 2.7 1.2 2.7 2.7S5 16.2 3.5 16.2H2V20a2 2 0 0 0 2 2h3.8v-1.5c0-1.5 1.2-2.7 2.7-2.7s2.7 1.2 2.7 2.7V22H17a2 2 0 0 0 2-2v-4h1.5a2.5 2.5 0 0 0 2.5-2.5 2.5 2.5 0 0 0-2.5-2.5"/></svg></span> <strong>CD-T</strong>  Research</p>
+<p><span class="twemoji lg middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.5 11H19V7a2 2 0 0 0-2-2h-4V3.5A2.5 2.5 0 0 0 10.5 1 2.5 2.5 0 0 0 8 3.5V5H4a2 2 0 0 0-2 2v3.8h1.5c1.5 0 2.7 1.2 2.7 2.7S5 16.2 3.5 16.2H2V20a2 2 0 0 0 2 2h3.8v-1.5c0-1.5 1.2-2.7 2.7-2.7s2.7 1.2 2.7 2.7V22H17a2 2 0 0 0 2-2v-4h1.5a2.5 2.5 0 0 0 2.5-2.5 2.5 2.5 0 0 0-2.5-2.5"/></svg></span> <strong>CD-T</strong>  Stable</p>
 <hr />
-<p>Contextual decomposition through transformers. GPT-2 only.</p>
+<p>Contextual decomposition through transformers. Clean inputs only. Scores on RoPE models are approximate.</p>
 <p><a href="../cdt/"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13.22 19.03a.75.75 0 0 1 0-1.06L18.19 13H3.75a.75.75 0 0 1 0-1.5h14.44l-4.97-4.97a.749.749 0 0 1 .326-1.275.75.75 0 0 1 .734.215l6.25 6.25a.75.75 0 0 1 0 1.06l-6.25 6.25a.75.75 0 0 1-1.06 0"/></svg></span> CD-T details</a></p>
 </li>
 </ul>
@@ -1855,9 +1855,9 @@
 <td>~30% faster; slightly noisier</td>
 </tr>
 <tr>
-<td>GPT-2 exploratory</td>
+<td>Minimal circuit</td>
 <td><code>acdc</code></td>
-<td>Minimal circuits via greedy edge-pruning</td>
+<td>Greedy edge-pruning. Node-only and slow</td>
 </tr>
 <tr>
 <td>Information-flow analysis</td>
@@ -1867,7 +1867,7 @@
 <tr>
 <td>Large model (3B+)</td>
 <td><code>eap-ig</code></td>
-<td>Only Stable-tier validated at this scale</td>
+<td>Validated at this scale. <code>ibcircuit</code> has a memory ceiling here and <code>acdc</code> is slow</td>
 </tr>
 </tbody>
 </table>
@@ -1893,6 +1893,11 @@
 <td>Vanilla EAP — fast baseline</td>
 </tr>
 <tr>
+<td><code>eap-gp</code></td>
+<td>Stable</td>
+<td>EAP-GP / GradPath</td>
+</tr>
+<tr>
 <td><code>eap-ig-activations</code></td>
 <td>Research</td>
 <td>IG over node activations</td>
@@ -1911,11 +1916,6 @@
 <td><code>atp-gd</code></td>
 <td>Research</td>
 <td>Attribution Patching with GradDrop (AtP+GD)</td>
-</tr>
-<tr>
-<td><code>eap-gp</code></td>
-<td>Research</td>
-<td>EAP-GP / GradPath</td>
 </tr>
 <tr>
 <td><code>relp</code></td>
@@ -1947,12 +1947,12 @@
 <tbody>
 <tr>
 <td><code>acdc</code></td>
-<td>Experimental</td>
-<td>Greedy edge-pruning; GPT-2 scale</td>
+<td>Stable</td>
+<td>Greedy edge-pruning; node-only by construction (edge search); slow</td>
 </tr>
 </tbody>
 </table>
-<p>When you want a minimal circuit and you're working at GPT-2 scale.</p>
+<p>When you want a minimal circuit and can afford a slow search.</p>
 <h3 id="ibcircuit">IBCircuit<a class="headerlink" href="#ibcircuit" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -1965,15 +1965,15 @@
 <tbody>
 <tr>
 <td><code>ibcircuit</code></td>
-<td>Experimental</td>
+<td>Stable</td>
 <td>Noise-model approach; clean-only data</td>
 </tr>
 </tbody>
 </table>
 <p>When paired (clean, corrupted) examples are hard to construct.</p>
 <div class="admonition warning">
-<p class="admonition-title">OOM risk above ~3B</p>
-<p>IBCircuit trains a noise model end-to-end, doubling memory. Known to OOM above ~3B parameters.</p>
+<p class="admonition-title">Memory ceiling on multi-billion-parameter models</p>
+<p>IBCircuit trains a noise model end-to-end, doubling memory. At aggressive settings it can OOM on models above ~3B parameters.</p>
 </div>
 <h3 id="cd-t">CD-T<a class="headerlink" href="#cd-t" title="Permanent link">&para;</a></h3>
 <table>
@@ -1987,12 +1987,12 @@
 <tbody>
 <tr>
 <td><code>cdt</code></td>
-<td>Research</td>
-<td>Frozen-RoPE attention approximation; GPT-2 IOI only</td>
+<td>Stable</td>
+<td>Clean inputs only; frozen-RoPE attention approximation</td>
 </tr>
 </tbody>
 </table>
-<p>Only for research replication.</p>
+<p>CD-T uses a frozen-RoPE attention approximation (Q/K are not decomposed) and a 50/50 gated-MLP cross-term split, so its scores on RoPE models are approximate.</p>
 <h2 id="model-compatibility">Model compatibility<a class="headerlink" href="#model-compatibility" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2020,6 +2020,34 @@
 <td>✅</td>
 </tr>
 <tr>
+<td><code>eap-gp</code></td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td><code>acdc</code></td>
+<td>✅</td>
+<td>⚠️</td>
+<td>⚠️</td>
+<td>⚠️</td>
+</tr>
+<tr>
+<td><code>ibcircuit</code></td>
+<td>✅</td>
+<td>⚠️</td>
+<td>⚠️</td>
+<td>⚠️</td>
+</tr>
+<tr>
+<td><code>cdt</code></td>
+<td>✅</td>
+<td>⚠️</td>
+<td>⚠️</td>
+<td>⚠️</td>
+</tr>
+<tr>
 <td><code>eap-ig-activations</code></td>
 <td>✅</td>
 <td>❌</td>
@@ -2034,27 +2062,6 @@
 <td>❌</td>
 </tr>
 <tr>
-<td><code>acdc</code></td>
-<td>✅</td>
-<td>⚠️</td>
-<td>⚠️</td>
-<td>⚠️</td>
-</tr>
-<tr>
-<td><code>ibcircuit</code></td>
-<td>✅</td>
-<td>⚠️</td>
-<td>❌</td>
-<td>❌</td>
-</tr>
-<tr>
-<td><code>cdt</code></td>
-<td>✅</td>
-<td>❌</td>
-<td>❌</td>
-<td>❌</td>
-</tr>
-<tr>
 <td>Research tier</td>
 <td>✅</td>
 <td>❌</td>
@@ -2063,7 +2070,9 @@
 </tr>
 </tbody>
 </table>
-<p>✅ Validated  ⚠️ Experimental  ❌ Not validated</p>
+<p>✅ Tested  ⚠️ Tested, with a documented caveat  ❌ Not validated</p>
+<p>Marks outside the GPT-2 column for <code>eap-gp</code>, <code>acdc</code>, <code>ibcircuit</code>, and <code>cdt</code> restate the stable-tier statement at family level. Faithfulness scores beyond GPT-2 are published only for <code>eap</code> and <code>eap-ig</code> (see <a href="../../trust/results/">Audit Results</a>).</p>
+<p>Caveats: <code>acdc</code> is slow above GPT-2 scale, <code>ibcircuit</code> has a memory ceiling on multi-billion-parameter models at aggressive settings, and <code>cdt</code> scores on RoPE models (Llama, Gemma, Qwen) are approximate.</p>
 <h2 id="algorithm-specific-config-keys">Algorithm-specific config keys<a class="headerlink" href="#algorithm-specific-config-keys" title="Permanent link">&para;</a></h2>
 <table>
 <thead>

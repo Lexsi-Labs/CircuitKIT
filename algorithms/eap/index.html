@@ -944,15 +944,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-two-stable-variants" class="md-nav__link">
+  <a href="#the-stable-variants" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The Two Stable Variants
+        The Stable Variants
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="The Two Stable Variants">
+    <nav class="md-nav" aria-label="The Stable Variants">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -971,6 +971,17 @@
     <span class="md-ellipsis">
       
         eap — Fast Baseline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#eap-gp-gradpath" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        eap-gp (GradPath)
       
     </span>
   </a>
@@ -1725,15 +1736,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-two-stable-variants" class="md-nav__link">
+  <a href="#the-stable-variants" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The Two Stable Variants
+        The Stable Variants
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="The Two Stable Variants">
+    <nav class="md-nav" aria-label="The Stable Variants">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1752,6 +1763,17 @@
     <span class="md-ellipsis">
       
         eap — Fast Baseline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#eap-gp-gradpath" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        eap-gp (GradPath)
       
     </span>
   </a>
@@ -1883,7 +1905,7 @@
 
 
 <h1 id="eap-family">EAP Family<a class="headerlink" href="#eap-family" title="Permanent link">&para;</a></h1>
-<p><strong>Edge Attribution Patching</strong> (EAP) and its variants power most of CircuitKit's discovery. Both Stable-tier algorithms, <code>eap</code> and <code>eap-ig</code>, belong to this family, alongside the Research-tier <code>eap-ig-activations</code> and <code>eap-clean-corrupted</code> and several other Research variants.</p>
+<p><strong>Edge Attribution Patching</strong> (EAP) and its variants power most of CircuitKit's discovery. Three of the six Stable-tier algorithms, <code>eap</code>, <code>eap-ig</code> and <code>eap-gp</code>, belong to this family, alongside the Research-tier <code>eap-ig-activations</code> and <code>eap-clean-corrupted</code> and five other Research variants.</p>
 <hr />
 <h2 id="core-idea">Core Idea<a class="headerlink" href="#core-idea" title="Permanent link">&para;</a></h2>
 <p>EAP frames circuit discovery as an attribution problem. Given a model <span class="arithmatex">\(M\)</span>, a clean input <span class="arithmatex">\(x\)</span>, a corrupted input <span class="arithmatex">\(x^*\)</span>, and a scalar metric <span class="arithmatex">\(f\)</span> (e.g., logit-difference):</p>
@@ -1899,7 +1921,7 @@
 <div class="arithmatex">\[\text{attr}_{IG}(u \to v) = (\text{act}_{clean} - \text{act}_{corrupt}) \cdot \int_0^1 \frac{\partial f}{\partial \text{act}_\alpha} d\alpha\]</div>
 <p>approximated with <code>ig_steps</code> steps (default: 5).</p>
 <hr />
-<h2 id="the-two-stable-variants">The Two Stable Variants<a class="headerlink" href="#the-two-stable-variants" title="Permanent link">&para;</a></h2>
+<h2 id="the-stable-variants">The Stable Variants<a class="headerlink" href="#the-stable-variants" title="Permanent link">&para;</a></h2>
 <h3 id="eap-ig-default"><code>eap-ig</code> — Default<a class="headerlink" href="#eap-ig-default" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">discover_circuit</span><span class="p">({</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="s2">"model"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"name"</span><span class="p">:</span> <span class="s2">"gpt2"</span><span class="p">},</span>
@@ -1924,6 +1946,11 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="s2">"discovery"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"algorithm"</span><span class="p">:</span> <span class="s2">"eap"</span><span class="p">,</span> <span class="s2">"task"</span><span class="p">:</span> <span class="s2">"ioi"</span><span class="p">,</span> <span class="s2">"level"</span><span class="p">:</span> <span class="s2">"node"</span><span class="p">,</span> <span class="o">...</span><span class="p">}</span>
 </code></pre></div>
 <p>Vanilla EAP — one gradient step at the clean activation point. ~30% faster than EAP-IG, but gradient estimates are noisier. Use when discovery speed is the bottleneck and you have many models to process.</p>
+<hr />
+<h3 id="eap-gp-gradpath"><code>eap-gp</code> (GradPath)<a class="headerlink" href="#eap-gp-gradpath" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="s2">"discovery"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"algorithm"</span><span class="p">:</span> <span class="s2">"eap-gp"</span><span class="p">,</span> <span class="s2">"task"</span><span class="p">:</span> <span class="s2">"ioi"</span><span class="p">,</span> <span class="s2">"level"</span><span class="p">:</span> <span class="s2">"node"</span><span class="p">,</span> <span class="o">...</span><span class="p">}</span>
+</code></pre></div>
+<p>EAP-GP / GradPath uses an adaptive integration path instead of straight-line IG (Zhang et al. 2025). Stable tier, tested across the GPT-2, Llama, Gemma, and Qwen families.</p>
 <hr />
 <h2 id="research-tier-eap-variants">Research-Tier EAP Variants<a class="headerlink" href="#research-tier-eap-variants" title="Permanent link">&para;</a></h2>
 <p>These are implemented for algorithm comparison studies. Only validated on GPT-2 IOI — do not use for standard circuit discovery:</p>
@@ -1952,10 +1979,6 @@
 <td>Attribution Patching with GradDrop (Kramár et al. 2024)</td>
 </tr>
 <tr>
-<td><code>eap-gp</code></td>
-<td>EAP-GP / GradPath — adaptive integration path instead of straight-line IG (Zhang et al. 2025)</td>
-</tr>
-<tr>
 <td><code>relp</code></td>
 <td>Relevance Patching — LRP-ε-style gradient re-routing (Rezaei Jafari et al. 2025)</td>
 </tr>
@@ -1969,8 +1992,8 @@
 </tr>
 </tbody>
 </table>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="s2">"discovery"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"algorithm"</span><span class="p">:</span> <span class="s2">"eap-ig-activations"</span><span class="p">,</span> <span class="s2">"task"</span><span class="p">:</span> <span class="s2">"ioi"</span><span class="p">,</span> <span class="s2">"level"</span><span class="p">:</span> <span class="s2">"node"</span><span class="p">,</span> <span class="o">...</span><span class="p">}</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="s2">"discovery"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"algorithm"</span><span class="p">:</span> <span class="s2">"eap-clean-corrupted"</span><span class="p">,</span> <span class="s2">"task"</span><span class="p">:</span> <span class="s2">"ioi"</span><span class="p">,</span> <span class="s2">"level"</span><span class="p">:</span> <span class="s2">"node"</span><span class="p">,</span> <span class="o">...</span><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="s2">"discovery"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"algorithm"</span><span class="p">:</span> <span class="s2">"eap-ig-activations"</span><span class="p">,</span> <span class="s2">"task"</span><span class="p">:</span> <span class="s2">"ioi"</span><span class="p">,</span> <span class="s2">"level"</span><span class="p">:</span> <span class="s2">"node"</span><span class="p">,</span> <span class="o">...</span><span class="p">}</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="s2">"discovery"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"algorithm"</span><span class="p">:</span> <span class="s2">"eap-clean-corrupted"</span><span class="p">,</span> <span class="s2">"task"</span><span class="p">:</span> <span class="s2">"ioi"</span><span class="p">,</span> <span class="s2">"level"</span><span class="p">:</span> <span class="s2">"node"</span><span class="p">,</span> <span class="o">...</span><span class="p">}</span>
 </code></pre></div>
 <hr />
 <h2 id="tuning-eap-ig">Tuning EAP-IG<a class="headerlink" href="#tuning-eap-ig" title="Permanent link">&para;</a></h2>
@@ -2037,21 +2060,21 @@
 <hr />
 <h2 id="eap-ig-on-instruction-tuned-models">EAP-IG on Instruction-Tuned Models<a class="headerlink" href="#eap-ig-on-instruction-tuned-models" title="Permanent link">&para;</a></h2>
 <p>For instruction-tuned models, set <code>chat_template_mode</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">discover_circuit</span><span class="p">({</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="s2">"model"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"name"</span><span class="p">:</span> <span class="s2">"meta-llama/Llama-3.2-1B-Instruct"</span><span class="p">},</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="s2">"discovery"</span><span class="p">:</span> <span class="p">{</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>        <span class="s2">"algorithm"</span><span class="p">:</span> <span class="s2">"eap-ig"</span><span class="p">,</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>        <span class="s2">"task"</span><span class="p">:</span> <span class="s2">"ioi"</span><span class="p">,</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>        <span class="s2">"chat_template_mode"</span><span class="p">:</span> <span class="s2">"on"</span><span class="p">,</span>   <span class="c1"># wrap in chat template</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>        <span class="s2">"level"</span><span class="p">:</span> <span class="s2">"node"</span><span class="p">,</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>        <span class="s2">"data_params"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"num_examples"</span><span class="p">:</span> <span class="mi">128</span><span class="p">},</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="p">},</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="o">...</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="p">})</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">discover_circuit</span><span class="p">({</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="s2">"model"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"name"</span><span class="p">:</span> <span class="s2">"meta-llama/Llama-3.2-1B-Instruct"</span><span class="p">},</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="s2">"discovery"</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>        <span class="s2">"algorithm"</span><span class="p">:</span> <span class="s2">"eap-ig"</span><span class="p">,</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>        <span class="s2">"task"</span><span class="p">:</span> <span class="s2">"ioi"</span><span class="p">,</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>        <span class="s2">"chat_template_mode"</span><span class="p">:</span> <span class="s2">"on"</span><span class="p">,</span>   <span class="c1"># wrap in chat template</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>        <span class="s2">"level"</span><span class="p">:</span> <span class="s2">"node"</span><span class="p">,</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>        <span class="s2">"data_params"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"num_examples"</span><span class="p">:</span> <span class="mi">128</span><span class="p">},</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="p">},</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>    <span class="o">...</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="p">})</span>
 </code></pre></div>
 <p>Or use a downstream-behavior task with <code>chat_template_mode="auto"</code> (the default for <code>boolq</code>, <code>mmlu</code>, etc.):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="s2">"discovery"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"algorithm"</span><span class="p">:</span> <span class="s2">"eap-ig"</span><span class="p">,</span> <span class="s2">"task"</span><span class="p">:</span> <span class="s2">"boolq"</span><span class="p">,</span> <span class="o">...</span><span class="p">}</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1"># chat_template_mode is auto-resolved based on the model</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="s2">"discovery"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"algorithm"</span><span class="p">:</span> <span class="s2">"eap-ig"</span><span class="p">,</span> <span class="s2">"task"</span><span class="p">:</span> <span class="s2">"boolq"</span><span class="p">,</span> <span class="o">...</span><span class="p">}</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># chat_template_mode is auto-resolved based on the model</span>
 </code></pre></div>
 <hr />
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>

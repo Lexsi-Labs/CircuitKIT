@@ -1753,52 +1753,52 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.backends</span><span class="w"> </span><span class="kn">import</span> <span class="n">STABILITY</span><span class="p">,</span> <span class="n">is_stable</span><span class="p">,</span> <span class="n">is_experimental</span><span class="p">,</span> <span class="n">is_research</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">is_stable</span><span class="p">(</span><span class="s2">"eap-ig"</span><span class="p">))</span>      <span class="c1"># True</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nb">print</span><span class="p">(</span><span class="n">is_experimental</span><span class="p">(</span><span class="s2">"acdc"</span><span class="p">))</span>  <span class="c1"># True</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">is_research</span><span class="p">(</span><span class="s2">"cdt"</span><span class="p">))</span>       <span class="c1"># True</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nb">print</span><span class="p">(</span><span class="n">STABILITY</span><span class="p">[</span><span class="s2">"eap-ig"</span><span class="p">])</span>      <span class="c1"># "stable"</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nb">print</span><span class="p">(</span><span class="n">is_stable</span><span class="p">(</span><span class="s2">"acdc"</span><span class="p">))</span>        <span class="c1"># True</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">is_experimental</span><span class="p">(</span><span class="s2">"acdc"</span><span class="p">))</span>  <span class="c1"># False</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nb">print</span><span class="p">(</span><span class="n">is_research</span><span class="p">(</span><span class="s2">"relp"</span><span class="p">))</span>      <span class="c1"># True</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="nb">print</span><span class="p">(</span><span class="n">STABILITY</span><span class="p">[</span><span class="s2">"eap-ig"</span><span class="p">])</span>      <span class="c1"># "stable"</span>
 </code></pre></div>
+<p>Of the 13 discovery algorithms, 6 are Stable and 7 are Research. No discovery algorithm is in the Experimental tier at the moment.</p>
 <h2 id="stable">Stable<a class="headerlink" href="#stable" title="Permanent link">&para;</a></h2>
-<p>Validated across multiple model families and tasks. Suitable for production use.</p>
+<p>Tested across the GPT-2, Llama, Gemma, and Qwen families.</p>
 <table>
 <thead>
 <tr>
 <th>Algorithm</th>
-<th>Validated on</th>
+<th>Notes</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>eap-ig</code></td>
-<td>GPT-2, Llama-3.2-1B/3B, Gemma-2-2B, Gemma-3-4B, Qwen2.5-1.5B</td>
+<td>Default. Validated on GPT-2, Llama-3.2-1B/3B, Gemma-2-2B, Gemma-3-4B, Qwen2.5-1.5B.</td>
 </tr>
 <tr>
 <td><code>eap</code></td>
-<td>GPT-2, small Llama/Gemma</td>
+<td>Validated on GPT-2 and small Llama/Gemma models.</td>
+</tr>
+<tr>
+<td><code>eap-gp</code></td>
+<td>EAP-GP / GradPath.</td>
+</tr>
+<tr>
+<td><code>acdc</code></td>
+<td>Node-only by construction (edge search). Slow.</td>
+</tr>
+<tr>
+<td><code>ibcircuit</code></td>
+<td>Memory ceiling on multi-billion-parameter models at aggressive settings.</td>
+</tr>
+<tr>
+<td><code>cdt</code></td>
+<td>Works from clean inputs only. Uses a frozen-RoPE attention approximation (Q/K are not decomposed) and a 50/50 gated-MLP cross-term split, so its scores on RoPE models are approximate.</td>
 </tr>
 </tbody>
 </table>
 <h2 id="experimental">Experimental<a class="headerlink" href="#experimental" title="Permanent link">&para;</a></h2>
-<p>Validated on GPT-2 IOI. May fail or OOM on larger models.</p>
-<table>
-<thead>
-<tr>
-<th>Algorithm</th>
-<th>Known limitation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>acdc</code></td>
-<td>Slow and memory-intensive above GPT-2 scale</td>
-</tr>
-<tr>
-<td><code>ibcircuit</code></td>
-<td>OOM risk above ~3B parameters</td>
-</tr>
-</tbody>
-</table>
+<p>None currently for discovery. The tier, <code>EXPERIMENTAL_ALGORITHMS</code>, and <code>is_experimental</code> remain part of the API.</p>
 <h2 id="research">Research<a class="headerlink" href="#research" title="Permanent link">&para;</a></h2>
-<p>Validated only on GPT-2 IOI. Do not rely on for non-GPT-2 models.</p>
+<p>Implemented and validated on GPT-2/IOI but not yet exercised at scale or across architectures.</p>
 <table>
 <thead>
 <tr>
@@ -1807,7 +1807,7 @@
 </thead>
 <tbody>
 <tr>
-<td><code>eap-ig-activations</code>, <code>eap-clean-corrupted</code>, <code>eap-exact</code>, <code>atp-gd</code>, <code>eap-gp</code>, <code>relp</code>, <code>peap</code>, <code>eap-ifr</code>, <code>cdt</code></td>
+<td><code>eap-ig-activations</code>, <code>eap-clean-corrupted</code>, <code>eap-exact</code>, <code>atp-gd</code>, <code>relp</code>, <code>peap</code>, <code>eap-ifr</code></td>
 </tr>
 </tbody>
 </table>
@@ -1819,7 +1819,7 @@
 - Different scales (what works at 124M may OOM at 7B)</p>
 <h2 id="runtime-warnings">Runtime warnings<a class="headerlink" href="#runtime-warnings" title="Permanent link">&para;</a></h2>
 <p>When you request a non-Stable algorithm, CircuitKit emits a <code>UserWarning</code>:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="ne">UserWarning</span><span class="p">:</span> <span class="n">Algorithm</span> <span class="s1">'acdc'</span> <span class="ow">is</span> <span class="n">experimental</span><span class="o">.</span> <span class="n">May</span> <span class="n">fail</span> <span class="n">on</span> <span class="n">larger</span> <span class="n">models</span> <span class="ow">or</span> <span class="n">non</span><span class="o">-</span><span class="n">IOI</span> <span class="n">tasks</span><span class="o">.</span> <span class="n">Use</span> <span class="s1">'eap-ig'</span> <span class="k">for</span> <span class="n">production</span><span class="o">.</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="ne">UserWarning</span><span class="p">:</span> <span class="n">Algorithm</span> <span class="s1">'relp'</span> <span class="ow">is</span> <span class="n">research</span><span class="o">-</span><span class="n">quality</span> <span class="p">(</span><span class="n">only</span> <span class="n">validated</span> <span class="n">on</span> <span class="n">GPT</span><span class="o">-</span><span class="mi">2</span> <span class="n">IOI</span><span class="p">)</span><span class="o">.</span> <span class="n">Use</span> <span class="s1">'eap-ig'</span> <span class="k">for</span> <span class="n">production</span><span class="o">.</span>
 </code></pre></div></p>
 <p>This is expected behaviour. Suppress with <code>warnings.filterwarnings("ignore")</code> only after you have verified the algorithm works for your use case.</p>
 <h2 id="checking-before-discovery">Checking before discovery<a class="headerlink" href="#checking-before-discovery" title="Permanent link">&para;</a></h2>
@@ -1830,7 +1830,7 @@
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"WARNING: </span><span class="si">{</span><span class="n">algo</span><span class="si">}</span><span class="s2"> is </span><span class="si">{</span><span class="n">STABILITY</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">algo</span><span class="p">,</span><span class="w"> </span><span class="s1">'unknown'</span><span class="p">)</span><span class="si">}</span><span class="s2"> tier"</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="recommendation">Recommendation<a class="headerlink" href="#recommendation" title="Permanent link">&para;</a></h2>
-<p>Start with <code>eap-ig</code> (Stable) for any new experiment. Only switch to Experimental or Research algorithms when you have a specific reason (e.g., comparing methods for a paper).</p>
+<p>Start with <code>eap-ig</code> (Stable) for any new experiment. Only switch to Research algorithms when you have a specific reason (e.g., comparing methods for a paper).</p>
 
 
 

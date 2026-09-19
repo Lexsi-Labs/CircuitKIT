@@ -1772,7 +1772,7 @@
 
 <h1 id="ibcircuit">IBCircuit<a class="headerlink" href="#ibcircuit" title="Permanent link">&para;</a></h1>
 <p><strong>Information-Bottleneck Circuit</strong> (IBCircuit) takes a different approach to circuit discovery: instead of computing gradients with respect to a metric, it trains a <strong>noise model</strong> that learns which activations are necessary for the task.</p>
-<p><strong>Stability tier:</strong>  Experimental — validated on GPT-2 IOI; OOM risk above ~3B parameters.</p>
+<p><strong>Stability tier:</strong>  Stable. Tested across the GPT-2, Llama, Gemma, and Qwen families. Memory ceiling on multi-billion-parameter models at aggressive settings (OOM risk above ~3B parameters).</p>
 <hr />
 <h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <p>IBCircuit adds learned noise gates to every component in the model. It then minimizes an Information Bottleneck objective:</p>
@@ -1798,8 +1798,8 @@
 <a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="p">})</span>
 </code></pre></div>
 <div class="admonition warning">
-<p class="admonition-title">IBCircuit emits a UserWarning</p>
-<p>Since IBCircuit is Experimental-tier, <code>discover_circuit</code> emits a <code>UserWarning</code> when you request it. This is expected.</p>
+<p class="admonition-title">Memory ceiling</p>
+<p>IBCircuit trains a noise model alongside the frozen model, which roughly doubles memory. Peak memory grows with batch size and sequence length, so aggressive settings can OOM on multi-billion-parameter models.</p>
 </div>
 <hr />
 <h2 id="key-parameters">Key Parameters<a class="headerlink" href="#key-parameters" title="Permanent link">&para;</a></h2>
@@ -1876,12 +1876,12 @@
 </tr>
 <tr>
 <td>Model size</td>
-<td>GPT-2 scale (~124M)</td>
+<td>Memory ceiling above ~3B</td>
 <td>Validated to 4B</td>
 </tr>
 <tr>
 <td>Tier</td>
-<td>Experimental</td>
+<td>Stable</td>
 <td>Stable</td>
 </tr>
 </tbody>
@@ -1897,7 +1897,6 @@
 <h2 id="known-limitations">Known Limitations<a class="headerlink" href="#known-limitations" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>OOM above ~3B</strong> — the noise model doubles memory requirements</li>
-<li><strong>GPT-2 validated only</strong> — GQA and SwiGLU architectures are untested</li>
 <li><strong>Slower</strong> than EAP — requires training the noise model, not just a gradient pass</li>
 </ul>
 <hr />
@@ -1905,7 +1904,7 @@
 <ul>
 <li><a href="../eap/">EAP Family</a> — faster, stable alternative</li>
 <li><a href="../../user-guide/custom-data/">Custom Data</a> — clean-only dataset setup</li>
-<li><a href="../stability-tiers/">Stability Tiers</a> — understanding experimental-tier risks</li>
+<li><a href="../stability-tiers/">Stability Tiers</a> — full tier table</li>
 </ul>
 
 

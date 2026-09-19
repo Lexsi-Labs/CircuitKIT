@@ -1005,9 +1005,11 @@ or fine-tune — then export a reloadable HuggingFace checkpoint.</p></p>
 <li>
 <p><span class="twemoji lg middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9 2v6h2v3H5c-1.11 0-2 .89-2 2v3H1v6h6v-6H5v-3h6v3H9v6h6v-6h-2v-3h6v3h-2v6h6v-6h-2v-3c0-1.11-.89-2-2-2h-6V8h2V2z"/></svg></span> <strong>13 discovery algorithms</strong></p>
 <hr />
-<p>EAP family (stable), ACDC and IBCircuit (experimental), CD-T (research) — each with
-explicit stability tiers. Only 2 (<code>eap</code>, <code>eap-ig</code>) are validated at production scale;
-the other 11 (2 experimental, 9 research) are not yet. Default: <code>eap-ig</code>.</p>
+<p>EAP family, ACDC, IBCircuit and CD-T, each with an explicit stability tier. Six are
+stable (<code>eap</code>, <code>eap-ig</code>, <code>eap-gp</code>, <code>acdc</code>, <code>ibcircuit</code>, <code>cdt</code>) and have been tested
+across the GPT-2, Llama, Gemma, and Qwen families. The other seven are research:
+validated on GPT-2/IOI but not yet exercised at scale or across architectures.
+Default: <code>eap-ig</code>.</p>
 <p><a href="algorithms/overview/"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13.22 19.03a.75.75 0 0 1 0-1.06L18.19 13H3.75a.75.75 0 0 1 0-1.5h14.44l-4.97-4.97a.749.749 0 0 1 .326-1.275.75.75 0 0 1 .734.215l6.25 6.25a.75.75 0 0 1 0 1.06l-6.25 6.25a.75.75 0 0 1-1.06 0"/></svg></span> Algorithm overview</a></p>
 </li>
 <li>
@@ -1089,9 +1091,9 @@ chat templates, grouped-query attention handled natively.</p>
 
     subgraph backends["13 algorithms / 4 backends"]
         direction TB
-        B1["EAP family  Stable&lt;br/&gt;eap, eap-ig, ..."]
-        B2["ACDC / IBCircuit  Experimental"]
-        B3["CD-T, RelP, ...  Research"]
+        B1["EAP family  Stable&lt;br/&gt;eap, eap-ig, eap-gp"]
+        B2["ACDC / IBCircuit / CD-T  Stable"]
+        B3["RelP, PEAP, ...  Research"]
     end
     B --&gt; B1 &amp; B2 &amp; B3
 

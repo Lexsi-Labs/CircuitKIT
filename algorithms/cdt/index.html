@@ -1728,13 +1728,13 @@
 
 <h1 id="cd-t">CD-T<a class="headerlink" href="#cd-t" title="Permanent link">&para;</a></h1>
 <p><strong>Contextual Decomposition through Transformers</strong> (CD-T) adapts the classical Contextual Decomposition (CD) approach to transformer attention layers. It decomposes a layer's contribution into components attributable to specific input tokens.</p>
-<p><strong>Stability tier:</strong>  Research — validated on GPT-2 IOI only. Uses a frozen-RoPE approximation and a 50/50 gated-MLP cross-term split that are not valid for GQA or SwiGLU architectures.</p>
+<p><strong>Stability tier:</strong>  Stable. Tested across the GPT-2, Llama, Gemma, and Qwen families. Works from clean inputs only. Uses a frozen-RoPE attention approximation and a 50/50 gated-MLP cross-term split, so its scores on RoPE models are approximate.</p>
 <hr />
 <h2 id="important-caveats">Important Caveats<a class="headerlink" href="#important-caveats" title="Permanent link">&para;</a></h2>
 <div class="admonition warning">
-<p class="admonition-title">Research-tier only</p>
-<p>CD-T is implemented for algorithm comparison and research purposes. It uses a frozen RoPE attention approximation (Q/K are not decomposed) and a simplified MLP cross-term split. These approximations are specific to GPT-2's attention and MLP structure and are <strong>not valid for modern architectures</strong> (Llama, Gemma, Qwen, etc.).</p>
-<p>For non-GPT-2 models: use <code>eap-ig</code> (Stable).</p>
+<p class="admonition-title">Approximate scores on RoPE models</p>
+<p>CD-T works from clean inputs only. It uses a frozen-RoPE attention approximation (Q/K are not decomposed) and a 50/50 gated-MLP cross-term split. On RoPE models (Llama, Gemma, Qwen, etc.) its scores are therefore <strong>approximate</strong>.</p>
+<p>If the approximation matters for your use case, use <code>eap-ig</code> (Stable).</p>
 </div>
 <hr />
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
@@ -1779,7 +1779,7 @@
 </tr>
 <tr>
 <td>Architecture scope</td>
-<td>GPT-2 only</td>
+<td>GPT-2, Llama, Gemma, Qwen (approximate on RoPE models)</td>
 <td>GPT-2 through 4B</td>
 </tr>
 <tr>
@@ -1789,7 +1789,7 @@
 </tr>
 <tr>
 <td>Tier</td>
-<td>Research</td>
+<td>Stable</td>
 <td>Stable</td>
 </tr>
 </tbody>
