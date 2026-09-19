@@ -54,7 +54,7 @@ an experimental- or research-tier algorithm is used.
 To pick an algorithm for a given model size, consult the README's
 [capability matrix](../../README.md#capability-matrix-algorithm--model-scale), which
 crosses each algorithm with model scale (GPT-2 → 7B+) and flags expected outcome
-(Stable / Experimental / OOM-risk) with rough time and memory notes.
+(validated / may fail or be slow / known failure) with rough time and memory notes.
 
 The most commonly used algorithms:
 
@@ -67,19 +67,25 @@ The most commonly used algorithms:
 - Direct attribution-based edge importance
 - **Best for**: a fast, validated baseline
 
-#### ACDC (Automatic Circuit DisCovery) — **Experimental**
+#### ACDC (Automatic Circuit DisCovery) — **Stable**
 - Greedy edge-pruning to minimize circuit size
-- Validated on GPT-2 IOI; may fail or OOM on larger models
-- **Best for**: GPT-2-scale exploratory work
+- Node-only by construction (edge search) and slow
+- **Best for**: minimal circuits when a slow search is acceptable
 
-#### IBCircuit (Information Bottleneck) — **Experimental**
+#### IBCircuit (Information Bottleneck) — **Stable**
 - Information-theoretic approach to component importance
-- Trains on a single batch; can OOM above ~3B parameters
-- **Best for**: GPT-2-scale information-flow studies
+- Trains on a single batch; has a memory ceiling on multi-billion-parameter models at aggressive settings
+- **Best for**: information-flow studies and clean-only data
 
-The research-tier algorithms (`eap-exact`, `atp-gd`, `eap-gp`, `relp`, `peap`,
-`eap-ifr`, `cdt`) are implemented but validated only on GPT-2 IOI — use them for
-research and exploration, not production.
+`eap-gp` and `cdt` are also stable tier. CD-T works from clean inputs only and uses a
+frozen-RoPE attention approximation (Q/K are not decomposed) plus a 50/50 gated-MLP
+cross-term split, so its scores on RoPE models are approximate. The six stable-tier
+algorithms have been tested across the GPT-2, Llama, Gemma, and Qwen families.
+
+The research-tier algorithms (`eap-ig-activations`, `eap-clean-corrupted`, `eap-exact`,
+`atp-gd`, `relp`, `peap`, `eap-ifr`) are implemented and validated on GPT-2/IOI but not
+yet exercised at scale or across architectures. Use them for research and exploration,
+not production.
 
 ### Discovery Hyperparameters
 

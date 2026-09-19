@@ -10,27 +10,33 @@ Every algorithm in CircuitKit is labelled with a stability tier. The definitive 
 |---|---|---|---|---|---|---|
 | `eap-ig` | EAP |  Stable | All models | ✅ | ✅ | ✅ |
 | `eap` | EAP |  Stable | All models | ✅ | ✅ | ✅ |
-| `acdc` | ACDC |  Experimental | GPT-2 scale | ⚠️ | ⚠️ | ❌ |
-| `ibcircuit` | IBCircuit |  Experimental | ≤3B | ❌ | ❌ | ❌ |
+| `eap-gp` | EAP |  Stable | GPT-2, Llama, Gemma, Qwen | ❌ | ❌ | ❌ |
+| `acdc` | ACDC |  Stable | Node-only; slow above GPT-2 scale | ⚠️ | ⚠️ | ❌ |
+| `ibcircuit` | IBCircuit |  Stable | Memory ceiling above ~3B | ❌ | ❌ | ❌ |
+| `cdt` | CD-T |  Stable | Clean inputs only; approximate on RoPE models | ❌ | ❌ | ❌ |
 | `eap-ig-activations` | EAP |  Research | GPT-2 IOI | ❌ | ❌ | ❌ |
 | `eap-clean-corrupted` | EAP |  Research | GPT-2 IOI | ❌ | ❌ | ❌ |
 | `eap-exact` | EAP |  Research | GPT-2 IOI | ❌ | ❌ | ❌ |
 | `atp-gd` | EAP |  Research | GPT-2 IOI | ❌ | ❌ | ❌ |
-| `eap-gp` | EAP |  Research | GPT-2 IOI | ❌ | ❌ | ❌ |
 | `relp` | EAP |  Research | GPT-2 IOI | ❌ | ❌ | ❌ |
 | `peap` | EAP |  Research | GPT-2 IOI | ❌ | ❌ | ❌ |
 | `eap-ifr` | EAP |  Research | GPT-2 IOI | ❌ | ❌ | ❌ |
-| `cdt` | CD-T |  Research | GPT-2 IOI | ❌ | ❌ | ❌ |
 
-✅ Validated  ⚠️ Experimental / may fail  ❌ Not validated
+✅ Validated  ⚠️ May fail  ❌ Not validated
 
 ### Tier definitions
 
 | Tier | Meaning | You should |
 |---|---|---|
-|  **Stable** | Validated across model families (GPT-2, Llama-3, Gemma, Qwen) at multiple scales (124M–4B). Works with GQA, RoPE, SwiGLU, and chat templates. | Use in production experiments. Cite in papers. |
-|  **Experimental** | Implemented and runs without errors on GPT-2 scale. May produce wrong results on larger or instruction-tuned models. GQA/SwiGLU handling is not validated. | Use for exploratory work. Do not cite as primary evidence. |
-|  **Research** | Implemented and matches the paper description. Only validated on GPT-2 IOI (the paper's evaluation setting). No GQA, chat-template, or scaling validation. | Use only for algorithm comparison or paper replication. |
+|  **Stable** | Tested across the GPT-2, Llama, Gemma, and Qwen families. Six discovery algorithms: `eap`, `eap-ig`, `eap-gp`, `acdc`, `ibcircuit`, `cdt`. The last three carry the caveats listed below. | Use in production experiments. Cite in papers. |
+|  **Experimental** | Implemented and runs without errors on GPT-2 scale. May produce wrong results on larger or instruction-tuned models. GQA/SwiGLU handling is not validated. None currently for discovery. | Use for exploratory work. Do not cite as primary evidence. |
+|  **Research** | Implemented and matches the paper description. Validated on GPT-2/IOI but not yet exercised at scale or across architectures. No GQA, chat-template, or scaling validation. Seven discovery algorithms. | Use only for algorithm comparison or paper replication. |
+
+### Caveats on stable-tier algorithms
+
+- **`acdc`** is node-only by construction (it is an edge search) and slow.
+- **`ibcircuit`** has a memory ceiling on multi-billion-parameter models at aggressive settings.
+- **`cdt`** works from clean inputs only. It uses a frozen-RoPE attention approximation (Q/K are not decomposed) and a 50/50 gated-MLP cross-term split, so its scores on RoPE models are approximate.
 
 ## Algorithm selection
 
@@ -41,7 +47,7 @@ Start with `eap-ig` for any new experiment. It is the default, the most validate
 ### Models
 
 - **GPT-2 (124M–1.5B):** fully validated, CPU-friendly. All 13 algorithms run on GPT-2.
-- **Llama 3.x (1B–3B):** Stable-tier EAP validated. Experimental and Research algorithms are not validated on Llama-3.
+- **Llama 3.x (1B–3B):** Stable-tier EAP validated. Research algorithms are not validated on Llama-3.
 - **Gemma 2/3 (2B–4B):** Stable-tier EAP validated on Gemma-2-2B. GQA is detected at runtime (when `n_kv != n_heads`), not separately validated per model.
 - **Qwen 2.5 (0.5B–7B):** Stable-tier EAP validated. Chat-template auto-detection works.
 - **Larger models (>7B):** Not systematically validated. Stable EAP should work but may require GPU with ≥24 GB VRAM.

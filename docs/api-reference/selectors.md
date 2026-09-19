@@ -58,9 +58,9 @@ def my_selector(model, task_name: str, config: dict) -> dict:
 |----------|----------|-------------|
 | `eap` | Discovery | Edge Attribution Patching (stable) |
 | `eap-ig` | Discovery | EAP with Integrated Gradients (stable, default) |
-| `eap-gp` | Discovery | EAP-GP / GradPath — adaptive integration path (research) |
-| `ibcircuit` | Discovery | Information Bottleneck Circuit (experimental) |
-| `cdt` | Discovery | Contextual Decomposition for Transformers (research) |
+| `eap-gp` | Discovery | EAP-GP / GradPath — adaptive integration path (stable) |
+| `ibcircuit` | Discovery | Information Bottleneck Circuit (stable) |
+| `cdt` | Discovery | Contextual Decomposition for Transformers (stable; approximate scores on RoPE models) |
 | `relp` | Discovery | Relevance Patching via LRP-style hooks (research) |
 | `random` | Baseline | Uniform random scores |
 | `magnitude` | Compression | L2 norm of weights |

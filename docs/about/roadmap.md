@@ -18,7 +18,7 @@
 ### Algorithm Expansions
 
 - **IBCircuit OOM fix** — memory-efficient implementation for >3B parameter models
-- **CD-T validation** — validate the RoPE handling and gated-MLP split, which are currently approximations, to move CD-T off the research tier
+- **CD-T validation** — validate the RoPE handling and gated-MLP split, which are currently approximations, so that CD-T scores on RoPE models are no longer approximate
 - **New stable algorithm candidate** — RelP promotion from research tier pending validation
 
 ### Infrastructure

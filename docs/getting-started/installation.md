@@ -54,7 +54,7 @@ pip install -e ".[gpu-cu126,benchmarks]"
 | *(core)* | Discovery, evaluation, pruning, visualisation, robustness pillar (Pillar 4) with semantic/entity corruptions |
 | `benchmarks` | GSM8K, MMLU, BoolQ, WinoGrande via lm-eval |
 | `quantization` | Circuit-aware mixed-precision via optimum-quanto |
-| `cdt` | CD-T research-tier discovery backend |
+| `cdt` | CD-T discovery backend |
 
 ## Verify
 

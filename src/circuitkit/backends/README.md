@@ -23,11 +23,15 @@ canonical registry of every algorithm name CircuitKit knows about.
 
 ## Stability tiers
 
-- **stable** — production-ready (GPT-2, Llama 1B/3B, Gemma 1B/4B). EAP family
-  (`eap`, `eap-ig`) plus pruning/quantization selectors.
-- **experimental** — works on IOI, may fail on larger models: `acdc`, `ibcircuit`.
-- **research** — implemented but unvalidated outside GPT-2 IOI: `cdt`, EAP
-  research variants (`eap-exact`, `atp-gd`, `eap-gp`, `relp`, `peap`, `eap-ifr`).
+- **stable** — tested across the GPT-2, Llama, Gemma, and Qwen families: `eap`,
+  `eap-ig`, `eap-gp`, `acdc` (node-only by construction, slow), `ibcircuit`
+  (memory ceiling on multi-billion-parameter models at aggressive settings),
+  `cdt` (clean-only; approximate scores on RoPE models), plus pruning/quantization
+  selectors.
+- **experimental** — works on IOI, may fail on larger models: none currently.
+- **research** — implemented but unvalidated outside GPT-2 IOI: EAP research
+  variants (`eap-ig-activations`, `eap-clean-corrupted`, `eap-exact`, `atp-gd`,
+  `relp`, `peap`, `eap-ifr`).
 
 ## How it fits
 

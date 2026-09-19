@@ -125,14 +125,15 @@ from circuitkit.backends import (
 
 default_algorithm()       # "eap-ig"
 is_stable("eap-ig")       # True
-STABILITY["cdt"]          # "research"
+STABILITY["cdt"]          # "stable"
+STABILITY["relp"]         # "research"
 ```
 
 | Tier | Algorithms | Notes |
 |------|-----------|-------|
-| **Stable** | `eap`, `eap-ig` | Validated across GPT-2 and small Llama/Gemma models. |
-| **Experimental** | `acdc`, `ibcircuit` | Works on GPT-2 IOI; may fail or OOM on larger models. |
-| **Research** | `eap-ig-activations`, `eap-clean-corrupted`, `eap-exact`, `atp-gd`, `eap-gp`, `relp`, `peap`, `eap-ifr`, `cdt` | Only validated on GPT-2 IOI. Unvalidated elsewhere. |
+| **Stable** | `eap`, `eap-ig`, `eap-gp`, `acdc`, `ibcircuit`, `cdt` | Tested across the GPT-2, Llama, Gemma, and Qwen families. `acdc` is node-only by construction (edge search) and slow. `ibcircuit` has a memory ceiling on multi-billion-parameter models at aggressive settings. `cdt` works from clean inputs only and its scores on RoPE models are approximate (see [CD-T backend](#cd-t-backend)). |
+| **Experimental** | none currently | Works on GPT-2 IOI; may fail or OOM on larger models. |
+| **Research** | `eap-ig-activations`, `eap-clean-corrupted`, `eap-exact`, `atp-gd`, `relp`, `peap`, `eap-ifr` | Implemented and validated on GPT-2/IOI but not yet exercised at scale or across architectures. |
 
 `discover_circuit` emits a `UserWarning` whenever an experimental- or research-tier
 algorithm is requested.
@@ -361,9 +362,9 @@ splitting.
 
 **Module**: `circuitkit.backends.cdt`
 
-> CD-T is a **research-tier** algorithm — validated only on GPT-2 IOI. It uses a
+> CD-T is a **stable-tier** algorithm. It works from clean inputs only. It uses a
 > frozen-RoPE attention approximation (Q/K are not decomposed) and a 50/50 gated-MLP
-> cross-term split. Do not rely on its scores for non-GPT-2 models.
+> cross-term split, so its scores on RoPE models are approximate.
 
 `run_cdt_discovery(...)` lives in `circuitkit.backends.cdt.adapter`. CD-T is normally
 invoked through `discover_circuit({"discovery": {"algorithm": "cdt", ...}})` rather than

@@ -29,8 +29,8 @@ flowchart TD
 
     subgraph backends["13 algorithms · 4 backends"]
         B1["EAP family — Stable"]
-        B2["ACDC · IBCircuit — Experimental"]
-        B3["CD-T · AtP+GD · RelP — Research"]
+        B2["ACDC · IBCircuit · CD-T — Stable"]
+        B3["AtP+GD · RelP · PEAP — Research"]
     end
     B --> B1 & B2 & B3
     B1 & B2 & B3 --> C[("Circuit artifact<br/>circuit.pt + scores")]
@@ -60,9 +60,10 @@ Discovery is where the subgraph comes from. CircuitKit ships **13 algorithms acr
 
 | Tier | Algorithms | Use it for |
 |---|---|---|
-| **Stable** | EAP family (`eap`, `eap-ig`, …) | Production / paper results |
-| **Experimental** | ACDC, IBCircuit | Cross-checks, research |
-| **Research** | CD-T, AtP+GD, RelP, … | Method development |
+| **Stable** | `eap`, `eap-ig`, `eap-gp`, ACDC, IBCircuit, CD-T | Production / paper results |
+| **Research** | AtP+GD, RelP, PEAP, … (seven in total) | Method development |
+
+Six algorithms are stable tier and have been tested across the GPT-2, Llama, Gemma, and Qwen families. Three of them carry documented caveats: ACDC is node-only by construction and slow, IBCircuit has a memory ceiling on multi-billion-parameter models at aggressive settings, and CD-T scores on RoPE models are approximate. The remaining seven are research tier, implemented and validated on GPT-2/IOI but not yet exercised at scale or across architectures.
 
 Discovery runs at **node** granularity (whole attention heads / MLP blocks) or **neuron** granularity (individual MLP units), and the output is a portable `circuit.pt` artifact plus per-component scores.
 

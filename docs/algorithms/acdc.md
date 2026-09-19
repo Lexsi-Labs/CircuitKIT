@@ -2,7 +2,7 @@
 
 **Automatic Circuit Discovery** (ACDC) discovers circuits by greedy edge removal rather than gradient attribution. It starts with the full model and removes edges that do not meet an importance threshold, stopping when no further removals are possible.
 
-**Stability tier:**  Experimental — validated on GPT-2 IOI; may fail or slow on larger models.
+**Stability tier:**  Stable. Tested across the GPT-2, Llama, Gemma, and Qwen families. Node-only by construction (edge search) and slow on larger models.
 
 ---
 
@@ -43,8 +43,8 @@ circuit = discover_circuit({
 })
 ```
 
-!!! warning "ACDC emits a UserWarning"
-    Since ACDC is Experimental-tier, `discover_circuit` emits a `UserWarning` when you request it. This is expected behavior.
+!!! note "Node-level only"
+    ACDC is an edge search, so it is node-only by construction.
 
 ---
 
@@ -73,7 +73,7 @@ ACDC does not use a single threshold — it sweeps a grid of tao values built fr
 | Circuit size | Smaller (minimal) | Larger (top-K by score) |
 | Runtime | Slow (O(edges × iterations)) | Fast (O(n_examples × ig_steps)) |
 | Model size limit | GPT-2 scale practical | Validated to 4B params |
-| Tier |  Experimental |  Stable |
+| Tier |  Stable |  Stable |
 
 For most use cases, start with EAP-IG and compare ACDC only if you need a minimal circuit or are specifically studying algorithm differences.
 
@@ -90,7 +90,7 @@ For most use cases, start with EAP-IG and compare ACDC only if you need a minima
 ## Known Limitations
 
 - **Slow** for large models or large datasets — each iteration requires multiple forward passes
-- **GPT-2 validated only** — may produce degenerate results or fail on GQA architectures
+- **Node-only** by construction, because ACDC searches over edges
 - **Greedy local optima** — ACDC can get stuck removing edges that are locally unimportant but jointly important
 
 ---

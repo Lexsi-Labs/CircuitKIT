@@ -72,7 +72,7 @@ pip install torch==2.6.0+cu126 -f https://download.pytorch.org/whl/cu126
 
 This is expected for non-Stable algorithms:
 ```bash
-UserWarning: Algorithm 'acdc' is experimental. May fail on larger models or non-IOI tasks. Use 'eap-ig' for production.
+UserWarning: Algorithm 'relp' is research-quality (only validated on GPT-2 IOI). Use 'eap-ig' for production.
 ```
 Suppress with `warnings.filterwarnings("ignore")` only after verification.
 

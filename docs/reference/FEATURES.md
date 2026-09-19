@@ -16,12 +16,13 @@ tiers. Status below reflects validation maturity, not whether the code runs.
 |-----------|---------|------|-------|
 | `eap-ig` (default) | EAP |  Stable | EAP + integrated gradients; node/neuron level |
 | `eap` | EAP |  Stable | Edge attribution patching at module level |
-| `acdc` | ACDC |  Experimental | Validated on GPT-2 IOI; may fail on larger models |
-| `ibcircuit` | IBCircuit |  Experimental | Single-batch training; OOM above ~3B params |
+| `eap-gp` | EAP |  Stable | EAP-GP / GradPath adaptive integration path |
+| `acdc` | ACDC |  Stable | Node-only by construction (edge search); slow |
+| `ibcircuit` | IBCircuit |  Stable | Single-batch training; memory ceiling on multi-billion-parameter models at aggressive settings |
+| `cdt` | CD-T |  Stable | Clean inputs only; frozen-RoPE / 50-50 gated-MLP approximations, so scores on RoPE models are approximate |
 | `eap-ig-activations` | EAP |  Research | IG over node activations; validated only on GPT-2 IOI |
 | `eap-clean-corrupted` | EAP |  Research | EAP with clean/corrupted activations; validated only on GPT-2 IOI |
-| `eap-exact`, `atp-gd`, `eap-gp`, `relp`, `peap`, `eap-ifr` | EAP |  Research | Validated only on GPT-2 IOI |
-| `cdt` | CD-T |  Research | Frozen-RoPE / 50-50 gated-MLP approximations |
+| `eap-exact`, `atp-gd`, `relp`, `peap`, `eap-ifr` | EAP |  Research | Validated only on GPT-2 IOI |
 
 `discover_circuit` emits a `UserWarning` for experimental and research algorithms. The
 stability map is defined in `circuitkit.backends`.
