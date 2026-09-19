@@ -1232,11 +1232,28 @@ class GenericTaskSpec:
         seed = discovery_cfg.get("seed", 42)
         rng = random.Random(seed)
 
+        # Dataset-derived strategies (entity pools, POS vocabularies) draw their
+        # replacements from the clean set, so they must see all of it before the
+        # per-example loop below.
+        prepare = getattr(self.corruption_strategy, "prepare", None)
+        if callable(prepare):
+            prepare(examples)
+
+        # Prompt-rewriting strategies leave the answer untouched. When the rewrite
+        # lands on another clean row of the same dataset ("capital of France" ->
+        # "capital of Egypt"), that row's answer is the counterfactual answer.
+        answer_by_prompt = {
+            ex.get("prompt"): ex.get("answer") for ex in examples if ex.get("answer")
+        }
+
         corrupted = []
         n_failed = 0
         for ex in examples:
             try:
                 corr_ex = self.corruption_strategy.corrupt_example(ex, rng)
+                donor_answer = answer_by_prompt.get(corr_ex.get("prompt"))
+                if donor_answer and corr_ex.get("answer") == ex.get("answer"):
+                    corr_ex["answer"] = donor_answer
                 corrupted.append(corr_ex)
                 # A strategy can report a real ``strategy_used`` yet still leave the
                 # prompt unchanged when it finds nothing to corrupt (no entity/token/

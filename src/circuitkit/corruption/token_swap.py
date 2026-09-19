@@ -47,6 +47,41 @@ class TokenSwapCorruption:
         self.vocab = vocab or {}
         self._vocab_built = vocab is not None
 
+    _default_tagger = None
+
+    @classmethod
+    def _spacy_tagger(cls):
+        """POS tagger used when the caller supplies none (needs en_core_web_sm)."""
+        if cls._default_tagger is None:
+            try:
+                import spacy
+
+                nlp = spacy.load("en_core_web_sm")
+            except Exception as e:
+                raise ValueError(
+                    "TokenSwapCorruption needs a POS tagger: pass metadata['tagger'] "
+                    "or install the default one:\n"
+                    "    pip install spacy\n"
+                    "    python -m spacy download en_core_web_sm"
+                ) from e
+
+            def tagger(text):
+                doc = nlp(text)
+                return [t.text for t in doc], [t.pos_ for t in doc]
+
+            cls._default_tagger = tagger
+        return cls._default_tagger
+
+    def prepare(
+        self,
+        examples: List[Dict[str, Any]],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Build the POS vocabulary from the dataset unless one was supplied."""
+        if not self._vocab_built and self.vocab == {}:
+            tagger = (metadata or {}).get("tagger") or self._spacy_tagger()
+            self._build_vocab_from_examples(examples, tagger)
+
     def set_tokenizer(self, tokenizer):
         """Set tokenizer after initialization."""
         self.tokenizer = tokenizer
@@ -116,12 +151,7 @@ class TokenSwapCorruption:
             ValueError: If tagger not provided in metadata and no default tagger available.
             ValueError: If no suitable tokens found in prompt.
         """
-        if metadata is None or "tagger" not in metadata:
-            raise ValueError(
-                "metadata with 'tagger' function required for TokenSwapCorruption.corrupt()"
-            )
-
-        tagger = metadata["tagger"]
+        tagger = (metadata or {}).get("tagger") or self._spacy_tagger()
         prompt = example.get("prompt", "")
 
         # Tokenize and tag
@@ -136,8 +166,9 @@ class TokenSwapCorruption:
             # Filter by POS tags if specified
             if self.pos_tags and pos not in self.pos_tags:
                 continue
-            # Check if we have replacements for this POS
-            if vocab and pos in vocab and len(vocab[pos]) > 0:
+            # Only tokens with a *different* same-POS replacement are swappable;
+            # a POS whose vocabulary is just this token would be a silent no-op.
+            if vocab and any(t != token for t in vocab.get(pos, [])):
                 candidates.append((i, token, pos))
 
         if not candidates:
@@ -201,10 +232,7 @@ class TokenSwapCorruption:
             List of corrupted examples.
         """
         # If vocab not yet built, build it now from examples
-        if not self._vocab_built and self.vocab == {} and metadata:
-            tagger = metadata.get("tagger")
-            if tagger:
-                self._build_vocab_from_examples(examples, tagger)
+        self.prepare(examples, metadata)
 
         return [self.corrupt(ex, rng=rng, metadata=metadata) for ex in examples]
 

@@ -263,6 +263,16 @@ class CorruptionPipeline:
             "validation_results": selected.validation_results,
         }
 
+    def prepare(
+        self, examples: List[Dict[str, Any]], metadata: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """Let every strategy build its dataset-derived state (pools, vocabularies)."""
+        for strategy in self.strategies:
+            # Strategies are duck-typed against the protocol; not all subclass it.
+            prepare = getattr(strategy, "prepare", None)
+            if callable(prepare):
+                prepare(examples, metadata)
+
     def corrupt_dataset(
         self,
         examples: List[Dict[str, Any]],

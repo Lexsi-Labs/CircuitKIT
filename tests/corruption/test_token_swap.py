@@ -122,16 +122,14 @@ class TestTokenSwapCorrupt:
             assert "replacement" in info
             assert "pos" in info
 
-    def test_corrupt_requires_tagger_in_metadata(self, number_vocab):
-        """Test that corrupt() requires tagger in metadata."""
+    def test_corrupt_without_tagger_needs_spacy(self, number_vocab, monkeypatch):
+        """With no metadata tagger and no spaCy, corrupt() names the missing tagger."""
         strategy = TokenSwapCorruption(vocab=number_vocab)
-
-        example = {"prompt": "5 + 3"}
-
-        rng = random.Random(42)
+        monkeypatch.setattr(TokenSwapCorruption, "_default_tagger", None)
+        monkeypatch.setitem(__import__("sys").modules, "spacy", None)
 
         with pytest.raises(ValueError, match="tagger"):
-            strategy.corrupt(example, rng=rng, metadata={})
+            strategy.corrupt({"prompt": "5 + 3"}, rng=random.Random(42), metadata={})
 
     def test_corrupt_no_suitable_tokens(self, simple_tagger):
         """Test corruption when no suitable tokens exist."""
