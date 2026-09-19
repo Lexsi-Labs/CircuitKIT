@@ -197,7 +197,7 @@ print(circuit.top_nodes(5))
 | Family | Scale | Notes |
 |---|---|---|
 | GPT-2 | 124M–1.5B | Registered arch family. Fully validated, CPU-friendly |
-| Llama 3 | 1B–3B | Registered arch family. Stable-tier EAP validated |
+| Llama 3 | 1B–3B | Registered arch family. `eap` and `eap-ig` validated |
 | Gemma | 2B–4B | Registered arch family. GQA detected at runtime; validated on Gemma-2-2B |
 | Qwen 2.5 | 0.5B–7B | Registered arch family. Chat-template auto-detection |
 | Pythia | 70M–12B | Discovery only (via TransformerLens); not a registered arch family |

@@ -51,8 +51,8 @@ CD-T). They are organized into explicit **stability tiers** — see the README's
 `STABILITY` map in `circuitkit.backends`. `discover_circuit` emits a `UserWarning` when
 an experimental- or research-tier algorithm is used.
 
-To pick an algorithm for a given model size, consult the README's
-[capability matrix](../../README.md#capability-matrix-algorithm--model-scale), which
+To pick an algorithm for a given model size, consult the
+[capability matrix](../algorithms/capability-matrix.md), which
 crosses each algorithm with model scale (GPT-2 → 7B+) and flags expected outcome
 (validated / may fail or be slow / known failure) with rough time and memory notes.
 

@@ -110,6 +110,8 @@ CD-T uses a frozen-RoPE attention approximation (Q/K are not decomposed) and a 5
 
 ✅ Tested  ⚠️ Tested, with a documented caveat  ❌ Not validated
 
+Marks outside the GPT-2 column for `eap-gp`, `acdc`, `ibcircuit`, and `cdt` restate the stable-tier statement at family level. Faithfulness scores beyond GPT-2 are published only for `eap` and `eap-ig` (see [Audit Results](../trust/results.md)).
+
 Caveats: `acdc` is slow above GPT-2 scale, `ibcircuit` has a memory ceiling on multi-billion-parameter models at aggressive settings, and `cdt` scores on RoPE models (Llama, Gemma, Qwen) are approximate.
 
 ## Algorithm-specific config keys

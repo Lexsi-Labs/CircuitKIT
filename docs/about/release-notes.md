@@ -12,7 +12,7 @@ First stable release. This release closes a correctness-hardening cycle: an audi
 
 - EAP and EAP-IG are validated across GPT-2, Llama-3.2-1B/3B, Gemma-2-2B, Gemma-3-4B, and Qwen2.5-1.5B
 - EAP-IG-Activations and EAP-Clean-Corrupted remain Research tier — validated only on GPT-2 IOI
-- 13 discovery algorithms across 4 backends (EAP, ACDC, IBCircuit, CD-T) — but only 2 are validated at production scale (`eap`, `eap-ig`); `acdc` and `ibcircuit` are Experimental (GPT-2 scale, `ibcircuit` OOMs above ~3B) and the other 9 are Research (GPT-2 IOI only)
+- 13 discovery algorithms across 4 backends (EAP, ACDC, IBCircuit, CD-T) — but only 2 are validated at production scale (`eap`, `eap-ig`); `acdc` and `ibcircuit` are Experimental (GPT-2 scale, `ibcircuit` OOMs above ~3B) and the other 9 are Research (GPT-2 IOI only). These are the tier counts as recorded at 1.0.0; the current assignment, 6 stable and 7 research, is in [Stability Tiers](../algorithms/stability-tiers.md)
 - 14 registered selectors; 16 built-in tasks
 - 6-pillar faithfulness framework with Pillar 6 marked preliminary
 

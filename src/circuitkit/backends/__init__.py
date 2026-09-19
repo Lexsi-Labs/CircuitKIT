@@ -7,7 +7,7 @@ stability tier. ``circuitkit.utils.exceptions`` derives its validation
 registries from here — do not maintain a second copy.
 
 Stability tiers:
-  stable        — Production-ready. Tested on GPT-2, Llama 1B/3B, Gemma 1B/4B.
+  stable        — Tested across the GPT-2, Llama, Gemma, and Qwen families.
   experimental  — Works on IOI. May fail on larger models. Use at own risk.
   research      — Implemented but unvalidated outside GPT-2 IOI. For exploration only.
 
@@ -33,7 +33,7 @@ ALGORITHMS: dict[str, tuple[str, str]] = {
     "eap-ig": ("discovery", "stable"),
     "eap-ig-activations": ("discovery", "research"),
     "eap-clean-corrupted": ("discovery", "research"),
-    # ── Discovery: EAP research variants — GPT-2 IOI only ──
+    # ── Discovery: EAP variants — research tier is GPT-2 IOI only ──
     "eap-exact": ("discovery", "research"),
     "atp-gd": ("discovery", "research"),
     "eap-gp": ("discovery", "stable"),

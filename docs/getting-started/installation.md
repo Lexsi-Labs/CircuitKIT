@@ -31,7 +31,7 @@ pip install "git+https://github.com/Lexsi-Labs/circuitkit.git"
 ```bash
 pip install -e ".[benchmarks]"   # lm-evaluation-harness integration
 pip install -e ".[quantization]" # optimum-quanto quantisation backend
-pip install -e ".[cdt]"          # captum/lime/shap (CD-T research backend)
+pip install -e ".[cdt]"          # captum/lime/shap (CD-T backend)
 pip install -e ".[dev]"          # pytest, black, flake8, mypy
 pip install -e ".[docs]"         # MkDocs documentation build
 ```

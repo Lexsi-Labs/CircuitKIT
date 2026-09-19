@@ -24,6 +24,8 @@ Every algorithm in CircuitKit is labelled with a stability tier. The definitive 
 
 ✅ Validated  ⚠️ May fail  ❌ Not validated
 
+The GQA, chat-template and >3B columns record what was separately validated for the audit ([Audit Results](results.md)) and predate the current tier assignment. The Tier column follows the registry.
+
 ### Tier definitions
 
 | Tier | Meaning | You should |
@@ -47,10 +49,10 @@ Start with `eap-ig` for any new experiment. It is the default, the most validate
 ### Models
 
 - **GPT-2 (124M–1.5B):** fully validated, CPU-friendly. All 13 algorithms run on GPT-2.
-- **Llama 3.x (1B–3B):** Stable-tier EAP validated. Research algorithms are not validated on Llama-3.
-- **Gemma 2/3 (2B–4B):** Stable-tier EAP validated on Gemma-2-2B. GQA is detected at runtime (when `n_kv != n_heads`), not separately validated per model.
-- **Qwen 2.5 (0.5B–7B):** Stable-tier EAP validated. Chat-template auto-detection works.
-- **Larger models (>7B):** Not systematically validated. Stable EAP should work but may require GPU with ≥24 GB VRAM.
+- **Llama 3.x (1B–3B):** `eap` and `eap-ig` validated. Research algorithms are not validated on Llama-3.
+- **Gemma 2/3 (2B–4B):** `eap` and `eap-ig` validated on Gemma-2-2B. GQA is detected at runtime (when `n_kv != n_heads`), not separately validated per model.
+- **Qwen 2.5 (0.5B–7B):** `eap-ig` validated. Chat-template auto-detection works.
+- **Larger models (>7B):** Not systematically validated. `eap` and `eap-ig` should work but may require GPU with ≥24 GB VRAM.
 
 ### Tasks
 

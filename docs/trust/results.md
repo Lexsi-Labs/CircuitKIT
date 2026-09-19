@@ -10,8 +10,9 @@ This page answers the question [scope.md](scope.md) does not: an algorithm is *s
 - **Tasks**: IOI, SVA, Gender Bias, Greater-Than, BoolQ — the 5 core evaluation tasks
 - **Metrics**: Each pillar produces a normalised faithfulness ratio in [0, 1]. The table below reports the normalized faithfulness ratio (`ablation_score`, Pillar 2) — higher is more faithful.
 - **All runs**: Single seed (seed 42), 256 examples. EAP-family rows use `eap-ig` defaults; `acdc` and `ibcircuit` use their own defaults and required data regime.
+- **Not covered**: `eap-gp` and `cdt` are Stable tier but have no scores on this page.
 
-## Stable-tier results (EAP family)
+## Stable-tier results (`eap`, `eap-ig`)
 
 | Algorithm | GPT-2 IOI | Llama-1B IOI | Llama-3B IOI | Gemma-2B IOI |
 |---|---|---|---|---|
