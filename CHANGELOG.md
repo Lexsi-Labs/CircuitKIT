@@ -1,8 +1,8 @@
 <!-- circuitkit-logo -->
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/circuitkit-logo-white.png">
-    <img src="docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Lexsi-Labs/CircuitKIT/main/docs/assets/circuitkit-logo-white.png">
+    <img src="https://raw.githubusercontent.com/Lexsi-Labs/CircuitKIT/main/docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
   </picture>
 </p>
 
@@ -64,6 +64,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   it in `/opt/homebrew/bin`.
 - An example notebook's saved output contained an absolute `/home/jovyan/...` path
   from the machine it was recorded on.
+- The README and CHANGELOG logo and doc links used repo-relative paths, so the logo
+  rendered blank on the PyPI project page (which renders the README outside the
+  repository) and the internal doc links 404'd there. They are now absolute
+  `raw.githubusercontent.com` / GitHub URLs.
 
 ## [Unreleased] (next release)
 
@@ -179,7 +183,7 @@ The next release after 0.1.8; the release pipeline assigns its number. (The `[1.
   research-tier pruning baseline.
 - **Interactive circuit visualization sample.** A rendered EAP-IG circuit for
   GPT-2 on IOI ships at `examples/visualization/ioi_eap-ig.html` and is embedded
-  live in the [Visualization](docs/user-guide/visualization.md) docs page.
+  live in the [Visualization](https://github.com/Lexsi-Labs/CircuitKIT/blob/main/docs/user-guide/visualization.md) docs page.
 
 ### Changed
 - **Brand name `CircuitKit` renamed to `CircuitKIT`** across documentation,
@@ -1206,7 +1210,7 @@ CircuitKIT follows [Semantic Versioning](https://semver.org/):
 For issues, questions, or contributions:
 - **Issues**: [GitHub Issues](https://github.com/Lexsi-Labs/circuitkit/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/Lexsi-Labs/circuitkit/discussions)
-- **Contributing**: See [CONTRIBUTING.md](CONTRIBUTING.md)
+- **Contributing**: See [CONTRIBUTING.md](https://github.com/Lexsi-Labs/CircuitKIT/blob/main/CONTRIBUTING.md)
 
 ---
 
