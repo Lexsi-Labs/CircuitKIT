@@ -156,12 +156,18 @@ class TestLinearProbe:
     def test_probe_get_logits(self):
         """Test getting raw logits."""
         probe = LinearProbe(input_dim=256)
-        x = torch.randn(4, 256)
+        # Pin the weights and input: a random draw puts all four logits inside
+        # [0, 1] often enough to make a "logits are unbounded" assertion flaky
+        # (measured 2.8% of runs here, and torch's global seed is not fixed).
+        with torch.no_grad():
+            probe.linear.weight.fill_(1.0)
+            probe.linear.bias.zero_()
 
-        logits = probe.get_logits(x)
+        logits = probe.get_logits(torch.ones(4, 256))
         assert logits.shape == (4, 1)
-        # Logits are unbounded (not sigmoid)
-        assert logits.min() < 0 or logits.max() > 1
+        # Logits are unbounded (not sigmoid): 256 summed unit inputs.
+        assert (logits == 256).all()
+        assert not torch.allclose(logits, torch.sigmoid(logits))
 
     def test_probe_eval_mode(self):
         """Test that probe works in eval mode."""
