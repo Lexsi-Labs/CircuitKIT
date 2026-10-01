@@ -39,7 +39,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
     from transformer_lens import HookedTransformer
 
     from .evaluation.report import FaithfulnessReport
-    
+
     from pathlib import Path
 
 __all__ = [
@@ -1019,7 +1019,7 @@ def benchmark(
         dtype=dtype,
         **kw,
     )
-    
+
 # --------------------------------------------------------------------------- #
 # load_scores                                                                  #
 # --------------------------------------------------------------------------- #

@@ -165,6 +165,25 @@ _EAP_QKV_MEM_GUARD_ACTIVATION_MULT = 3.0
 _EAP_QKV_MEM_GUARD_FREE_FRACTION = 0.95
 
 
+def _trust_remote_code_kwargs(model_cfg: Dict[str, Any]) -> Dict[str, Any]:
+    """Forward ``model.trust_remote_code`` to the loader, defaulting to off.
+
+    Sarvam-MoE ships its modeling code in the repository rather than in
+    ``transformers``, so loading it requires ``trust_remote_code=True``. The
+    YAML/dict config path had no way to say that even though ``load_model``
+    accepted it, which made Sarvam unloadable outside the quick API. Passing
+    this executes code from the model repository, so it is only forwarded when
+    explicitly enabled and never defaulted on.
+    """
+    if not model_cfg.get("trust_remote_code", False):
+        return {}
+    logger.warning(
+        "model.trust_remote_code is enabled: transformers will execute modeling "
+        "code from this repository. Only enable it for repositories you trust."
+    )
+    return {"trust_remote_code": True}
+
+
 def _check_qkv_flag_memory_headroom(
     model, algo: str, *, batch_size: int = 1, seq_len: Optional[int] = None
 ) -> None:
@@ -1219,7 +1238,10 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
         else:
             with log_execution_time("Model loading", logger):
                 model = _from_pretrained(
-                    model_cfg["name"], device=device, dtype=dtype
+                    model_cfg["name"],
+                    device=device,
+                    dtype=dtype,
+                    **_trust_remote_code_kwargs(model_cfg),
                 )
 
         algo = discovery_cfg["algorithm"].lower()
@@ -2121,7 +2143,10 @@ def evaluate_circuit(
         else:
             with log_execution_time("Model loading", logger):
                 model = _from_pretrained(
-                    config["model"]["name"], device=device, dtype=dtype
+                    config["model"]["name"],
+                    device=device,
+                    dtype=dtype,
+                    **_trust_remote_code_kwargs(config["model"]),
                 )
         # These flags are required by the graph reconstruction / faithfulness
         # evaluation below regardless of model provenance. discover_circuit()

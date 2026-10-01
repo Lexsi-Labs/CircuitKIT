@@ -33,6 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The Cohere config converter is kept only in `_tl_compat/cohere.py`; the duplicate
   copy in patch `0006` is gone, and local checkpoint folders resolve from their
   `config.json` instead.
+- `model.trust_remote_code` in YAML/dict configs, and `--trust-remote-code` on
+  `circuitkit discover`, now reach the loader, so Sarvam-MoE is loadable outside
+  `load_model`. It stays opt-in: absent or false forwards nothing, and enabling it
+  logs a warning that model-repository code will be executed.
 - **Logo refresh.** New chip-mark identity across the repo: the CircuitKIT lockup (wordmark now spelled with a capital "KIT"),
   a vector mark, and a favicon set, all in `docs/assets/`. The docs header, favicon and landing hero use them, and every README,
   the root docs and the example notebooks carry the lockup. The lockup PNGs have true transparency (no baked-in halo). The old
@@ -55,6 +59,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `tests/apply/test_hallucination_detection.py::TestLinearProbe::test_probe_get_logits`
   was flaky (~2.8% of runs) because it asserted that randomly initialised probe
   logits fall outside [0, 1]; it now pins the probe weights and input.
+- The patch-hook test no longer hard-codes `PATH=/usr/bin:/bin` for its `git apply`
+  subprocess, which broke `git` lookup on Windows and on macOS installs that keep
+  it in `/opt/homebrew/bin`.
+- An example notebook's saved output contained an absolute `/home/jovyan/...` path
+  from the machine it was recorded on.
 
 ## [Unreleased] (next release)
 

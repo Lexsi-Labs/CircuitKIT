@@ -1,6 +1,7 @@
 """The import hook serves exactly what ``git apply`` of the series would write to disk."""
 
 import importlib.util
+import os
 import shutil
 import subprocess
 import sys
@@ -26,6 +27,10 @@ def test_hook_source_matches_git_apply(tmp_path, monkeypatch, memory_opt_in):
         monkeypatch.delenv("CIRCUITKIT_TL_MEMORY_PATCH", raising=False)
     pkg = Path(importlib.util.find_spec("transformer_lens").origin).parent
     shutil.copytree(pkg, tmp_path / "transformer_lens", ignore=shutil.ignore_patterns("__pycache__"))
+    # Inherit the caller's environment and only pin the directory git may not
+    # walk above; a hard-coded PATH would hide git on Windows and on macOS
+    # installs that keep it in /opt/homebrew/bin.
+    git_env = {**os.environ, "GIT_CEILING_DIRECTORIES": str(tmp_path.parent)}
     for patch in sorted(PATCH_DIR.glob("*.patch")):
         if not _patch_enabled(patch):
             continue
@@ -33,7 +38,7 @@ def test_hook_source_matches_git_apply(tmp_path, monkeypatch, memory_opt_in):
             ["git", "apply", str(patch)],
             cwd=tmp_path,
             check=True,
-            env={"GIT_CEILING_DIRECTORIES": str(tmp_path.parent), "PATH": "/usr/bin:/bin"},
+            env=git_env,
         )
     finder = TransformerLensPatchFinder(parse_series())
     assert len(finder.series) >= 12

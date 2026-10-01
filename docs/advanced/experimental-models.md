@@ -48,7 +48,7 @@ support.
 | Checkpoint | Scope and requirements |
 |---|---|
 | `google/gemma-4-31B-it` | Text-side discovery only; the multimodal vision tower is not exposed through the TransformerLens port. At bf16, weights alone are about 58 GiB; use an 80 GB-class GPU or larger to leave room for activations. |
-| `sarvamai/sarvam-30b` | TransformerLens discovery only; pass `trust_remote_code=True` when loading. At bf16, weights alone are about 56 GiB; use an 80 GB-class GPU or larger to leave room for activations. |
+| `sarvamai/sarvam-30b` | TransformerLens discovery only. Sarvam ships its modeling code in the repository rather than in `transformers`, so it needs `trust_remote_code`: `load_model(..., trust_remote_code=True)`, `trust_remote_code: true` under `model:` in a YAML/dict config, or `circuitkit discover --trust-remote-code`. This executes code from the model repository, so it is off by default and never inferred. At bf16, weights alone are about 56 GiB; use an 80 GB-class GPU or larger to leave room for activations. |
 
 ---
 
