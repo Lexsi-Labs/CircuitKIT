@@ -1,15 +1,23 @@
 """
-CircuitKit Discovery Backends — algorithm registry & stability tiers.
+CircuitKIT Discovery Backends — algorithm registry & stability tiers.
 
-This module is the SINGLE SOURCE OF TRUTH for every algorithm name CircuitKit
+This module is the SINGLE SOURCE OF TRUTH for every algorithm name CircuitKIT
 knows about, its category (discovery / pruning / quantization), and its
 stability tier. ``circuitkit.utils.exceptions`` derives its validation
 registries from here — do not maintain a second copy.
 
 Stability tiers:
-  stable        — Tested across the GPT-2, Llama, Gemma, and Qwen families.
+  stable        — Production-ready. Tested on GPT-2, Llama 1B/3B, Gemma 1B/4B.
   experimental  — Works on IOI. May fail on larger models. Use at own risk.
   research      — Implemented but unvalidated outside GPT-2 IOI. For exploration only.
+
+Model targets:
+  Discovery runs through TransformerLens. Beyond TL's native models, CircuitKIT
+  ships a compatibility port for tiny-aya (``cohere2``) in
+  ``circuitkit.backends._tl_compat`` (registered at import time, below). It is an
+  *experimental* discovery target: the checkpoints are gated (need ``HF_TOKEN``)
+  and results should only be trusted once the real-weight parity gate passes.
+  See ``docs/advanced/tiny-aya.md``.
 
 Usage:
     from circuitkit.backends import STABILITY, is_stable, default_algorithm
@@ -22,9 +30,17 @@ from __future__ import annotations
 
 import logging
 
+from . import _tl_compat
+
 logger = logging.getLogger(__name__)
 
-# (category, stability) for every algorithm CircuitKit knows about.
+# Registers tiny-aya (cohere2) support with TransformerLens (2.18 or 3.8) before any
+# HookedTransformer.from_pretrained() call. Must run at import time of this
+# package, since every discovery backend imports from `circuitkit.backends`
+# (directly or via a submodule) before touching TransformerLens.
+_tl_compat.apply_patches()
+
+# (category, stability) for every algorithm CircuitKIT knows about.
 #   category   ∈ {"discovery", "pruning", "quantization"}
 #   stability  ∈ {"stable", "experimental", "research"}
 ALGORITHMS: dict[str, tuple[str, str]] = {
@@ -33,7 +49,7 @@ ALGORITHMS: dict[str, tuple[str, str]] = {
     "eap-ig": ("discovery", "stable"),
     "eap-ig-activations": ("discovery", "research"),
     "eap-clean-corrupted": ("discovery", "research"),
-    # ── Discovery: EAP variants — research tier is GPT-2 IOI only ──
+    # ── Discovery: EAP research variants — GPT-2 IOI only ──
     "eap-exact": ("discovery", "research"),
     "atp-gd": ("discovery", "research"),
     "eap-gp": ("discovery", "stable"),
@@ -50,6 +66,7 @@ ALGORITHMS: dict[str, tuple[str, str]] = {
     "taylor": ("pruning", "stable"),
     "wanda": ("pruning", "stable"),
     "multi_granular": ("pruning", "stable"),
+    "sparsegpt": ("pruning", "research"),
     # ── Quantization selectors ──
     "gptq": ("quantization", "stable"),
     "awq": ("quantization", "stable"),

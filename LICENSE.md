@@ -1,8 +1,8 @@
-# Lexsi Labs Source Available License (LSAL), Version 1.2 (CircuitKit)
+# Lexsi Labs Source Available License (LSAL), Version 1.2 (CircuitKIT)
 
 ## Preamble
 
-This Source Available License governs use of the software known as **CircuitKit**, together with its example datasets, notebooks, and documentation (collectively, the "Licensed Work"), developed and owned by **Lexsi Labs (Lithasa Technologies Pvt. Ltd.)** ("Licensor").
+This Source Available License governs use of the software known as **CircuitKIT**, together with its example datasets, notebooks, and documentation (collectively, the "Licensed Work"), developed and owned by **Lexsi Labs (Lithasa Technologies Pvt. Ltd.)** ("Licensor").
 
 This is **not** an open-source license as defined by the [Open Source Initiative (OSI)](https://opensource.org/). It grants **academic research and teaching** MIT-like permissions: free use, modification, and redistribution with the notice intact. Organizations must acknowledge their use or obtain permission (Section 1A). It also bars commercial exploitation and unsafe use. The Licensed Work locates and manipulates the internal circuits of language models, including safety-relevant behaviors, and its value lies in reproducible research and auditing. The restrictions exist to keep that work out of unreviewed production deployment and out of the removal of model safeguards.
 
@@ -30,7 +30,7 @@ Before any organization, including a charitable organization, educational instit
 
 Both go to **support@lexsi.ai**.
 
-Licensor grants permission at its discretion. The written permission sets out the terms, which may include sharing with Licensor the evaluation results the Licensed Work produces, in CircuitKit's standard report format, excluding model weights, training data, prompt text, and model generations. Licensor uses shared results for research and for improving the Licensed Work, and handles them under the terms stated in the written permission.
+Licensor grants permission at its discretion. The written permission sets out the terms, which may include sharing with Licensor the evaluation results the Licensed Work produces, in CircuitKIT's standard report format, excluding model weights, training data, prompt text, and model generations. Licensor uses shared results for research and for improving the Licensed Work, and handles them under the terms stated in the written permission.
 
 Permission under this Section does not authorize any use described in Section 2.
 
@@ -42,7 +42,7 @@ Without a separate **commercial license** from Lexsi Labs, you may **not** Sell 
 * embedding the Licensed Work in proprietary or revenue-generating software;
 * paid consulting or support whose substance is the Licensed Work.
 
-If you redistribute a modified version, you must mark it as modified and must not present it as the original. You may also not **re-license, rebrand, or redistribute** the Licensed Work under different terms, nor use **Lexsi Labs**, **CircuitKit**, or related trademarks, logos, or branding except to identify unmodified, licensed copies.
+If you redistribute a modified version, you must mark it as modified and must not present it as the original. You may also not **re-license, rebrand, or redistribute** the Licensed Work under different terms, nor use **Lexsi Labs**, **CircuitKIT**, or related trademarks, logos, or branding except to identify unmodified, licensed copies.
 
 ## 3. Patents
 
@@ -95,6 +95,6 @@ For acknowledgements and permission requests under Section 1A, and for commercia
 
 ## 11. Notice
 
-**CircuitKit** © 2026 **Lithasa Technologies Pvt. Ltd.**
+**CircuitKIT** © 2026 **Lithasa Technologies Pvt. Ltd.**
 Licensed under the **Lexsi Labs Source Available License (LSAL) v1.2**.
 **Academic research and teaching are free on MIT-like terms. Use by any organization requires written acknowledgement or permission (Section 1A). Commercial use requires a commercial license (Section 2). The Licensed Work may not be used to remove or weaken the safety behaviors of deployed models (Section 4).**

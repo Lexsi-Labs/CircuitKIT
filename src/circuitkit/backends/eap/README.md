@@ -1,3 +1,11 @@
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../../docs/assets/circuitkit-logo-white.png">
+    <img src="../../../../docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
+
 # eap
 
 Backend for the EAP (Edge Attribution Patching) family. This is the discovery
@@ -20,7 +28,7 @@ TransformerLens computation graph and supports EAP-IG plus several research vari
   perplexity) via answer spans.
 - `eap_utils.py` — tokenization, mean-activation caching, hook/matrix construction,
   and the `collate_EAP` batcher.
-- `circuit_kit_adapter.py` — converts an EAP `Graph` into CircuitKit node/edge
+- `circuit_kit_adapter.py` — converts an EAP `Graph` into CircuitKIT node/edge
   score dicts; perplexity helper.
 - `visualization.py` — color helpers for rendering edges by QKV type / score.
 - `artifact_export.py` — `export_circuit_artifact`: EAP node scores → `CircuitArtifact`.

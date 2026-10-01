@@ -226,7 +226,7 @@ class GLUETaskSpec:
 
         # Load dataset
         logger.info(f"Loading GLUE {self.task_name} dataset split={split}")
-        dataset = load_dataset("glue", self.task_name, split=split)
+        dataset = load_dataset("nyu-mll/glue", self.task_name, split=split)
 
         # Sample if requested
         if samples_per_split and len(dataset) > samples_per_split:
@@ -357,18 +357,46 @@ class GLUETaskSpec:
             apply=apply,
         )
 
-        # Apply corruptions and tokenize
+        # Apply corruptions and tokenize.
+        #
+        # ``_tokenize_glue_example`` reads the CLEAN prompt from ``"prompt"`` and
+        # the counter-factual from a separate ``"corrupted"`` field. There are
+        # two ways that field gets populated:
+        #
+        #   1. EXPLICIT contrastive pairs — the example already carries an
+        #      authored ``corrupted_prompt`` (+ optional ``corrupted_answer``).
+        #      This is the academically-preferred path for non-syntactic tasks:
+        #      paraphrase/distractor are meaning-preserving (not counter-factual)
+        #      and give near-zero contrastive signal, whereas an authored
+        #      label-flipping pair isolates the behaviour. Mirrors
+        #      ``GenericTaskSpec._apply_corruption`` Path 1.
+        #   2. A corruption STRATEGY — its output prompt is wired into
+        #      ``"corrupted"`` here. (Previously the strategy's returned dict —
+        #      which overwrites ``"prompt"`` and sets no ``"corrupted"`` key —
+        #      was handed straight to the tokenizer, so ``clean == corrupted``
+        #      and the patch-faithfulness denominator collapsed. That is fixed.)
         processed_examples = []
         for example in examples:
-            # Corrupt
-            if isinstance(corruption_strategy, CorruptionPipeline):
-                corrupted = corruption_strategy.corrupt([example])[0]
+            tok_example = dict(example)
+            explicit_corrupt = example.get("corrupted_prompt") or example.get("corrupted")
+            if explicit_corrupt:
+                tok_example["corrupted"] = explicit_corrupt
+                incorrect = example.get("answer_incorrect") or example.get("corrupted_answer")
+                if incorrect:
+                    tok_example["answer_incorrect"] = incorrect
             else:
-                rng = __import__("random").Random(42)
-                corrupted = corruption_strategy.corrupt(example, rng=rng)
+                if isinstance(corruption_strategy, CorruptionPipeline):
+                    corrupted = corruption_strategy.corrupt([example])[0]
+                else:
+                    rng = __import__("random").Random(42)
+                    corrupted = corruption_strategy.corrupt(example, rng=rng)
+                tok_example["corrupted"] = (
+                    corrupted.get("corrupted")
+                    or corrupted.get("prompt")
+                    or example.get("prompt", "")
+                )
 
-            # Tokenize
-            tokens = tokenize_fn(corrupted)
+            tokens = tokenize_fn(tok_example)
             if tokens:
                 processed_examples.append(tokens)
 
@@ -494,8 +522,18 @@ class GLUETaskSpec:
             # Get token IDs
             correct_idx = answer_tokens[0, -1].item()
 
-            # Use first token as baseline incorrect
-            incorrect_idx = model.to_tokens("not", prepend_bos=False)[0, 0].item()
+            # The "incorrect" token defines the logit-diff metric
+            # (logit(correct) - logit(incorrect)). Prefer an AUTHORED counter-
+            # factual answer (``answer_incorrect``) so the metric contrasts the
+            # two real class tokens (e.g. " positive" vs " negative") — this is
+            # what makes y_clean and y_corrupt separate and patch-faithfulness
+            # well-defined. Fall back to "not" only for legacy pairs that ship
+            # no explicit counter-factual answer.
+            incorrect_answer = example.get("answer_incorrect")
+            if incorrect_answer:
+                incorrect_idx = model.to_tokens(incorrect_answer, prepend_bos=False)[0, -1].item()
+            else:
+                incorrect_idx = model.to_tokens("not", prepend_bos=False)[0, 0].item()
 
             # Wrap clean and corrupted prompts at finalization time. GLUE has no
             # answer-eliciting tail (the answer is a separate token), so the
@@ -560,7 +598,7 @@ class GLUETaskSpec:
         apply = resolve_chat_template_from_tokenizer(mode, tokenizer)
 
         split = cfg.get("split", "validation")
-        dataset = load_dataset("glue", self.task_name, split=split)
+        dataset = load_dataset("nyu-mll/glue", self.task_name, split=split)
 
         clean_texts: List[str] = []
         query_strings: List[str] = []

@@ -25,7 +25,7 @@ def export_circuit_artifact(
     Export EAP circuit as CircuitArtifact.
 
     Converts EAP's node attribution scores to the unified CircuitArtifact
-    schema for compatibility with interventions and other CircuitKit modules.
+    schema for compatibility with interventions and other CircuitKIT modules.
 
     Args:
         node_scores: Dictionary mapping node names to importance scores

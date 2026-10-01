@@ -1,6 +1,6 @@
 # Downstream Benchmarking
 
-After applying circuit-guided interventions (pruning, quantization), CircuitKit integrates with [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness) to measure downstream task performance.
+After applying circuit-guided interventions (pruning, quantization), CircuitKIT integrates with [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness) to measure downstream task performance.
 
 **Requires:** `pip install -e ".[benchmarks]"` — installs `lm-eval` from GitHub and `datasets>=2.20`.
 
@@ -64,7 +64,7 @@ Benchmark results measure **extrinsic performance** — whether the pruned/quant
 
 2. **Target task vs. transfer tasks:** If you discovered a circuit for IOI and pruned at 30% sparsity, benchmark on both IOI (within-task) and BoolQ, Winogrande (out-of-task). A good circuit-guided compression should degrade transfer tasks less than random pruning.
 
-3. **Circuit vs. random pruning:** Compare `ck.benchmark` after circuit-guided pruning vs. random pruning at the same sparsity. The CircuitKit paper shows circuit-guided pruning retains ~5-15% more accuracy on unrelated tasks.
+3. **Circuit vs. random pruning:** Compare `ck.benchmark` after circuit-guided pruning vs. random pruning at the same sparsity. The CircuitKIT paper shows circuit-guided pruning retains ~5-15% more accuracy on unrelated tasks.
 
 ---
 
@@ -96,7 +96,7 @@ for task in ["boolq", "winogrande"]:
 
 ## PEFT Benchmarking
 
-For circuit-restricted fine-tuning, CircuitKit includes a PEFT benchmark utility:
+For circuit-restricted fine-tuning, CircuitKIT includes a PEFT benchmark utility:
 
 ```python
 from circuitkit.applications.finetuning.benchmark_peft import PEFTBenchmark

@@ -1,4 +1,4 @@
-# Closing the Loop on Circuit Discovery: Introducing CircuitKit
+# Closing the Loop on Circuit Discovery: Introducing CircuitKIT
 
 *A toolkit that takes a discovered circuit and actually does something with it — prunes it, quantizes it, ships it as a real checkpoint, and tells you whether it was ever faithful in the first place.*
 
@@ -14,13 +14,13 @@ In practice, "then what" is a pile of glue code. You discover a circuit with one
 
 And almost all of that tooling **stops at the subgraph**. You get "here is a circuit and an attribution score." You do *not* get an answer to the question that actually matters: *is this circuit real enough to act on?*
 
-**CircuitKit** is built to close that loop.
+**CircuitKIT** is built to close that loop.
 
 ---
 
 ## Discover → Evaluate → Intervene
 
-CircuitKit is a pipeline, not a grab-bag of scripts. You give it a model and a task; it does three things, through one config:
+CircuitKIT is a pipeline, not a grab-bag of scripts. You give it a model and a task; it does three things, through one config:
 
 ```mermaid
 flowchart TD
@@ -48,7 +48,7 @@ The whole workflow runs off one `discover_circuit({...})` config and a HuggingFa
 
 Two design choices make it more than glue removal.
 
-**1. It closes the loop.** CircuitKit is, as far as we know, the only library that takes a discovered circuit and *acts on it for real* — it structurally prunes or quantizes the model **down to the circuit**, writes a standard HuggingFace checkpoint you can reload anywhere, and then measures both **faithfulness** (does the circuit explain the behaviour?) and **downstream utility** (does the compressed checkpoint still score on `lm-eval`?). Most tooling treats a circuit as an explanation. CircuitKit treats it as something you ship.
+**1. It closes the loop.** CircuitKIT is, as far as we know, the only library that takes a discovered circuit and *acts on it for real* — it structurally prunes or quantizes the model **down to the circuit**, writes a standard HuggingFace checkpoint you can reload anywhere, and then measures both **faithfulness** (does the circuit explain the behaviour?) and **downstream utility** (does the compressed checkpoint still score on `lm-eval`?). Most tooling treats a circuit as an explanation. CircuitKIT treats it as something you ship.
 
 **2. It targets modern models.** Discovery, chat-templating, and GQA/RoPE handling work on instruction-tuned Llama-3, Gemma, and Qwen — not just GPT-2. Each task carries a `chat_template_mode`, and discovery *freezes* the prompt-formatting policy so a circuit isn't misattributed to a prompt distribution the model is never actually run on.
 
@@ -56,7 +56,7 @@ Two design choices make it more than glue removal.
 
 ## Stage 1 — Discover
 
-Discovery is where the subgraph comes from. CircuitKit ships **13 algorithms across 4 backends**, organised into explicit **stability tiers** so you know what you're standing on:
+Discovery is where the subgraph comes from. CircuitKIT ships **13 algorithms across 4 backends**, organised into explicit **stability tiers** so you know what you're standing on:
 
 | Tier | Algorithms | Use it for |
 |---|---|---|
@@ -89,7 +89,7 @@ The point of the tier table isn't bureaucracy — it's honesty. A research-tier 
 
 ## Stage 2 — Evaluate
 
-A circuit is a *claim*: "these components explain this behaviour." CircuitKit pressure-tests that claim with a **6-pillar faithfulness framework** — not a single number, because a single number is easy to overfit to.
+A circuit is a *claim*: "these components explain this behaviour." CircuitKIT pressure-tests that claim with a **6-pillar faithfulness framework** — not a single number, because a single number is easy to overfit to.
 
 ```mermaid
 flowchart LR
@@ -103,13 +103,13 @@ flowchart LR
     P1 & P2 & P3 & P4 & P5 & P6 --> S["Faithfulness<br/>profile"]
 ```
 
-Crucially, evaluation doesn't stop at faithfulness. Because CircuitKit produces a **real, reloadable checkpoint** at the end of the intervention, it also benchmarks **downstream utility** through `lm-evaluation-harness` — the same way you'd evaluate any model. Faithfulness tells you whether the circuit *explains* the behaviour; the `lm-eval` score tells you whether the model you actually built still *works*. Keeping both numbers in the same pipeline is the whole point.
+Crucially, evaluation doesn't stop at faithfulness. Because CircuitKIT produces a **real, reloadable checkpoint** at the end of the intervention, it also benchmarks **downstream utility** through `lm-evaluation-harness` — the same way you'd evaluate any model. Faithfulness tells you whether the circuit *explains* the behaviour; the `lm-eval` score tells you whether the model you actually built still *works*. Keeping both numbers in the same pipeline is the whole point.
 
 ---
 
 ## Stage 3 — Intervene
 
-This is the stage most interpretability tools don't have. Once you have a circuit, CircuitKit acts on it:
+This is the stage most interpretability tools don't have. Once you have a circuit, CircuitKIT acts on it:
 
 ```mermaid
 flowchart LR
@@ -126,17 +126,17 @@ flowchart LR
 - **Quantize** — mixed-precision quantization that keeps circuit-important layers at higher bit-width and compresses the rest.
 - **Edit / Steer / Fine-tune** — ROME/MEMIT knowledge edits, activation steering, and LoRA fine-tuning, all scoped to the discovered circuit.
 
-Every path ends at a checkpoint on disk. Pruned checkpoints are plain HuggingFace models — reload them with `AutoModelForCausalLM` and run them like anything else. Quantized checkpoints are saved in optimum-quanto's format and reload through CircuitKit's `load_quantized_checkpoint`. Either way, the artifact is a real model you can ship and benchmark, not just a subgraph.
+Every path ends at a checkpoint on disk. Pruned checkpoints are plain HuggingFace models — reload them with `AutoModelForCausalLM` and run them like anything else. Quantized checkpoints are saved in optimum-quanto's format and reload through CircuitKIT's `load_quantized_checkpoint`. Either way, the artifact is a real model you can ship and benchmark, not just a subgraph.
 
 ---
 
-## The question CircuitKit was built to answer
+## The question CircuitKIT was built to answer
 
-CircuitKit exists because of a research question: **if a circuit is faithful, is it a good thing to compress a model down to?**
+CircuitKIT exists because of a research question: **if a circuit is faithful, is it a good thing to compress a model down to?**
 
 It's an intuitive hypothesis. A faithful circuit is, by construction, "the part of the model that does the task" — so pruning everything else, or protecting the circuit's layers during quantization, *should* be a principled compression strategy. The faithfulness score should predict how well the compressed model survives.
 
-CircuitKit makes that hypothesis directly testable. Treat each discovery method as a **selector** — a way to score components — and use that score as a compression criterion:
+CircuitKIT makes that hypothesis directly testable. Treat each discovery method as a **selector** — a way to score components — and use that score as a compression criterion:
 
 ```mermaid
 flowchart LR
@@ -150,7 +150,7 @@ flowchart LR
 
 Run that across many selectors, two interventions (structured pruning and quantization), and a grid of models and tasks, and you can ask: **does a selector's faithfulness rank-correlate with the actionability — the accuracy you keep after compressing to its circuit?**
 
-That's a question you can only *answer* with tooling that closes the loop — that actually compresses the model and measures what survives, instead of stopping at the subgraph. Running that audit rigorously — across many selectors, both interventions, and a grid of models and tasks — is ongoing research. CircuitKit is the instrument that makes the audit runnable in the first place, and that's the design it's built around.
+That's a question you can only *answer* with tooling that closes the loop — that actually compresses the model and measures what survives, instead of stopping at the subgraph. Running that audit rigorously — across many selectors, both interventions, and a grid of models and tasks — is ongoing research. CircuitKIT is the instrument that makes the audit runnable in the first place, and that's the design it's built around.
 
 ---
 
@@ -158,7 +158,7 @@ That's a question you can only *answer* with tooling that closes the loop — th
 
 Interpretability tooling has a specific failure mode: **a wrong number looks exactly like a right one.** A faithfulness score that's silently unnormalized, a structural prune that masks the wrong axis, a quantization step that's never actually persisted to the checkpoint — none of these crash. They just give you a plausible number that's wrong.
 
-CircuitKit `1.0.0` shipped after a correctness-hardening cycle in which an audit found and fixed **10+ serious bugs in code that had already been marked "done"** — wrong-axis structural pruning, double-BOS tokenization, unnormalized faithfulness scores, an ACDC crash on grouped-query attention, quantization that was never written to the checkpoint. The full history is kept in [`CHANGELOG.md`](../../CHANGELOG.md) **on purpose**: for this kind of tooling, an honest fix log is the trust signal. The stability tiers exist for the same reason — a backend that hasn't been validated across model scales should not look like one that has.
+CircuitKIT `1.0.0` shipped after a correctness-hardening cycle in which an audit found and fixed **10+ serious bugs in code that had already been marked "done"** — wrong-axis structural pruning, double-BOS tokenization, unnormalized faithfulness scores, an ACDC crash on grouped-query attention, quantization that was never written to the checkpoint. The full history is kept in [`CHANGELOG.md`](../../CHANGELOG.md) **on purpose**: for this kind of tooling, an honest fix log is the trust signal. The stability tiers exist for the same reason — a backend that hasn't been validated across model scales should not look like one that has.
 
 ---
 
@@ -175,7 +175,7 @@ import circuitkit
 print(circuitkit.__version__)   # 1.0.0
 ```
 
-CircuitKit needs Python 3.10+ and PyTorch 2.0+. Optional extras cover spaCy-backed
+CircuitKIT needs Python 3.10+ and PyTorch 2.0+. Optional extras cover spaCy-backed
 corruption strategies, `lm-evaluation-harness` integration, and docs/dev tooling.
 The 60-second quickstart, the stability-tier table, and the capability matrix are
 all in the [README](../../README.md); installation scenarios are in
@@ -185,10 +185,10 @@ all in the [README](../../README.md); installation scenarios are in
 
 ## The one-line version
 
-Most interpretability tools answer *"what is the circuit?"* CircuitKit answers the
+Most interpretability tools answer *"what is the circuit?"* CircuitKIT answers the
 next question — *"is the circuit real enough to act on, and what happens when you
 do?"* — by discovering it, scoring its faithfulness six ways, compressing the model
 down to it, and handing you a checkpoint you can reload and benchmark. The loop is
 closed.
 
-*CircuitKit is source-available (LSAL v1.2) — [github.com/Lexsi-Labs/circuitkit](https://github.com/Lexsi-Labs/circuitkit).*
+*CircuitKIT is source-available (LSAL v1.2) — [github.com/Lexsi-Labs/circuitkit](https://github.com/Lexsi-Labs/circuitkit).*

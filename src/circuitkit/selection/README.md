@@ -1,3 +1,11 @@
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../docs/assets/circuitkit-logo-white.png">
+    <img src="../../../docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
+
 # selectors
 
 A registry of component-scoring functions (attribution methods and pruning/quantization baselines) that map a loaded model to per-component importance scores.
@@ -5,7 +13,7 @@ A registry of component-scoring functions (attribution methods and pruning/quant
 ## Key modules
 
 - `__init__.py` — the registry: `register` decorator, `get_selector`, `list_selectors`, and imports that register every built-in selector (including application pruning/quantization selectors).
-- `eap_selector.py` — registers `eap` and `eap-ig` attribution via CircuitKit's `Graph` + `attribute_node`.
+- `eap_selector.py` — registers `eap` and `eap-ig` attribution via CircuitKIT's `Graph` + `attribute_node`.
 - `eap_gp_selector.py` — registers `eap-gp` (GradPath adaptive integration path).
 - `relp_selector.py` — registers `relp` (Relevance Patching via LRP-style detach hooks).
 - `cdt_selector.py` — registers `cdt` (Contextual Decomposition for Transformers, gradient-free).
@@ -21,4 +29,4 @@ A registry of component-scoring functions (attribution methods and pruning/quant
 
 ## How it fits
 
-A scoring interface used by both CircuitKit applications (pruning/quantization) and the discovery/experiment framework, so attribution methods and baselines are interchangeable by name.
+A scoring interface used by both CircuitKIT applications (pruning/quantization) and the discovery/experiment framework, so attribution methods and baselines are interchangeable by name.

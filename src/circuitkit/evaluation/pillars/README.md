@@ -1,3 +1,11 @@
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../../docs/assets/circuitkit-logo-white.png">
+    <img src="../../../../docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
+
 # pillars
 
 The 6-pillar faithfulness framework, with a supplementary seventh reliability pillar, for evaluating circuit quality.

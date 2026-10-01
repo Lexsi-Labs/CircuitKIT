@@ -54,7 +54,7 @@ Wrap it in a `CorruptionPipeline` and pass it to `GenericTaskSpec.from_csv(..., 
 
 Here's the honest caveat. The built-in strategies were designed for **syntactic, template-style prompts** — IOI-style sentences where swapping a name or a token genuinely flips the answer. On instruction-tuned or safety-style prompts, they often can't find anything to change and leave the prompt untouched. Some also need optional dependencies (for example, `entity_swap` relies on spaCy for entity detection); when the dependency is missing, the strategy quietly produces no change.
 
-When the corrupt prompt ends up identical to the clean one for every example, the contrastive pair carries no signal, and any circuit you get out is meaningless. CircuitKit does not let this pass silently:
+When the corrupt prompt ends up identical to the clean one for every example, the contrastive pair carries no signal, and any circuit you get out is meaningless. CircuitKIT does not let this pass silently:
 
 - On the task-YAML / `GenericTaskSpec` path, discovery logs a loud warning when a corruption strategy (or explicit corrupt column) produces no change across the whole dataset — the clean and corrupt prompts are identical, so there is nothing to attribute against.
 - On the normalized / `data.type: template` path, discovery raises a `ValueError` outright when a paired algorithm is handed data that isn't fully paired, telling you to apply a corruption strategy or switch to a clean-only algorithm (IBCircuit / CD-T).

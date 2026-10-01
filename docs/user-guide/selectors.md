@@ -1,6 +1,6 @@
 # Selectors
 
-The **selector registry** is CircuitKit's unified interface for component scoring. Every discovery algorithm, pruning strategy, and quantization method is a registered selector function. This makes algorithms interchangeable and allows custom scoring functions to be plugged into any pipeline stage.
+The **selector registry** is CircuitKIT's unified interface for component scoring. Every discovery algorithm, pruning strategy, and quantization method is a registered selector function. This makes algorithms interchangeable and allows custom scoring functions to be plugged into any pipeline stage.
 
 ## The 14 registered selectors
 

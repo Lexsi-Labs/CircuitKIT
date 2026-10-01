@@ -1,5 +1,5 @@
 """
-Asynchronous processing utilities for CircuitKit.
+Asynchronous processing utilities for CircuitKIT.
 Provides async I/O, batch processing, and concurrent operations.
 """
 

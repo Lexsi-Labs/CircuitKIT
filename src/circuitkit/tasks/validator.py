@@ -77,7 +77,7 @@ class ValidationResult:
 
 
 class DatasetValidator:
-    """Validates datasets for use with CircuitKit tasks.
+    """Validates datasets for use with CircuitKIT tasks.
 
     Checks:
     1. Schema completeness: Required fields present

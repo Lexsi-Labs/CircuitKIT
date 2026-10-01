@@ -1,0 +1,168 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Pratinav Seth <pratinav.seth@lexsi.ai>
+Date: Sat, 26 Sep 2026 22:46:06 +0530
+Subject: [PATCH 4/5] gemma4: match HF (proportional RoPE, final softcap,
+ layer_scalar)
+
+Not in the vendored fork. Measured on a tiny random Gemma4ForConditionalGeneration
+(fp32): without this patch max |dlogit| 0.108 and top-1 agreement 0.875 vs HF; with it
+7e-5 and 1.0. Global layers used a partial rotary_dim=128 where HF's proportional RoPE
+rotates 64 pairs spread over the full 512-dim head; final_logit_softcapping=30 was not
+applied; the per-layer layer_scalar buffer was ignored. Also drops two stale sarvam
+comments that referred to a removed SARVAM_MOE_UNSUPPORTED.
+
+diff --git a/transformer_lens/components/abstract_attention.py b/transformer_lens/components/abstract_attention.py
+index d54b4f2..6e6b613 100644
+--- a/transformer_lens/components/abstract_attention.py
++++ b/transformer_lens/components/abstract_attention.py
+@@ -774,6 +774,12 @@ class AbstractAttention(ABC, nn.Module):
+             scaling_factor = getattr(self.cfg, "rotary_scaling_factor", 1.0)
+             if scaling_factor != 1.0 and self.attn_type != "local":
+                 freq = freq * scaling_factor
++            # Gemma 4 "proportional" RoPE: pairs past int(factor * rotary_dim // 2) get
++            # inv_freq 0 (an infinite period), matching transformers'
++            # _compute_proportional_rope_parameters.
++            proportional = self.cfg.proportional_rotary_factor
++            if proportional is not None and self.attn_type != "local":
++                freq[int(proportional * rotary_dim // 2) :] = float("inf")
+         if self.cfg.rotary_adjacent_pairs:
+             freq = einops.repeat(freq, "d -> (d 2)")
+         else:
+diff --git a/transformer_lens/components/transformer_block.py b/transformer_lens/components/transformer_block.py
+index e303ba4..4aafaa0 100644
+--- a/transformer_lens/components/transformer_block.py
++++ b/transformer_lens/components/transformer_block.py
+@@ -155,6 +155,8 @@ class TransformerBlock(nn.Module):
+         if not self.cfg.attn_only and not self.cfg.parallel_attn_mlp:
+             self.hook_resid_mid = HookPoint()  # [batch, pos, d_model]
+         self.hook_resid_post = HookPoint()  # [batch, pos, d_model]
++        if self.cfg.use_layer_scalar:
++            self.register_buffer("layer_scalar", torch.ones(1, dtype=self.cfg.dtype))
+ 
+     def forward(
+         self,
+@@ -262,7 +264,10 @@ class TransformerBlock(nn.Module):
+             else:
+                 normalized_resid_mid = self.ln2(mlp_in)
+                 mlp_out = self.apply_mlp(normalized_resid_mid)
+-            resid_post = self.hook_resid_post(resid_mid + mlp_out)  # [batch, pos, d_model]
++            resid_post = resid_mid + mlp_out
++            if self.cfg.use_layer_scalar:
++                resid_post = resid_post * self.layer_scalar
++            resid_post = self.hook_resid_post(resid_post)  # [batch, pos, d_model]
+         elif self.cfg.parallel_attn_mlp:
+             # Dumb thing done by GPT-J, both MLP and Attn read from resid_pre and write to resid_post, no resid_mid used.
+             # In GPT-J, LN1 and LN2 are tied, in GPT-NeoX they aren't.
+diff --git a/transformer_lens/config/hooked_transformer_config.py b/transformer_lens/config/hooked_transformer_config.py
+index e0bcc93..81e6e4c 100644
+--- a/transformer_lens/config/hooked_transformer_config.py
++++ b/transformer_lens/config/hooked_transformer_config.py
+@@ -257,6 +257,15 @@ class HookedTransformerConfig(TransformerLensConfig):
+             before attention (Gemma 4: every layer's value path is RMS-normalized with no
+             learned scale, mirroring q_norm/k_norm's mechanism but without a weight -- see
+             `use_qk_norm`). Defaults to False.
++        proportional_rotary_factor (float, *optional*): HF ``rope_type="proportional"`` (Gemma 4
++            global layers). Frequencies are laid out over the full ``rotary_dim``, but only the
++            first ``int(factor * rotary_dim // 2)`` pairs rotate; the rest pass through
++            unrotated. Not the same as a partial ``rotary_dim``, which changes both the
++            frequencies and which dimensions pair up. Applied to non-local layers only.
++            Defaults to None.
++        use_layer_scalar (bool): Multiply each block's output (residual included) by a
++            per-block scalar buffer ``layer_scalar`` (Gemma 4's ``Gemma4TextDecoderLayer``).
++            Defaults to False.
+         norm_topk_prob (bool): Whether to normalize the top-k probabilities in the MoE layer.
+         use_logn_attn (bool): Qwen-1's log-n attention: scale queries by
+             log_{train_len}(position) past the training length (eval only).
+@@ -323,6 +332,8 @@ class HookedTransformerConfig(TransformerLensConfig):
+     n_key_value_heads_local: Optional[int] = None
+     rotary_dim_local: Optional[int] = None
+     use_v_norm: bool = False
++    proportional_rotary_factor: Optional[float] = None
++    use_layer_scalar: bool = False
+     rotary_scaling_factor: float = (
+         1.0  # Linear RoPE scaling factor for global attention (e.g., 8.0 for Gemma 3 4B)
+     )
+diff --git a/transformer_lens/loading_from_pretrained.py b/transformer_lens/loading_from_pretrained.py
+index a65436f..30f216d 100644
+--- a/transformer_lens/loading_from_pretrained.py
++++ b/transformer_lens/loading_from_pretrained.py
+@@ -1470,12 +1470,9 @@ def convert_hf_model_config(model_name: str, **kwargs: Any) -> dict[str, Any]:
+         # (configuration_sarvam_moe.py / modeling_sarvam_moe.py) -- sarvam_moe is NOT
+         # in `transformers`, so there is no upstream implementation to cite instead.
+         #
+-        # This cfg describes the model's SHAPE only. It does NOT make the model
+-        # numerically correct: see SARVAM_MOE_UNSUPPORTED in
+-        # pretrained/weight_conversions/sarvam_moe.py for the router/MLP semantics
+-        # (always-on shared expert, sigmoid scoring, learned expert bias applied
+-        # before top-k, routed_scaling_factor=2.5, first_k_dense_replace=1) that
+-        # TransformerLens's MoE component cannot yet express.
++        # The router/MLP semantics (shared expert, sigmoid scoring, expert bias
++        # before top-k, routed_scaling_factor, first_k_dense_replace) live in
++        # components/mlps/moe.py and components/transformer_block.py.
+         cfg_dict = {
+             "d_model": hf_config.hidden_size,                     # 4096
+             "d_head": hf_config.head_dim,                         # 64
+@@ -1561,14 +1558,11 @@ def convert_hf_model_config(model_name: str, **kwargs: Any) -> dict[str, Any]:
+         #   - hidden_size_per_layer_input=0 in this checkpoint's config, so
+         #     the per-layer-input gating mechanism is inert here too, same
+         #     caveat for other Gemma 4 variants.
+-        #   - rope_type "proportional" on full_attention layers' RoPE
+-        #     (transformers' newer per-layer rope_parameters schema) is NOT
+-        #     the same thing as Gemma 3's `rotary_scaling_factor` linear
+-        #     scaling, and its exact semantics were not resolved from
+-        #     modeling_gemma4.py in the time available -- rotary_scaling_factor
+-        #     is deliberately left at TL's default (1.0, unscaled) below
+-        #     rather than guessing a value. This is the single biggest open
+-        #     correctness question in this port; see docs/CTHETA_GEMMA4_AUDIT.md.
++        #
++        # rope_type "proportional" on full_attention layers: rotary spans the whole
++        # 512-dim head with base^(-2i/512) frequencies, and only the first
++        # int(0.25 * 512 // 2) = 64 pairs rotate (proportional_rotary_factor). A
++        # partial rotary_dim=128 would pair and scale different dimensions.
+         cfg_dict = {
+             "d_model": 5376,
+             "d_head": 512,
+@@ -1586,7 +1580,8 @@ def convert_hf_model_config(model_name: str, **kwargs: Any) -> dict[str, Any]:
+             "normalization_type": "RMS",
+             "rotary_base": 1000000,          # full_attention ("global") layers
+             "rotary_base_local": 10000,       # sliding_attention ("local") layers
+-            "rotary_dim": 128,                # global: partial_rotary_factor 0.25 * d_head(512)
++            "rotary_dim": 512,                # global: proportional RoPE spans the full head
++            "proportional_rotary_factor": 0.25,
+             "rotary_dim_local": 256,          # local: full rotary over d_head_local(256)
+             "positional_embedding_type": "rotary",
+             "use_attn_scale": True,
+@@ -1596,6 +1591,8 @@ def convert_hf_model_config(model_name: str, **kwargs: Any) -> dict[str, Any]:
+             "use_normalization_before_and_after": True,
+             "use_qk_norm": True,
+             "use_v_norm": True,               # unscaled RMSNorm on V, every layer (see above)
++            "use_layer_scalar": True,         # Gemma4TextDecoderLayer.layer_scalar
++            "output_logits_soft_cap": 30.0,   # text_config.final_logit_softcapping
+             "window_size": 1024,
+             "use_local_attn": True,
+             "attn_types": [
+@@ -2391,11 +2388,6 @@ def get_pretrained_state_dict(
+         elif cfg.original_architecture == "MixtralForCausalLM":
+             state_dict = convert_mixtral_weights(hf_model, cfg)
+         elif cfg.original_architecture == "SarvamMoEForCausalLM":
+-            # Raises by default: the weight mapping is implemented, but TL's MoE
+-            # component cannot express sarvam_moe's router/MLP semantics, so a
+-            # silently-converted model would compute a different function from the
+-            # real one. See SARVAM_MOE_UNSUPPORTED in
+-            # pretrained/weight_conversions/sarvam_moe.py.
+             state_dict = convert_sarvam_moe_weights(hf_model, cfg)
+         elif cfg.original_architecture == "GptOssForCausalLM":
+             state_dict = convert_gpt_oss_weights(hf_model, cfg)
+diff --git a/transformer_lens/pretrained/weight_conversions/gemma.py b/transformer_lens/pretrained/weight_conversions/gemma.py
+index 1f24a18..f7f9f43 100644
+--- a/transformer_lens/pretrained/weight_conversions/gemma.py
++++ b/transformer_lens/pretrained/weight_conversions/gemma.py
+@@ -246,6 +246,8 @@ def convert_gemma4_weights(gemma4, cfg: HookedTransformerConfig):
+         # Gemma4TextDecoderLayer, independent of the (here-disabled) MoE path.
+         state_dict[f"blocks.{l}.ln2.w"] = layer.pre_feedforward_layernorm.weight.float()
+         state_dict[f"blocks.{l}.ln2_post.w"] = layer.post_feedforward_layernorm.weight.float()
++        # Persistent buffer in HF: each layer's output is multiplied by it.
++        state_dict[f"blocks.{l}.layer_scalar"] = layer.layer_scalar
+ 
+         state_dict[f"blocks.{l}.mlp.W_in"] = layer.mlp.up_proj.weight.T
+         state_dict[f"blocks.{l}.mlp.W_gate"] = layer.mlp.gate_proj.weight.T

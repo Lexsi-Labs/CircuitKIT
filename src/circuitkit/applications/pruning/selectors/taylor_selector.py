@@ -14,11 +14,39 @@ tokenizer's global ``padding_side`` and produced wrong scores under right
 padding).
 """
 
+from contextlib import contextmanager
+
 import torch
 
 from circuitkit.backends.eap.eap_utils import tokenize_plus
 from circuitkit.selection import register
 from circuitkit.tasks.registry import get_task
+
+
+@contextmanager
+def _only_score_params_require_grad(model):
+    """Restrict autograd to the weights the selector reads (attn W_O, MLP W_out).
+
+    Backward then skips the weight grads of every other parameter (embeddings,
+    W_Q/K/V, W_in, unembedding, ...), which would otherwise allocate about one
+    extra copy of the model. Activation grads, and so the W_O / W_out grads
+    themselves, are unchanged. The caller's requires_grad flags are restored.
+    """
+    scored = {
+        id(p)
+        for block in model.blocks
+        for p in (getattr(block.attn, "W_O", None), getattr(block.mlp, "W_out", None))
+        if isinstance(p, torch.nn.Parameter)
+    }
+    saved = [(p, p.requires_grad) for p in model.parameters()]
+    try:
+        if scored:
+            for p, _ in saved:
+                p.requires_grad_(id(p) in scored)
+        yield
+    finally:
+        for p, flag in saved:
+            p.requires_grad_(flag)
 
 
 @register("taylor")
@@ -61,44 +89,45 @@ def taylor_selector(model, task_name: str, config: dict) -> dict:
 
     accum_h = [[0.0] * nH for _ in range(nL)]
     accum_m = [0.0] * nL
-    nB = 0
-    for batch in dataloader:
-        clean, corrupted, labels = batch
-        if isinstance(clean[0], str):
-            # Padding-safe: tokenize_plus returns per-example input_lengths
-            # and lets us pin padding_side='left' explicitly so the metric
-            # indexes the last real token for every sample.
-            tokens, _attn_mask, input_lengths, _n_pos = tokenize_plus(
-                model, list(clean), padding_side="left", templated=templated
-            )
-            input_lengths = input_lengths.to(device)
-        else:
-            tokens = clean.to(device)
-            input_lengths = torch.full(
-                (tokens.size(0),), tokens.size(-1),
-                dtype=torch.long, device=device,
-            )
-        logits = model(tokens)
-        # Non-contrastive metrics ignore the second positional arg, but pass
-        # logits for it to match the standard metric signature; the KL guard
-        # above prevents the silently-zero failure mode.
-        metric = metric_fn(logits, logits, input_lengths, labels)
-        if isinstance(metric, torch.Tensor) and metric.requires_grad:
-            metric.sum().backward()
-            for L in range(nL):
-                block = model.blocks[L]
-                if hasattr(block.attn, "W_O") and block.attn.W_O.grad is not None:
-                    wo_grad = block.attn.W_O.grad
-                    wo_val = block.attn.W_O.detach()
-                    for h in range(nH):
-                        accum_h[L][h] += float((wo_grad[h] * wo_val[h]).abs().sum().item())
-                mlp = block.mlp
-                if hasattr(mlp, "W_out") and mlp.W_out.grad is not None:
-                    accum_m[L] += float((mlp.W_out.grad * mlp.W_out).abs().sum().item())
-            model.zero_grad()
-        nB += 1
-        if nB >= config.get("max_batches", 10):
-            break
+    with _only_score_params_require_grad(model):
+        nB = 0
+        for batch in dataloader:
+            clean, corrupted, labels = batch
+            if isinstance(clean[0], str):
+                # Padding-safe: tokenize_plus returns per-example input_lengths
+                # and lets us pin padding_side='left' explicitly so the metric
+                # indexes the last real token for every sample.
+                tokens, _attn_mask, input_lengths, _n_pos = tokenize_plus(
+                    model, list(clean), padding_side="left", templated=templated
+                )
+                input_lengths = input_lengths.to(device)
+            else:
+                tokens = clean.to(device)
+                input_lengths = torch.full(
+                    (tokens.size(0),), tokens.size(-1),
+                    dtype=torch.long, device=device,
+                )
+            logits = model(tokens)
+            # Non-contrastive metrics ignore the second positional arg, but pass
+            # logits for it to match the standard metric signature; the KL guard
+            # above prevents the silently-zero failure mode.
+            metric = metric_fn(logits, logits, input_lengths, labels)
+            if isinstance(metric, torch.Tensor) and metric.requires_grad:
+                metric.sum().backward()
+                for L in range(nL):
+                    block = model.blocks[L]
+                    if hasattr(block.attn, "W_O") and block.attn.W_O.grad is not None:
+                        wo_grad = block.attn.W_O.grad
+                        wo_val = block.attn.W_O.detach()
+                        for h in range(nH):
+                            accum_h[L][h] += float((wo_grad[h] * wo_val[h]).abs().sum().item())
+                    mlp = block.mlp
+                    if hasattr(mlp, "W_out") and mlp.W_out.grad is not None:
+                        accum_m[L] += float((mlp.W_out.grad * mlp.W_out).abs().sum().item())
+                model.zero_grad()
+            nB += 1
+            if nB >= config.get("max_batches", 10):
+                break
     scores = {}
     for L in range(nL):
         for h in range(nH):

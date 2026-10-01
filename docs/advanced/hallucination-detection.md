@@ -1,6 +1,6 @@
 # Hallucination Detection
 
-CircuitKit's `HallucinationDetector` uses circuit activations and trained linear probes to detect probable hallucinations during model generation. Rather than using an external judge, it monitors the circuit components that were identified as task-relevant and flags outputs where those components show patterns associated with incorrect generation.
+CircuitKIT's `HallucinationDetector` uses circuit activations and trained linear probes to detect probable hallucinations during model generation. Rather than using an external judge, it monitors the circuit components that were identified as task-relevant and flags outputs where those components show patterns associated with incorrect generation.
 
 ---
 

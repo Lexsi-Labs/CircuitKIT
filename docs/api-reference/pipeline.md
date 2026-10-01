@@ -283,7 +283,7 @@ pipe.summary()  # prints a Rich table
 
 ## Error States
 
-There is no `PipelineStateError` in CircuitKit. Pipeline raises standard `RuntimeError` and `ValueError`:
+There is no `PipelineStateError` in CircuitKIT. Pipeline raises standard `RuntimeError` and `ValueError`:
 
 | Situation | Error |
 |-----------|-------|

@@ -1,6 +1,6 @@
 # 6-Pillar Faithfulness Framework
 
-CircuitKit evaluates circuits with a 6-pillar framework. Each pillar tests whether the discovered circuit faithfully represents the model's computation.
+CircuitKIT evaluates circuits with a 6-pillar framework. Each pillar tests whether the discovered circuit faithfully represents the model's computation.
 
 ## Why 6 pillars?
 

@@ -81,7 +81,7 @@ _TASK_ALIASES: Dict[str, str] = {
 
 def _load_task(task_arg: str) -> Any:
     """
-    Instantiate a CircuitKit task spec by short name or fully-qualified path.
+    Instantiate a CircuitKIT task spec by short name or fully-qualified path.
 
     All built-in task specs have no-argument constructors. Accepts short aliases
     from _TASK_ALIASES or a dotted 'package.module.ClassName' string directly.

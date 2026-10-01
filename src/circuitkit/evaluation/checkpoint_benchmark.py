@@ -281,7 +281,7 @@ def run_lm_eval(
     batch_size: Union[int, str] = "auto",
     backend: str = "hf",
     device: str = "auto",
-    dtype: str = "float32",
+    dtype: str = "bfloat16",
     apply_chat_template: Union[bool, str] = "auto",
     gpu_memory_utilization: Optional[float] = None,
 ) -> Dict[str, Dict[str, float]]:
@@ -315,7 +315,9 @@ def run_lm_eval(
         batch_size: lm-eval batch size (``"auto"`` recommended).
         backend: ``"hf"`` (HFLM) or ``"vllm"`` (vLLM backend, if installed).
         device: Torch device for the ``hf`` backend.
-        dtype: Model dtype string for the ``hf`` backend.
+        dtype: Model dtype string. Defaults to ``"bfloat16"``, which halves the
+            benchmark model's VRAM versus float32 at the cost of slightly different
+            scores; pass ``"float32"`` to reproduce earlier numbers.
         apply_chat_template: Wrap each task prompt in the model's chat template
             before scoring. Instruction-tuned checkpoints score badly on raw
             task text (MMLU/BoolQ/GSM8K/...), so this must be on for them.
@@ -412,7 +414,7 @@ def _run_lm_eval_inproc(
     batch_size: Union[int, str] = "auto",
     backend: str = "hf",
     device: str = "auto",
-    dtype: str = "float32",
+    dtype: str = "bfloat16",
     apply_chat_template: Union[bool, str] = "auto",
     gpu_memory_utilization: Optional[float] = None,
 ) -> Dict[str, Dict[str, float]]:
@@ -654,7 +656,7 @@ def export_and_benchmark(
     fewshot: int = 0,
     backend: str = "hf",
     device: str = "auto",
-    dtype: str = "float32",
+    dtype: str = "bfloat16",
     apply_chat_template: Union[bool, str] = "auto",
     overwrite: bool = True,
     keep_checkpoint: bool = True,
@@ -738,7 +740,7 @@ def compare_base_vs_intervened(
     fewshot: int = 0,
     backend: str = "hf",
     device: str = "auto",
-    dtype: str = "float32",
+    dtype: str = "bfloat16",
     apply_chat_template: Union[bool, str] = "auto",
     keep_checkpoints: bool = False,
 ) -> Dict[str, Any]:

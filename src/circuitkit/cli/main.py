@@ -1,5 +1,5 @@
 """
-CircuitKit CLI - Main entry point for command-line interface.
+CircuitKIT CLI - Main entry point for command-line interface.
 """
 
 import os
@@ -35,7 +35,7 @@ DISCOVERY_CHOICES = sorted(DISCOVERY_ALGORITHMS)
 @click.option("--config", "-c", help="Path to configuration file")
 @click.pass_context
 def cli(ctx, verbose, config):
-    """CircuitKit: Circuit Discovery and Analysis for Transformer Models"""
+    """CircuitKIT: Circuit Discovery and Analysis for Transformer Models"""
     ctx.ensure_object(dict)
     ctx.obj["verbose"] = verbose
     ctx.obj["config"] = config
@@ -44,7 +44,7 @@ def cli(ctx, verbose, config):
     setup_logging(verbose)
 
     if verbose:
-        console.print("[bold blue]CircuitKit CLI[/bold blue] - Verbose mode enabled")
+        console.print("[bold blue]CircuitKIT CLI[/bold blue] - Verbose mode enabled")
 
 
 @cli.command()
@@ -896,7 +896,7 @@ def heal(
 
     import torch
     from torch.utils.data import DataLoader, TensorDataset
-    from transformer_lens import HookedTransformer
+    from circuitkit.quick import _from_pretrained
 
     from circuitkit.applications.finetuning.soft_healing import CircuitLoRA
 
@@ -915,7 +915,7 @@ def heal(
     try:
         # Load model
         console.print(f"\n[blue]Loading model: {model}[/blue]")
-        model_obj = HookedTransformer.from_pretrained(model, device=device)
+        model_obj = _from_pretrained(model, device=device)
 
         # Load circuit scores
         console.print(f"[blue]Loading circuit scores from {circuit_scores}[/blue]")
@@ -1119,7 +1119,7 @@ def steer(
 
         import pandas as pd
         import torch
-        from transformer_lens import HookedTransformer
+        from circuitkit.quick import _from_pretrained
 
         from circuitkit.applications.steering.steering import ActivationSteering
 
@@ -1159,7 +1159,7 @@ def steer(
         # Load model (auto-detects CUDA / MPS / CPU)
         device = get_device()
         console.print(f"Loading model ({device})...")
-        model_obj = HookedTransformer.from_pretrained(model, device=device)
+        model_obj = _from_pretrained(model, device=device)
 
         # Initialize steering
         steering = ActivationSteering(model_obj, scores.node_scores, score_threshold=threshold)
@@ -1345,7 +1345,7 @@ def benchmark(
     from ..benchmarks import CircuitBenchmark
 
     try:
-        console.print("[bold blue]CircuitKit Benchmarking Suite[/bold blue]")
+        console.print("[bold blue]CircuitKIT Benchmarking Suite[/bold blue]")
         console.print(f"Models: {', '.join(models)}")
         console.print(f"Tasks: {', '.join(tasks)}")
         console.print(f"Algorithms: {', '.join(algorithms)}")

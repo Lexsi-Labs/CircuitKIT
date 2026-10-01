@@ -8,13 +8,13 @@ Stability tests whether the discovered circuit is consistent across re-discovery
 
 ## The Measurement
 
-CircuitKit runs discovery $N$ times with different random seeds and computes the **Spearman rank correlation** between the importance score vectors across seed pairs:
+CircuitKIT runs discovery $N$ times with different random seeds and computes the **Spearman rank correlation** between the importance score vectors across seed pairs:
 
 $$\text{stability} = \text{mean}_{i \neq j} \, \rho_S(\text{scores}_i, \text{scores}_j)$$
 
 where $\rho_S$ is the Spearman rank correlation. A value of 1.0 means all seeds produce identical score rankings; 0.0 means the rankings are random.
 
-Additionally, CircuitKit measures **node overlap** as the Jaccard similarity between the selected node sets of two seeds (reported as `mean_jaccard`), alongside the Dice coefficient (`mean_dice`):
+Additionally, CircuitKIT measures **node overlap** as the Jaccard similarity between the selected node sets of two seeds (reported as `mean_jaccard`), alongside the Dice coefficient (`mean_dice`):
 
 $$\text{overlap} = \text{Jaccard}(A_i, A_j) = \frac{|A_i \cap A_j|}{|A_i \cup A_j|}$$
 

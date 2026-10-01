@@ -390,7 +390,7 @@ class WinoGrandeTaskSpec:
         """
         from datasets import load_dataset
 
-        ds = load_dataset("winogrande", "winogrande_xl", split="train")
+        ds = load_dataset("allenai/winogrande", "winogrande_xl", split="train")
         examples = list(ds)
 
         # Stratified random held-out partition. Split by the answer label,
@@ -515,7 +515,7 @@ class WinoGrandeTaskSpec:
         try:
             from datasets import load_dataset
 
-            ds = load_dataset("winogrande", "winogrande_xl", split="train")
+            ds = load_dataset("allenai/winogrande", "winogrande_xl", split="train")
             indices = list(range(len(ds)))
             rng = random.Random(seed)
             rng.shuffle(indices)

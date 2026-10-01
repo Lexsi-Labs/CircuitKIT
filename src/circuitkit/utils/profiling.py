@@ -1,5 +1,5 @@
 """
-Advanced profiling and performance monitoring utilities for CircuitKit.
+Advanced profiling and performance monitoring utilities for CircuitKIT.
 Provides detailed performance analysis, memory tracking, and optimization recommendations.
 """
 

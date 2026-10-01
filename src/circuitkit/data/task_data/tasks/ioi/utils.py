@@ -20,7 +20,7 @@ from ...core.TLACDCInterpNode import TLACDCInterpNode
 
 logger = get_logger("data.task_data.ioi_utils")
 
-# Simple AllDataThings class for CircuitKit
+# Simple AllDataThings class for CircuitKIT
 @dataclass
 class AllDataThings:
     """Simple data container for ACDC task data."""

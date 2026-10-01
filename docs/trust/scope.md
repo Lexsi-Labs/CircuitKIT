@@ -1,10 +1,10 @@
 # Scope & Limitations
 
-CircuitKit is a **unified discover → evaluate → intervene toolkit** for mechanistic interpretability. This page documents what the library does, what it does not do, and where the algorithms are known to have limitations.
+CircuitKIT is a **unified discover → evaluate → intervene toolkit** for mechanistic interpretability. This page documents what the library does, what it does not do, and where the algorithms are known to have limitations.
 
 ## Stability tiers — the single source of truth
 
-Every algorithm in CircuitKit is labelled with a stability tier. The definitive list lives in `circuitkit/backends/__init__.py`; this page mirrors it.
+Every algorithm in CircuitKIT is labelled with a stability tier. The definitive list lives in `circuitkit/backends/__init__.py`; this page mirrors it.
 
 | Algorithm | Backend | Tier | Scope | GQA? | Chat template? | >3B? |
 |---|---|---|---|---|---|---|
@@ -24,8 +24,6 @@ Every algorithm in CircuitKit is labelled with a stability tier. The definitive 
 
 ✅ Validated  ⚠️ May fail  ❌ Not validated
 
-The GQA, chat-template and >3B columns record what was separately validated for the audit ([Audit Results](results.md)) and predate the current tier assignment. The Tier column follows the registry.
-
 ### Tier definitions
 
 | Tier | Meaning | You should |
@@ -42,17 +40,17 @@ The GQA, chat-template and >3B columns record what was separately validated for 
 
 ## Algorithm selection
 
-Start with `eap-ig` for any new experiment. It is the default, the most validated, and the algorithm used in the CircuitKit audit paper. Use `eap` if discovery speed is the bottleneck.
+Start with `eap-ig` for any new experiment. It is the default, the most validated, and the algorithm used in the CircuitKIT audit paper. Use `eap` if discovery speed is the bottleneck.
 
 ## Known limitations
 
 ### Models
 
 - **GPT-2 (124M–1.5B):** fully validated, CPU-friendly. All 13 algorithms run on GPT-2.
-- **Llama 3.x (1B–3B):** `eap` and `eap-ig` validated. Research algorithms are not validated on Llama-3.
-- **Gemma 2/3 (2B–4B):** `eap` and `eap-ig` validated on Gemma-2-2B. GQA is detected at runtime (when `n_kv != n_heads`), not separately validated per model.
-- **Qwen 2.5 (0.5B–7B):** `eap-ig` validated. Chat-template auto-detection works.
-- **Larger models (>7B):** Not systematically validated. `eap` and `eap-ig` should work but may require GPU with ≥24 GB VRAM.
+- **Llama 3.x (1B–3B):** Stable-tier EAP validated. Research algorithms are not validated on Llama-3.
+- **Gemma 2/3 (2B–4B):** Stable-tier EAP validated on Gemma-2-2B. GQA is detected at runtime (when `n_kv != n_heads`), not separately validated per model.
+- **Qwen 2.5 (0.5B–7B):** Stable-tier EAP validated. Chat-template auto-detection works.
+- **Larger models (>7B):** Not systematically validated. Stable EAP should work but may require GPU with ≥24 GB VRAM.
 
 ### Tasks
 
@@ -70,13 +68,13 @@ Start with `eap-ig` for any new experiment. It is the default, the most validate
 
 - **Pillar 6 (Generalization)** is implemented but has not been validated at scale. Treat its scores as preliminary. If `target_task` is not supplied, Pillar 6 is skipped automatically.
 
-## What CircuitKit does not do
+## What CircuitKIT does not do
 
-- **Training from scratch** — CircuitKit discovers circuits in pretrained models. It does not train new models.
-- **Prompt engineering** — CircuitKit expects a task with a defined metric. It does not optimise prompts.
-- **Safety evaluation** — CircuitKit measures faithfulness and downstream utility. It does not measure model safety or bias. For safety tools, see [SafeTune](https://github.com/Lexsi-Labs/SafeTune).
-- **Distributed training** — CircuitKit runs on single-GPU or CPU. Multi-GPU discovery is not supported.
-- **Auto-selection of algorithm** — The user must choose an algorithm. CircuitKit does not grid-search algorithms.
+- **Training from scratch** — CircuitKIT discovers circuits in pretrained models. It does not train new models.
+- **Prompt engineering** — CircuitKIT expects a task with a defined metric. It does not optimise prompts.
+- **Safety evaluation** — CircuitKIT measures faithfulness and downstream utility. It does not measure model safety or bias. For safety tools, see [SafeTune](https://github.com/Lexsi-Labs/SafeTune).
+- **Distributed training** — CircuitKIT runs on single-GPU or CPU. Multi-GPU discovery is not supported.
+- **Auto-selection of algorithm** — The user must choose an algorithm. CircuitKIT does not grid-search algorithms.
 
 ## Reproducibility
 

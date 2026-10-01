@@ -1,6 +1,6 @@
-site_name: CircuitKit
+site_name: CircuitKIT
 site_description: "Discover, Evaluate, and Intervene on Circuits in Neural Networks — 13 circuit discovery algorithms, 6-pillar faithfulness evaluation, and pruning / quantization / knowledge editing / unlearning / activation steering / contrastive weight steering interventions behind one API."
-site_url: https://lexsi-labs.github.io/circuitkit/
+site_url: https://circuitkit.lexsi.ai/
 repo_url: https://github.com/Lexsi-Labs/circuitkit
 repo_name: Lexsi-Labs/circuitkit
 edit_uri: edit/main/docs/
@@ -35,8 +35,9 @@ copyright: >
 
 theme:
   name: material
+  custom_dir: overrides
   logo: assets/circuitkit-mark-white.svg
-  favicon: assets/favicon.png
+  favicon: assets/favicon.ico
   font:
     text: Schibsted Grotesk
     code: IBM Plex Mono
@@ -90,10 +91,10 @@ extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/Lexsi-Labs/circuitkit
-      name: CircuitKit on GitHub
+      name: CircuitKIT on GitHub
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/circuitkit/
-      name: CircuitKit on PyPI
+      name: CircuitKIT on PyPI
     - icon: fontawesome/brands/x-twitter
       link: https://x.com/Lexsi_labs
       name: Lexsi Labs on X
@@ -163,6 +164,8 @@ nav:
           - Hallucination Detection: guides/hallucination_detection_guide.md
       - Advanced:
           - Architecture Registry: advanced/architecture-registry.md
+          - Tiny Aya (Cohere2): advanced/tiny-aya.md
+          - Experimental Models (Command R7B, Aya Expanse, SmolLM3): advanced/experimental-models.md
           - Memory Optimization: advanced/memory-optimization.md
           - vLLM Evaluation: advanced/vllm-evaluation.md
           - Circuit Artifacts: advanced/circuit-artifacts.md

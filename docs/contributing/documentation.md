@@ -1,6 +1,6 @@
 # Documentation Guide
 
-CircuitKit's documentation uses MkDocs with the Material theme, mkdocstrings for auto-generated API signatures, and Mermaid for architecture diagrams.
+CircuitKIT's documentation uses MkDocs with the Material theme, mkdocstrings for auto-generated API signatures, and Mermaid for architecture diagrams.
 
 ---
 
@@ -38,9 +38,24 @@ All docs source is in `docs/`. The `mkdocs.yml` at the project root controls nav
 ```text
 docs/
 ├── index.md              # Landing page
-├── assets/               # CSS, JS, SVG logo, images
+├── assets/               # CSS, JS, logo / mark / favicon set, images
 └── {section}/            # One directory per nav section
 ```
+
+### Brand assets
+
+All logo files live in `docs/assets/`. Use the wordmark (**CircuitKIT**, capital "KIT") in READMEs and the mark alone wherever space is tight.
+
+| File | Use it for |
+|---|---|
+| `circuitkit-logo-black.png` / `circuitkit-logo-white.png` | Full lockup (chip mark + wordmark) on light / dark backgrounds. READMEs and notebooks pair them in a `<picture>` element so the right one shows per theme. Transparent PNG. |
+| `circuitkit-mark-black.svg` / `circuitkit-mark-white.svg` | The chip mark alone, as vector art. The docs header logo and hero fallback use these. |
+| `circuitkit-mark-black.png` / `circuitkit-mark-white.png` | 512 px raster of the mark, for places that cannot render SVG (slides, social cards). |
+| `favicon.svg` | Browser-tab icon. A simplified chip that switches colour with the browser's light / dark theme. |
+| `favicon.ico`, `favicon-16x16.png`, `favicon-32x32.png`, `favicon.png`, `apple-touch-icon.png` | Raster fallbacks (Safari, legacy browsers, iOS home screen). White mark on a dark tile. The ICO and `apple-touch-icon.png` are wired up in `mkdocs.yml` / `overrides/main.html`. |
+| `lexsi-logo-dark.png` / `lexsi-logo-white.png` | Lexsi Labs company logo, used in the docs footer. |
+
+The lockup is a raster because it has no vector source for the wordmark. If you have a vector master, replace the PNGs (keep the file names, so nothing else needs to change).
 
 ---
 

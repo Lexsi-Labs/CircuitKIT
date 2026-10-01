@@ -1,3 +1,11 @@
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../docs/assets/circuitkit-logo-white.png">
+    <img src="../../../../../../docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
+
 # Greater-than
 
 The ACDC greater-than task: given "The {noun} lasted from the year 17XX to 17__", the model must predict a two-digit year end strictly greater than the given start year.

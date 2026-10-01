@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-# Simple AllDataThings class for CircuitKit
+# Simple AllDataThings class for CircuitKIT
 from dataclasses import dataclass
 from functools import partial
 from typing import Any, ClassVar, Optional

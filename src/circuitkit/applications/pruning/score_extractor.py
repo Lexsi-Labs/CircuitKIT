@@ -107,7 +107,7 @@ def run_discovery(
         stacklevel=2,
     )
     
-    from transformer_lens import HookedTransformer
+    from circuitkit.quick import _from_pretrained
 
     from circuitkit.backends.eap.attribute_node import attribute_node
     from circuitkit.backends.eap.graph import Graph
@@ -120,7 +120,7 @@ def run_discovery(
     dtype = getattr(torch, precision)
 
     logger.info(f"[discovery] Loading {model_name} via TransformerLens …")
-    tl_model = HookedTransformer.from_pretrained(model_name, device=device, dtype=dtype)
+    tl_model = _from_pretrained(model_name, device=device, dtype=dtype)
     tl_model.cfg.use_attn_result = True
     tl_model.cfg.use_split_qkv_input = True
     tl_model.cfg.use_hook_mlp_in = True

@@ -1,6 +1,6 @@
 """Safety dataset measurements: Pillar 1-7 faithfulness on AdvBench + WMDP.
 
-Runs the full CircuitKit faithfulness evaluation suite (Pillars 1-7) on two
+Runs the full CircuitKIT faithfulness evaluation suite (Pillars 1-7) on two
 safety-relevant datasets:
   - AdvBench (Zou et al. 2023)  -- refusal-circuit localisation
   - WMDP (Li et al. 2024)       -- dangerous-knowledge circuit localisation

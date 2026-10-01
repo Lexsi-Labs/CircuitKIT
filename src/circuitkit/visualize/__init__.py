@@ -1,5 +1,5 @@
 """
-CircuitKit visualization module.
+CircuitKIT visualization module.
 
 Provides tools for visualizing circuit discovery results, including:
 - Graph visualization (nodes and edges)

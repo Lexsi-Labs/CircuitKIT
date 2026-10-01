@@ -1,7 +1,7 @@
 """Benchmark: all 9 algorithms on GPT-2 + MMLU (genuine custom HF data).
 
 MMLU is a real HuggingFace dataset (multi-subject MCQ). Routed through
-CircuitKit's mmlu TaskSpec, which converts each MCQ into a clean/corrupt
+CircuitKIT's mmlu TaskSpec, which converts each MCQ into a clean/corrupt
 pair via String Token Replacement (Zhang & Nanda 2023). This is the
 'custom data' axis the algos must work over — distinct from IOI's
 synthetic name-pair templates.

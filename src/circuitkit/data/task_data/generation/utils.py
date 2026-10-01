@@ -53,7 +53,7 @@ class FileManager:
 
     def __init__(self, base_storage_dir: str = None):
         if base_storage_dir is None:
-            # Default to CircuitKit storage directory
+            # Default to CircuitKIT storage directory
             base_storage_dir = Path(__file__).parent.parent / "storage"
 
         self.base_storage_dir = Path(base_storage_dir)

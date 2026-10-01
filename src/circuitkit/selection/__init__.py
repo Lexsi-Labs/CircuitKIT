@@ -1,4 +1,4 @@
-"""CircuitKit Selector Registry — unified interface for component scoring.
+"""CircuitKIT Selector Registry — unified interface for component scoring.
 
 Consumed by both circuitkit applications (pruning/quantization selectors)
 and the experiments experiment framework.

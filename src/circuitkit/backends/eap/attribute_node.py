@@ -12,7 +12,11 @@ from transformer_lens.hook_points import HookPoint
 from ...utils.logging import get_logger
 logger = get_logger("eap.attribute_node")
 
-from .eap_utils import compute_mean_activations, tokenize_batch_pair
+from .eap_utils import (
+    compute_mean_activations,
+    grads_through_embeddings_only,
+    tokenize_batch_pair,
+)
 from .evaluate import evaluate_baseline, evaluate_graph
 from .graph import Graph
 
@@ -1100,6 +1104,7 @@ def get_scores_atp_grad_drop(
     # AtP+GD eq. 11: average of |I_AtP+GD_l| over L layers, normalised by (L-1).
     return accum / (n_layers - 1)
 
+@grads_through_embeddings_only
 def get_scores_eap(
     model: HookedTransformer,
     graph: Graph,
@@ -1214,10 +1219,18 @@ def get_scores_eap(
 
             metric_value.backward()
 
+        # Drop the batch's buffer, hook closures and logits before the next
+        # make_hooks_and_matrices() allocates a fresh buffer; otherwise two
+        # [batch, pos, n_forward, max_d] buffers coexist at the allocation peak.
+        del fwd_hooks_corrupted, fwd_hooks_clean, bwd_hooks, activation_difference
+        del clean_logits, logits, metric_value
+
+    model.zero_grad(set_to_none=True)
     scores /= total_items
 
     return scores
 
+@grads_through_embeddings_only
 def get_scores_eap_ig(
     model: HookedTransformer,
     graph: Graph,
@@ -1332,6 +1345,12 @@ def get_scores_eap_ig(
                 metric_value = metric(logits, clean_logits, input_lengths, label)
                 metric_value.backward()
 
+        # See get_scores_eap: release the batch's buffers before the next one.
+        del fwd_hooks_corrupted, fwd_hooks_clean, bwd_hooks, activation_difference
+        del input_activations_corrupted, input_activations_clean, clean_logits
+        logits = metric_value = None  # unbound if steps < 1
+
+    model.zero_grad(set_to_none=True)
     scores /= total_items
     # Guard against empty/degenerate dataloaders (total_steps would be 0 if
     # the inner loop never ran). Doesn't affect our grid — every cell has a
@@ -1340,6 +1359,7 @@ def get_scores_eap_ig(
 
     return scores
 
+@grads_through_embeddings_only
 def get_scores_ig_activations(
     model: HookedTransformer,
     graph: Graph,
@@ -1437,19 +1457,22 @@ def get_scores_ig_activations(
             model, graph, batch_size, n_pos, scores, neuron=neuron
         )
 
-        if intervention == "patching":
-            with model.hooks(fwd_hooks=fwd_hooks_corrupted):
-                _ = model(corrupted_tokens, attention_mask=corrupted_attention_mask)
+        # The corrupted/clean passes only fill buffers and provide reference
+        # logits. Running them without autograd keeps their graphs (one full
+        # forward of saved activations) from living across every node x step
+        # backward below, which is what retain_graph=True used to require.
+        with torch.no_grad():
+            if intervention == "patching":
+                with model.hooks(fwd_hooks=fwd_hooks_corrupted):
+                    _ = model(corrupted_tokens, attention_mask=corrupted_attention_mask)
 
-        elif "mean" in intervention:
-            activation_difference += means
+            elif "mean" in intervention:
+                activation_difference += means
 
-        with model.hooks(fwd_hooks=fwd_hooks_clean):
-            clean_logits = model(clean_tokens, attention_mask=clean_attention_mask)
+            with model.hooks(fwd_hooks=fwd_hooks_clean):
+                clean_logits = model(clean_tokens, attention_mask=clean_attention_mask)
 
-            activation_difference += (
-                activations_corrupted.clone().detach() - activations_clean.clone().detach()
-            )
+            activation_difference += activations_corrupted - activations_clean
 
         def output_interpolation_hook(k: int, clean: torch.Tensor, corrupted: torch.Tensor):
             def hook_fn(activations: torch.Tensor, hook):
@@ -1483,8 +1506,14 @@ def get_scores_ig_activations(
                     logits = model(clean_tokens, attention_mask=clean_attention_mask)
                     metric_value = metric(logits, clean_logits, input_lengths, label)
 
-                    metric_value.backward(retain_graph=True)
+                    metric_value.backward()
 
+        # Release this batch's three buffers before the next batch allocates its own.
+        del bwd_hooks, fwd_hooks_corrupted, fwd_hooks_clean, clean_logits
+        del activation_difference, activations_corrupted, activations_clean
+        logits = metric_value = clean_acts = corrupted_acts = fwd_hooks = None  # unbound if steps < 1
+
+    model.zero_grad(set_to_none=True)
     scores /= total_items
     # Guard against empty/degenerate dataloaders (total_steps would be 0 if
     # the inner loop never ran). Doesn't affect our grid — every cell has a
@@ -1493,6 +1522,7 @@ def get_scores_ig_activations(
 
     return scores
 
+@grads_through_embeddings_only
 def get_scores_clean_corrupted(
     model: HookedTransformer,
     graph: Graph,

@@ -341,7 +341,7 @@ class IBHookedTransformer:
         Extract node-level importance scores after training.
 
         Applies sigmoid to raw IB weights, averages across the batch dimension,
-        and returns scores in CircuitKit's naming convention.
+        and returns scores in CircuitKIT's naming convention.
 
         Args:
             threshold (float | None): If provided, binarises scores — values above

@@ -1,5 +1,5 @@
 """
-CircuitKit Analysis Module
+CircuitKIT Analysis Module
 
 Provides analysis tools for circuits including metrics, scoring, and statistical analysis.
 """

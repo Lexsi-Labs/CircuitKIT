@@ -34,7 +34,7 @@ circuit = discover_circuit({
 ```
 
 !!! note "Node-level only"
-    CD-T only supports `level="node"`. If `level="neuron"` is requested, CircuitKit raises a `ValueError` — pick `level="node"`, or use an algorithm that supports neuron-level discovery (e.g. `eap`, `eap-ig`, `ibcircuit`).
+    CD-T only supports `level="node"`. If `level="neuron"` is requested, CircuitKIT raises a `ValueError` — pick `level="node"`, or use an algorithm that supports neuron-level discovery (e.g. `eap`, `eap-ig`, `ibcircuit`).
 
 ---
 
@@ -53,7 +53,7 @@ circuit = discover_circuit({
 ## When to Use CD-T
 
 - You are **replicating a CD-based paper result** on GPT-2
-- You are contributing to CircuitKit's algorithm diversity study
+- You are contributing to CircuitKIT's algorithm diversity study
 - You specifically need a **non-gradient decomposition** approach
 
 For any other use case: use `eap-ig`.
@@ -62,7 +62,7 @@ For any other use case: use `eap-ig`.
 
 ## Implementation Notes
 
-CD-T in CircuitKit is invoked through `discover_circuit({"algorithm": "cdt", ...})` rather than the lower-level `run_cdt_discovery()` function directly. The package re-exports `circuitkit.backends.cdt.wrappers`, `circuitkit.backends.cdt.core`, and `circuitkit.backends.cdt.basic` for research use.
+CD-T in CircuitKIT is invoked through `discover_circuit({"algorithm": "cdt", ...})` rather than the lower-level `run_cdt_discovery()` function directly. The package re-exports `circuitkit.backends.cdt.wrappers`, `circuitkit.backends.cdt.core`, and `circuitkit.backends.cdt.basic` for research use.
 
 The `cdt` extra is not required for CD-T (it is bundled with the core). The `cdt` extra installs `captum`, `lime`, and `shap` for experimental attribution comparison work.
 

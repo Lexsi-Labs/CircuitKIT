@@ -1,5 +1,5 @@
 """
-Debugging and profiling utilities for CircuitKit.
+Debugging and profiling utilities for CircuitKIT.
 """
 
 import gc
@@ -199,7 +199,7 @@ class MemoryTracker:
 
 
 class Debugger:
-    """Main debugging class for CircuitKit."""
+    """Main debugging class for CircuitKIT."""
 
     def __init__(self, enable_profiling: bool = True, enable_memory_tracking: bool = True):
         self.enable_profiling = enable_profiling

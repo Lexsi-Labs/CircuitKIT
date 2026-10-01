@@ -1,6 +1,14 @@
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../../docs/assets/circuitkit-logo-white.png">
+    <img src="../../../../docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
+
 # builtins
 
-The task specifications that ship with CircuitKit. They are registered via `tasks/bootstrap.py`.
+The task specifications that ship with CircuitKIT. They are registered via `tasks/bootstrap.py`.
 
 ## Key modules
 

@@ -1,6 +1,6 @@
 # FILE: circuitkit/applications/editing/rome_wrapper.py
 """
-ROME (Rank-One Model Editing) Wrapper for CircuitKit.
+ROME (Rank-One Model Editing) Wrapper for CircuitKIT.
 
 Implements ROME, a lightweight method for editing knowledge in transformers
 by applying rank-one perturbations to weight matrices. ROME works by:

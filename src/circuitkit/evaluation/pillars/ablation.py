@@ -64,6 +64,8 @@ class Pillar2_Ablation:
         intervention_dataloader: Optional[DataLoader] = None,
         device: str = "auto",
         quiet: bool = False,
+        clean_score: Optional[float] = None,
+        corrupt_score: Optional[float] = None,
     ) -> dict:
         """
         Run ablation evaluation on a circuit.
@@ -90,6 +92,11 @@ class Pillar2_Ablation:
                 (required if intervention is 'mean' or 'mean-positional').
             device: Target device ("cuda" or "cpu"). Defaults to "cuda".
             quiet: Suppress progress bar. Defaults to False.
+            clean_score: Mean metric of the full model on ``dataloader``, when
+                already computed for the same model/dataloader/metric (e.g. by
+                Pillar 1). Together with ``corrupt_score`` it skips recomputing
+                both baselines. Both must be given to take effect.
+            corrupt_score: Mean metric of the corrupt baseline; see ``clean_score``.
 
         Returns:
             dict with keys:
@@ -139,12 +146,17 @@ class Pillar2_Ablation:
         try:
             # Clean (full model) and corrupt baselines — needed to normalize the
             # raw metric into a 0-1 faithfulness ratio.
-            clean_score = _mean_metric(
-                evaluate_baseline(model, dataloader, metric_fn, run_corrupted=False, quiet=quiet)
-            )
-            corrupt_score = _mean_metric(
-                evaluate_baseline(model, dataloader, metric_fn, run_corrupted=True, quiet=quiet)
-            )
+            if clean_score is None or corrupt_score is None:
+                clean_score = _mean_metric(
+                    evaluate_baseline(
+                        model, dataloader, metric_fn, run_corrupted=False, quiet=quiet
+                    )
+                )
+                corrupt_score = _mean_metric(
+                    evaluate_baseline(
+                        model, dataloader, metric_fn, run_corrupted=True, quiet=quiet
+                    )
+                )
 
             circuit_scores = evaluate_graph(
                 model=model,
@@ -294,6 +306,8 @@ class Pillar2_Ablation:
                 intervention_dataloader=intervention_dataloader,
                 device=device,
                 quiet=quiet,
+                clean_score=results["zero"]["clean_score"],
+                corrupt_score=results["zero"]["corrupt_score"],
             )
 
             results["mean_positional"] = Pillar2_Ablation.run(
@@ -305,6 +319,8 @@ class Pillar2_Ablation:
                 intervention_dataloader=intervention_dataloader,
                 device=device,
                 quiet=quiet,
+                clean_score=results["zero"]["clean_score"],
+                corrupt_score=results["zero"]["corrupt_score"],
             )
 
         return results

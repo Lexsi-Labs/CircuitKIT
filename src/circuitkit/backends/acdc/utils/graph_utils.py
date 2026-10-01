@@ -5,7 +5,7 @@ from itertools import chain, product
 from typing import Any, Collection, Dict, Iterator, List, Optional, Set, Tuple
 
 import torch as t
-from transformer_lens import HookedTransformer, HookedTransformerKeyValueCache
+from transformer_lens import HookedTransformer, TransformerLensKeyValueCache
 
 from ..model_utils import micro_model_utils as mm_utils
 from ..model_utils import transformer_lens_utils as tl_utils
@@ -166,7 +166,7 @@ def patchable_model(
     slice_output: OutputSlice = None,
     seq_len: Optional[int] = None,
     separate_qkv: Optional[bool] = None,
-    kv_caches: Tuple[Optional[HookedTransformerKeyValueCache], ...] = (None,),
+    kv_caches: Tuple[Optional[TransformerLensKeyValueCache], ...] = (None,),
     device: t.device = t.device("cpu"),
 ) -> PatchableModel:
     """

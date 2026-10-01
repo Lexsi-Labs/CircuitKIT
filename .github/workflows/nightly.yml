@@ -1,0 +1,66 @@
+name: Nightly (slow tests)
+
+# The heavy tier: real small-model loads (gpt2/Qwen2 on CPU), training loops,
+# discovery / transfer runs, and dataset-backed task tests. Network IS allowed
+# here (offline mode is NOT set, so downloads work). Gated 3.35B-checkpoint
+# tests are excluded unless you dispatch with an HF token + opt-in env.
+
+on:
+  schedule:
+    - cron: "0 3 * * *" # 03:00 UTC daily
+  workflow_dispatch:
+    inputs:
+      markexpr:
+        description: "pytest -m expression"
+        default: "slow and not gated"
+        required: false
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  slow:
+    name: Slow tier
+    runs-on: ubuntu-latest
+    # Well under GitHub's 6h hard ceiling; -n auto + per-test timeout keep it far
+    # below this in practice.
+    timeout-minutes: 300
+    env:
+      TOKENIZERS_PARALLELISM: "false"
+      # HuggingFace cache is restored/saved below so repeated model downloads are
+      # amortised across nightly runs.
+      HF_HOME: ${{ github.workspace }}/.hf-cache
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Cache HuggingFace downloads
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.hf-cache
+          key: hf-cache-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: hf-cache-${{ runner.os }}-
+
+      - name: Install package + dev + benchmark tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,benchmarks]"
+
+      - name: Install spaCy model (for corruption NER tests)
+        run: python -m spacy download en_core_web_sm
+
+      - name: Run slow tier
+        # The command-line -m overrides the fast default baked into pytest.ini.
+        run: |
+          python -m pytest \
+            -m "${{ github.event.inputs.markexpr || 'slow and not gated' }}" \
+            -n auto --dist loadfile \
+            --timeout=1800 --durations=25

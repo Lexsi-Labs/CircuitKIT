@@ -31,7 +31,7 @@ class TransferMatrix:
 
         Args:
             task_names (List[str]): List of task names (e.g., ['ioi', 'sva', 'greater_than']).
-                Tasks must be registered in CircuitKit's task registry.
+                Tasks must be registered in CircuitKIT's task registry.
         """
         self.task_names = task_names
         self.n_tasks = len(task_names)

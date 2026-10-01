@@ -2,7 +2,7 @@
 GSM8K Task Specification — open-ended generation circuit discovery.
 
 GSM8K (Cobbe et al. 2021, ``openai/gsm8k`` config ``"main"``) is a grade-school
-math word-problem benchmark. Unlike CircuitKit's classification / MCQ tasks
+math word-problem benchmark. Unlike CircuitKIT's classification / MCQ tasks
 (which use a logit-difference metric over A/B/C/D tokens), GSM8K is an
 *open-ended generation* task: the model must produce a numeric final answer.
 

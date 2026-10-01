@@ -1,5 +1,5 @@
 """
-Debugging utilities for CircuitKit.
+Debugging utilities for CircuitKIT.
 """
 
 import json
@@ -20,7 +20,7 @@ logger = get_logger("circuitkit.debug")
 
 
 class Debugger:
-    """Main debugging class for CircuitKit."""
+    """Main debugging class for CircuitKIT."""
 
     def __init__(self, enabled: bool = True, log_level: str = "DEBUG"):
         self.enabled = enabled

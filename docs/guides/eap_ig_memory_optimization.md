@@ -1,6 +1,6 @@
 # EAP-IG Memory Optimization Guide
 
-This document explains the memory optimizations that actually exist for EAP-IG discovery in CircuitKit. See [Advanced: Memory Optimization](../advanced/memory-optimization.md) for the canonical reference; this page focuses specifically on EAP-IG.
+This document explains the memory optimizations that actually exist for EAP-IG discovery in CircuitKIT. See [Advanced: Memory Optimization](../advanced/memory-optimization.md) for the canonical reference; this page focuses specifically on EAP-IG.
 
 !!! warning "No `memory_efficient` or `use_half_precision_activations` config keys"
     Earlier drafts of this guide documented `discovery.memory_efficient` and `discovery.use_half_precision_activations` config keys with specific memory-savings figures. **Neither key is read anywhere in the EAP-IG backend or `api.py` — setting them silently does nothing.** They have been removed below. The real levers are model precision, `batch_size`, `ig_steps`, and (for MMLU/WMDP) `samples_per_subject`.
@@ -11,7 +11,7 @@ This document explains the memory optimizations that actually exist for EAP-IG d
 
 **What it does:**
 - Fewer integrated gradient steps = less memory accumulation
-- Standard recommendation: 5 steps (the current CircuitKit default)
+- Standard recommendation: 5 steps (the current CircuitKIT default)
 
 **Usage:**
 ```python

@@ -288,19 +288,20 @@ class TestFullPipelineConfig:
 # ---------------------------------------------------------------------------
 
 class TestSampleFixtureFile:
-    """Verify the sample fixture YAML that test_yaml_run_cli.py uses is valid
-    and readable.  Path is relative to the tests/ root."""
+    """Verify the shipped example pipeline config is valid and readable.
+
+    ``tests/fixtures/sample_pipeline.yaml`` is a self-documenting reference
+    config for ``circuitkit run``; this guards it against drift. Path is
+    relative to the tests/ root."""
 
     FIXTURE_PATH = Path(__file__).parent.parent / "fixtures" / "sample_pipeline.yaml"
 
     def test_fixture_file_exists(self):
-        if not self.FIXTURE_PATH.exists():
-            pytest.skip("fixtures/sample_pipeline.yaml not yet created")
-        assert self.FIXTURE_PATH.exists()
+        assert self.FIXTURE_PATH.exists(), (
+            f"Shipped example config missing: {self.FIXTURE_PATH}"
+        )
 
     def test_fixture_file_is_valid_yaml(self):
-        if not self.FIXTURE_PATH.exists():
-            pytest.skip("fixtures/sample_pipeline.yaml not yet created")
         with open(self.FIXTURE_PATH) as f:
             data = yaml.safe_load(f)
         assert isinstance(data, dict)

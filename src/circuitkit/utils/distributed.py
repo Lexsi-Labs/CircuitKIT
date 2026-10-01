@@ -1,5 +1,5 @@
 """
-Distributed training utilities for CircuitKit.
+Distributed training utilities for CircuitKIT.
 Supports multi-GPU and multi-node training for large models.
 """
 

@@ -31,7 +31,7 @@ from .._algorithm_families import (
     unsupported_algorithm_message,
 )
 from .._chat import resolve_chat_template
-from ..specs import _find_task_cache, _load_finetuning_data_from_csv
+from ..specs import _find_task_cache, _load_finetuning_data_from_csv, require_single_token_answers
 
 logger = get_logger("task.ioi")
 
@@ -122,6 +122,12 @@ class IOITaskSpec:
                 f"config or set it to 'off'."
             )
 
+        # Fail fast when this tokenizer splits IOI names, before any data
+        # generation. IOI's answer token is the space-prefixed IO/S name's
+        # single token id; on a tokenizer that splits a name that id is a
+        # meaningless subword and the logit-difference metric is degenerate.
+        self._verify_single_token_answers(model)
+
         algorithm = discovery_cfg.get("algorithm", "").lower()
 
         if algorithm == "acdc":
@@ -145,6 +151,46 @@ class IOITaskSpec:
                 unsupported_algorithm_message(
                     "IOI task", algorithm, EAP_FAMILY | ACDC_FAMILY | IB_FAMILY | CDT_FAMILY
                 )
+            )
+
+    def _verify_single_token_answers(self, model) -> None:
+        """Guard against a tokenizer that splits IOI names into multiple tokens.
+
+        IOI derives its correct/incorrect answer token ids from the
+        space-prefixed IO/S names (via ``TokenIDGenerator``). The single-answer-
+        position logit-difference metric therefore requires each name to be one
+        token: on a tokenizer that splits a name, the derived id is a subword
+        rather than the whole name, and the metric compares meaningless
+        subwords. GPT-2's 50k vocab keeps the whole ``NAMES`` pool single-token,
+        but a larger vocabulary (e.g. Cohere's 262k) may not, so this is checked
+        against the loaded tokenizer.
+
+        Raises:
+            ValueError: if fewer than two names are single tokens (IOI cannot
+                form a contrast at all). Partial splitting only warns, since the
+                dataset still yields usable single-token rows.
+        """
+        from ...data.task_data.tasks.ioi.ioi_dataset import NAMES
+
+        tokenizer = model.tokenizer
+        tokenizer_name = getattr(tokenizer, "name_or_path", None) or getattr(
+            model.cfg, "model_name", "<unknown>"
+        )
+        single = require_single_token_answers(
+            tokenizer,
+            [" " + name for name in NAMES],
+            task_name=self.name,
+            min_valid=2,
+            tokenizer_name=tokenizer_name,
+        )
+        n_multi = len(NAMES) - len(single)
+        if n_multi:
+            logger.warning(
+                f"IOI: {n_multi} of {len(NAMES)} names are multi-token under "
+                f"tokenizer {tokenizer_name!r}; prompts that sample them score the "
+                f"answer's subword and add noise to attribution ({len(single)} "
+                f"single-token names remain). Consider a task whose answers are "
+                f"single tokens under this tokenizer."
             )
 
     def _build_eap_dataloader(
@@ -433,7 +479,7 @@ class IOITaskSpecLegacy:
             "IOITaskSpecLegacy is deprecated. Use IOITaskSpec instead.\n"
             "IOITaskSpec is a thin wrapper on GenericTaskSpec that provides the same "
             "functionality with less code and better maintainability.\n"
-            "IOITaskSpecLegacy will be removed in CircuitKit v0.3.",
+            "IOITaskSpecLegacy will be removed in CircuitKIT v0.3.",
             DeprecationWarning,
             stacklevel=2,
         )

@@ -4,15 +4,15 @@
 
 ## General
 
-**What is CircuitKit?**
+**What is CircuitKIT?**
 
-CircuitKit is a mechanistic interpretability toolkit for discovering, evaluating, and intervening on circuits in Transformer language models. A circuit is the minimal subgraph of attention heads and MLP layers that explains a model's behavior on a specific task.
+CircuitKIT is a mechanistic interpretability toolkit for discovering, evaluating, and intervening on circuits in Transformer language models. A circuit is the minimal subgraph of attention heads and MLP layers that explains a model's behavior on a specific task.
 
-**What models does CircuitKit support?**
+**What models does CircuitKIT support?**
 
 For circuit discovery, any model supported by TransformerLens (GPT-2, GPT-Neo, Pythia, Llama, Gemma, Qwen, Mistral, Phi, Falcon, and more). For applications (pruning, quantization), the architecture registry covers production-validated families: `llama`, `qwen`, `gemma`. See [Architecture Registry](../advanced/architecture-registry.md).
 
-**Is CircuitKit production-ready?**
+**Is CircuitKIT production-ready?**
 
 The six Stable-tier discovery algorithms (`eap`, `eap-ig`, `eap-gp`, `acdc`, `ibcircuit`, `cdt`) have been tested across the GPT-2, Llama, Gemma, and Qwen families. The seven Research-tier algorithms are not production-ready. They include EAP-IG-Activations and EAP-Clean-Corrupted, which are Research tier despite the similar name. Applications are validated on production families but have known limitations (see release notes).
 
@@ -90,7 +90,7 @@ Set `model.precision="bfloat16"`, `ig_steps=3`, `batch_size=1`, and lower `n_exa
 
 **How do I report a bug?**
 
-Open a GitHub issue at [github.com/Lexsi-Labs/circuitkit/issues](https://github.com/Lexsi-Labs/circuitkit/issues) with a minimal reproduction case, your CircuitKit version (`circuitkit.__version__`), and the full error traceback.
+Open a GitHub issue at [github.com/Lexsi-Labs/circuitkit/issues](https://github.com/Lexsi-Labs/circuitkit/issues) with a minimal reproduction case, your CircuitKIT version (`circuitkit.__version__`), and the full error traceback.
 
 **How do I request a feature?**
 

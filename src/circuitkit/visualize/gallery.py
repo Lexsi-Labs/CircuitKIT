@@ -36,7 +36,7 @@ class GalleryGenerator:
 
         self.gallery_items: List[Dict[str, Any]] = []
         self.metadata = {
-            "title": "CircuitKit Visualization Gallery",
+            "title": "CircuitKIT Visualization Gallery",
             "generated": datetime.now().isoformat(),
             "items": 0,
         }
@@ -315,7 +315,7 @@ class GalleryGenerator:
         """Generate HTML footer with scripts."""
         return """
             <footer>
-                <p>&copy; 2024 CircuitKit. All visualizations generated automatically.</p>
+                <p>&copy; 2024 CircuitKIT. All visualizations generated automatically.</p>
             </footer>
 
             <script>

@@ -1,1 +1,1 @@
-# CircuitKit CLI Module
+# CircuitKIT CLI Module

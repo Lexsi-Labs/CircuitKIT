@@ -2,7 +2,7 @@
 """
 01 - Quickstart: the full Discover -> Evaluate -> Prune -> Export loop.
 
-The fastest path through CircuitKit using the flat `circuitkit` API
+The fastest path through CircuitKIT using the flat `circuitkit` API
 (`import circuitkit as ck`). Runs end-to-end on GPT-2 / CPU in a couple
 of minutes.
 

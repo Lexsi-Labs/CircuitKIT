@@ -1,6 +1,14 @@
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../docs/assets/circuitkit-logo-white.png">
+    <img src="../../../docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
+
 # utils
 
-Low-level helpers used across CircuitKit: device, config, and logging setup, memory and performance tooling, caching, and error handling.
+Low-level helpers used across CircuitKIT: device, config, and logging setup, memory and performance tooling, caching, and error handling.
 
 ## Key modules
 

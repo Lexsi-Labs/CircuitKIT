@@ -1,5 +1,6 @@
 import logging
-from functools import partial
+from contextlib import contextmanager
+from functools import partial, wraps
 from typing import List, Optional, Union
 
 import torch
@@ -13,6 +14,45 @@ from transformer_lens.utils import get_attention_mask
 from .graph import AttentionNode, Graph, LogitNode
 
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def _grads_only_through_embeddings(model: HookedTransformer):
+    """Keep only the embedding weights differentiable while attributing.
+
+    Node/edge attribution reads gradients at activations, never at weights, but
+    backward still allocates a gradient for every parameter that requires one
+    (about one extra copy of the model). The embeddings stay differentiable so
+    the residual stream still enters the autograd graph and every backward hook
+    fires; everything downstream is unchanged. Skipped when no embedding
+    parameter requires grad (nothing would anchor the graph). The caller's
+    requires_grad flags are restored on exit.
+    """
+    params = list(model.named_parameters())
+    anchors = {
+        id(p) for n, p in params if n.split(".")[0] in ("embed", "pos_embed") and p.requires_grad
+    }
+    saved = [(p, p.requires_grad) for _, p in params]
+    try:
+        if anchors:
+            for _, p in params:
+                if id(p) not in anchors:
+                    p.requires_grad_(False)
+        yield
+    finally:
+        for p, flag in saved:
+            p.requires_grad_(flag)
+
+
+def grads_through_embeddings_only(fn):
+    """Decorate a ``fn(model, ...)`` scorer to run under ``_grads_only_through_embeddings``."""
+
+    @wraps(fn)
+    def wrapper(model, *args, **kwargs):
+        with _grads_only_through_embeddings(model):
+            return fn(model, *args, **kwargs)
+
+    return wrapper
 
 
 def collate_EAP(xs):
@@ -149,6 +189,7 @@ def tokenize_batch_pair(
     corrupted: list[str],
     pair_padding_side: Optional[str] = None,
     templated: bool = False,
+    max_length: Optional[int] = None,
 ):
     """
     Tokenize a clean/corrupted pair and align them to a shared sequence length.
@@ -158,6 +199,11 @@ def tokenize_batch_pair(
     between clean and corrupted inputs and they must share positional indices.
     Padding direction is controlled by pair_padding_side so that answer tokens
     remain at consistent positions across both sequences.
+
+    Sequence length is unbounded by default (matching prior behavior): a
+    pair's n_pos is the length of its longest side, so a single long
+    clean/corrupted example inflates every scorer's per-batch activation
+    buffer, which scales with n_pos. Pass max_length to cap it.
 
     Args:
         model (HookedTransformer): Model whose tokenizer is used.
@@ -170,6 +216,11 @@ def tokenize_batch_pair(
             chat template. Forwarded to :func:`tokenize_plus` so BOS is
             prepended iff ``not templated``, avoiding a double BOS on
             chat-templated text. Defaults to False (raw text), byte-identical
+            to the legacy behavior.
+        max_length (Optional[int]): If set, truncates both clean and corrupted
+            sequences to this length before cross-alignment (forwarded to
+            :func:`tokenize_plus`), bounding n_pos and so every downstream
+            activation buffer. ``None`` (default) is unbounded, byte-identical
             to the legacy behavior.
 
     Returns:
@@ -185,10 +236,10 @@ def tokenize_batch_pair(
     side = pair_padding_side or model.tokenizer.padding_side
     # Use the same padding side for within-batch and cross-pair alignment
     clean_tokens, clean_mask, clean_lengths, max_clean = tokenize_plus(
-        model, clean, padding_side=side, templated=templated
+        model, clean, max_length=max_length, padding_side=side, templated=templated
     )
     corr_tokens, corr_mask, corr_lengths, max_corr = tokenize_plus(
-        model, corrupted, padding_side=side, templated=templated
+        model, corrupted, max_length=max_length, padding_side=side, templated=templated
     )
 
     # Per-pair length check. EAP integrates per-position (corrupted - clean)

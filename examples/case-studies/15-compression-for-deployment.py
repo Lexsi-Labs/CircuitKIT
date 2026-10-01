@@ -2,7 +2,7 @@
 """Model compression for production deployment.
 
 Enterprise AI systems — whether in banking, fintech, or smart governance —
-need models that are small, fast, and auditable. CircuitKit's discovery +
+need models that are small, fast, and auditable. CircuitKIT's discovery +
 pruning pipeline finds the minimum subgraph that drives task performance,
 then exports a HuggingFace checkpoint you can deploy on-prem or at the edge.
 

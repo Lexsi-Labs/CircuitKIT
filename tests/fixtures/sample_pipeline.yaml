@@ -1,0 +1,29 @@
+# Sample CircuitKIT pipeline config — a valid, self-documenting example of the
+# YAML that `circuitkit run <config.yaml>` (and the Pipeline orchestrator)
+# consume. Used by tests/unit/test_yaml_pipeline_config.py to assert the
+# shipped example stays valid. Keep it in sync with the schema those tests and
+# tests/unit/test_yaml_run_cli.py exercise.
+
+# --- Model ------------------------------------------------------------------
+model: gpt2                 # HF / TransformerLens model name (required)
+task: ioi                   # built-in task name (data auto-generated)
+precision: float32          # float32 | bfloat16 | float16
+output_dir: ./pipeline_output
+
+# --- Discovery --------------------------------------------------------------
+discovery:
+  algorithm: eap-ig         # eap | eap-ig | acdc | cdt | ibcircuit | ...
+  level: node               # node | neuron
+  sparsity: 0.3             # target circuit sparsity
+  n_examples: 128           # examples to attribute over
+  batch_size: 4
+
+# --- Evaluation (optional) --------------------------------------------------
+evaluate:
+  enabled: true
+  pillars: [1]              # faithfulness pillar ids to run
+
+# --- Visualization (optional) -----------------------------------------------
+visualize:
+  enabled: false
+  mode: graph

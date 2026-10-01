@@ -28,7 +28,7 @@ def check_torch_cuda() -> None:
 
 
 def main() -> int:
-    print("=== CircuitKit Environment Validation ===")
+    print("=== CircuitKIT Environment Validation ===")
     print(f"python: {sys.version.split()[0]}")
     print(f"platform: {sys.platform}")
 
@@ -45,7 +45,7 @@ def main() -> int:
     else:
         print("[INFO] dlbactrace not found; continuing without it.")
 
-    # CircuitKit import
+    # CircuitKIT import
     ck_ver = check_import("circuitkit")
     if ck_ver is not None:
         print("circuitkit import: OK")

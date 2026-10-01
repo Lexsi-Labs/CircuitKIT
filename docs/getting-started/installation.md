@@ -1,6 +1,6 @@
 # Installation
 
-CircuitKit requires Python ≥ 3.10 and PyTorch ≥ 2.0.
+CircuitKIT requires Python ≥ 3.10 and PyTorch ≥ 2.0.
 
 ## Standard install (CPU)
 
@@ -31,7 +31,7 @@ pip install "git+https://github.com/Lexsi-Labs/circuitkit.git"
 ```bash
 pip install -e ".[benchmarks]"   # lm-evaluation-harness integration
 pip install -e ".[quantization]" # optimum-quanto quantisation backend
-pip install -e ".[cdt]"          # captum/lime/shap (CD-T backend)
+pip install -e ".[cdt]"          # captum/lime/shap (CD-T research backend)
 pip install -e ".[dev]"          # pytest, black, flake8, mypy
 pip install -e ".[docs]"         # MkDocs documentation build
 ```
@@ -60,7 +60,7 @@ pip install -e ".[gpu-cu126,benchmarks]"
 
 ```python
 import circuitkit
-print(circuitkit.__version__)   # 1.0.0
+print(circuitkit.__version__)   # the installed version
 ```
 
 ```bash

@@ -349,7 +349,7 @@ class TestIbNameToGraphName:
 
 
 class TestConvertEapScoresToCkFormat:
-    """Tests for EAP graph → CircuitKit score dict conversion."""
+    """Tests for EAP graph → CircuitKIT score dict conversion."""
 
     def _make_mock_graph(self, n_layers=2, n_heads=2):
         """

@@ -1,3 +1,11 @@
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../docs/assets/circuitkit-logo-white.png">
+    <img src="../../../../../../docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
+
 # Double IO
 
 An IOI variant where both the subject and the indirect object appear twice in the prompt. The naive "remove duplicate tokens" IOI algorithm should fail on it even though GPT-2 still succeeds.

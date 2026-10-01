@@ -3,7 +3,7 @@
 # Install with:
 #     pip install -r requirements-docs.txt
 #
-# Or install CircuitKit with the docs extra:
+# Or install CircuitKIT with the docs extra:
 #     pip install -e ".[docs]"
 
 -e .[docs]

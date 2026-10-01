@@ -1,6 +1,6 @@
 # Chat Templates
 
-CircuitKit runs discovery on pairs of (clean, corrupt) prompts. Whether those prompts are wrapped in a model's chat template affects what activations the circuit sees, and therefore what circuit gets discovered. This page explains the chat template policy, when to change it, and the underlying helpers.
+CircuitKIT runs discovery on pairs of (clean, corrupt) prompts. Whether those prompts are wrapped in a model's chat template affects what activations the circuit sees, and therefore what circuit gets discovered. This page explains the chat template policy, when to change it, and the underlying helpers.
 
 ---
 
@@ -127,7 +127,7 @@ tokens = to_tokens(tl_model, wrapped, templated=True)
 
 **Discovering with `"on"` and evaluating with a base model**: If you discover a circuit on an instruct model with `chat_template_mode="on"` and then try to evaluate it on a base model without a chat template, evaluation will error since the base model's tokenizer has no `chat_template` to resolve against. `chat_template_mode` is **not** persisted into the artifact — it is resolved fresh on every call from the mode you pass and the model in hand, so this mismatch only surfaces at evaluation time, not via stored metadata. Use the same model type for discovery and evaluation.
 
-**Different template versions**: Some models (Llama-3.x, Qwen-3) have multiple template variants. CircuitKit uses the tokenizer's default `chat_template`. If your inference stack uses a custom template, set `chat_template_mode="off"` and pre-format prompts yourself.
+**Different template versions**: Some models (Llama-3.x, Qwen-3) have multiple template variants. CircuitKIT uses the tokenizer's default `chat_template`. If your inference stack uses a custom template, set `chat_template_mode="off"` and pre-format prompts yourself.
 
 ---
 

@@ -59,7 +59,7 @@ from .._algorithm_families import (
     unsupported_algorithm_message,
 )
 from .._chat import resolve_chat_template
-from ..specs import _find_task_cache, _load_finetuning_data_from_csv
+from ..specs import _find_task_cache, _load_finetuning_data_from_csv, encodes_to_single_token
 
 logger = get_logger("task.greater_than")
 
@@ -248,16 +248,8 @@ class GreaterThanTaskSpec:
         Greater-Than task works on non-GPT-2 models too.
         """
         tokenizer = model.tokenizer
-        spaced = sum(
-            1
-            for n in range(0, 1000)
-            if len(tokenizer.encode(f" {n}", add_special_tokens=False)) == 1
-        )
-        unspaced = sum(
-            1
-            for n in range(0, 1000)
-            if len(tokenizer.encode(f"{n}", add_special_tokens=False)) == 1
-        )
+        spaced = sum(1 for n in range(0, 1000) if encodes_to_single_token(tokenizer, f" {n}"))
+        unspaced = sum(1 for n in range(0, 1000) if encodes_to_single_token(tokenizer, f"{n}"))
         return " " if spaced >= unspaced else ""
 
     def _get_single_token_numbers(self, model) -> list:
@@ -265,9 +257,7 @@ class GreaterThanTaskSpec:
         tokenizer = model.tokenizer
         prefix = self._number_prefix(model)
         candidates = [
-            n
-            for n in range(0, 10000)
-            if len(tokenizer.encode(f"{prefix}{n}", add_special_tokens=False)) == 1
+            n for n in range(0, 10000) if encodes_to_single_token(tokenizer, f"{prefix}{n}")
         ]
         if len(candidates) < 2:
             raise ValueError(

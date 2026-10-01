@@ -269,6 +269,11 @@ class TestResolvePillars:
 class TestDiscoverValidation:
     _MOCK_RETURN = list(_NODES)
 
+    @pytest.fixture(autouse=True)
+    def _stub_model_load(self):
+        with patch.object(Pipeline, "_ensure_model", return_value=MagicMock()):
+            yield
+
     def test_no_task_raises(self):
         p = Pipeline("gpt2")  # no task
         with pytest.raises(ValueError, match="task must be set"):
@@ -362,6 +367,22 @@ class TestDiscoverValidation:
         with patch("circuitkit.api.discover_circuit", return_value=self._MOCK_RETURN):
             result = p.discover()
         assert result is p
+
+
+class TestModelSharing:
+    def test_discover_and_evaluate_reuse_one_model(self, tmp_path):
+        model = MagicMock()
+        p = Pipeline("gpt2", task="ioi", output_dir=str(tmp_path))
+        p._model = model
+        with patch("circuitkit.api.discover_circuit", return_value=list(_NODES)) as disc:
+            p.discover()
+        assert disc.call_args.kwargs["_model"] is model
+
+        Path(p._artifact_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(p._artifact_path).touch()
+        with patch("circuitkit.api.evaluate_circuit") as ev:
+            p.evaluate()
+        assert ev.call_args.kwargs["_model"] is model
 
 
 # ---------------------------------------------------------------------------

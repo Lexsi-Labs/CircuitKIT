@@ -1,3 +1,11 @@
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../../../docs/assets/circuitkit-logo-white.png">
+    <img src="../../../../../docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
+
 # utils
 
 Core machinery for the ACDC backend: turning a model into an edge-patchable graph

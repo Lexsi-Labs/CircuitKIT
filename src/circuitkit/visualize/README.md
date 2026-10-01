@@ -1,3 +1,11 @@
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../docs/assets/circuitkit-logo-white.png">
+    <img src="../../../docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
+
 # visualize
 
 Tools for visualizing circuit discovery results: interactive graphs, saliency and feature-attribution maps, comparison dashboards, editors, galleries, and HTML/Jupyter/Streamlit exports.

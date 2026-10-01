@@ -1,5 +1,5 @@
 """
-CircuitKit module execution entry point.
+CircuitKIT module execution entry point.
 Allows running: python -m circuitkit
 """
 

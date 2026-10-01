@@ -1,6 +1,14 @@
-# CircuitKit Changelog
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/circuitkit-logo-white.png">
+    <img src="docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
 
-All notable changes to CircuitKit will be documented in this file.
+# CircuitKIT Changelog
+
+All notable changes to CircuitKIT will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -8,6 +16,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+
+- **Logo refresh.** New chip-mark identity across the repo: the CircuitKIT lockup (wordmark now spelled with a capital "KIT"),
+  a vector mark, and a favicon set, all in `docs/assets/`. The docs header, favicon and landing hero use them, and every README,
+  the root docs and the example notebooks carry the lockup. The lockup PNGs have true transparency (no baked-in halo). The old
+  `*-v3` bipartite-graph assets were removed.
+- Docs accent colour is now the logo orange `#FF4B0A` (links, buttons, landing animation, glows, docs badge); it was `#EC5A2C`.
+- Docs site now builds with a small template override (`overrides/main.html`) for the SVG favicon, ICO fallback and iOS icon.
+
+### Fixed
+
+- Docs and README pointed at `lexsi-labs.github.io/circuitkit/`, which 404s; the site lives at `https://circuitkit.lexsi.ai/`.
+  Also fixed the README "Applications" deep link.
+- Stale version strings: landing-page chip, both BibTeX blocks and the install check said `1.0.0`; they now read the installed package version.
+  `CITATION.cff` release date corrected, and the release-notes page now explains the older `v1.0.0` internal milestone.
+- Issue-template contact links pointed at a personal fork, and the contributing guide pointed to GitHub Discussions (not enabled).
+
+## [Unreleased] (next release)
+
+The next release after 0.1.8; the release pipeline assigns its number. (The `[1.0.0]` and
+`[0.2.0]` drafts further down were never published.)
+
+### Changed
+- One environment on **transformer-lens 3.8.0** and **transformers >=5.15,<6**
+  (huggingface-hub >=1.5,<2), so CircuitKIT installs next to the other Lexsi
+  libraries. The TransformerLens patch series (Gemma-4, Sarvam-MoE, Cohere) moved to
+  `circuitkit/_tl_patches` and is applied in memory by an import hook that
+  `import circuitkit` installs; `scripts/apply_tl_patches.py` and the separate
+  environment are gone. Import `circuitkit` before `transformer_lens`.
+- ACDC uses TransformerLens 3's `TransformerLensKeyValueCache`, so `circuitkit.api`,
+  `Pipeline`, `ck.discover`, prune, edit, steer and export all import and run on TL 3.
+- `load_model`, `Pipeline`, the `api` loaders, the CLI, the benchmarks and the score
+  extractors load without TransformerLens weight processing by default
+  (`fold_ln`, `center_writing_weights`, `center_unembed`, `fold_value_biases` are
+  keyword arguments, all `False`). The weights then equal the Hugging Face ones.
+  Pass `fold_ln=True` etc. for the old behaviour.
+- `export_checkpoint` / `save_pruned_checkpoint` write the model's **current**
+  weights (TransformerLens -> HF conversion for GPT-2, Llama, Mistral, Qwen2, Cohere,
+  Cohere2), then apply the pruning mask. ROME / MEMIT edits and weight steering used
+  to be dropped silently because the original HF weights were exported. Every
+  exported tensor is checked by converting it back with TransformerLens's loader.
+  `weights="original"` keeps the old behaviour; other architectures and
+  `fold_ln=True` models fall back to it with a warning. An artifact of `None`
+  exports without pruning. A tied `lm_head` whose weights no longer match the
+  embedding is untied.
+- The CLI, `benchmarks.benchmark`, both `score_extractor`s and the `api` loaders go
+  through one loader (`quick._from_pretrained`), so local checkpoint folders and
+  unlisted Hub ids work everywhere.
+- `__version__` comes from the installed package metadata; the release helper no
+  longer rewrites `src/circuitkit/__init__.py`.
 - `circuitkit run`: a `benchmark:` block now runs when present and is skipped
   only with `enabled: false`, matching `evaluate:` and `visualize:`. It used to
   need `enabled: true`, so `benchmark: {tasks: [boolq]}` on its own did nothing.
@@ -21,6 +78,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `faithfulness_report.json` to `output_dir` after evaluation.
 
 ### Added
+- `lexsi_provenance.json` (schema `lexsi.provenance/1`) in every exported checkpoint
+  folder, and a `provenance` key in every `*_scores.json`. When the model came from a
+  folder with its own `lexsi_provenance.json` (a SafeTune or AlignTune output), that
+  record is nested under `inputs[0].provenance`. See `circuitkit.provenance`.
+- `*_scores.json` also carries `safety_units` and `layer_suggestions`, the keys
+  SafeTune's `core/circuit_kit/adapter.py` reads, derived from the top 20% of
+  `node_scores` (`CircuitScores.to_json(top_fraction=...)`). Readers of
+  `node_scores` are unchanged; `CircuitScores.from_dict` ignores the new keys.
+- `arch_registry`: the `cohere` family's name lists Aya Expanse and Tiny Aya.
+- TransformerLens patch series: Gemma-4 (`google/gemma-4-31B-it`) and Sarvam-MoE
+  (`sarvamai/sarvam-30b`) `HookedTransformer` support on transformer-lens 3.8.0.
+  It replaces the TransformerLens fork vendored in the audit repo.
+  The new `0004-gemma4-hf-parity` fixes three places where that fork disagreed
+  with Hugging Face on Gemma-4: global-layer RoPE, the final logit softcap and
+  `layer_scalar`.
+- `circuitkit.backends._tl_compat` (Tiny Aya, Command R7B, Aya Expanse, SmolLM3)
+  also applies on transformer-lens 3.8 with transformers 5 (`rope_theta` is read
+  from `rope_parameters` there). It used to raise `RuntimeError` on any
+  transformer-lens but 2.18.
+- TransformerLens patch `0006-cohere`: `HookedTransformer` support for Aya Expanse
+  (`CohereForCausalLM`) and Tiny Aya (`Cohere2ForCausalLM`), including local
+  checkpoint directories. Tiny random models match Hugging Face logits to 1e-7.
+- `load_model` (and so `Pipeline`) and the `api` model loaders take a local
+  checkpoint directory or any Hub repo id; the architecture is read from its
+  `config.json`. Vision-language checkpoints (`aya_vision`, `cohere_compass`) are
+  rejected with an error naming the text-only alternatives.
 - `qa` dataset shape: plain `{question, answer}` tables, optionally with
   `corrupted_question` / `corrupted_answer`. `circuitkit data check` and
   `data prepare` listed `qa` in their help but had no adapter, so a
@@ -38,11 +121,167 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `token_swap`, which it can generate.
 - A pinned device was ignored by discovery and evaluation.
 
+### Fixed
+- **GLUE task corruption plumbing.** When a GLUE task was corrupted with a
+  corruption *strategy*, the strategy's returned dict (which overwrites
+  `"prompt"` and sets no `"corrupted"` key) was handed straight to the
+  tokenizer, so `clean == corrupted` and the patch-faithfulness denominator
+  collapsed to zero. The corrupted prompt is now wired into the `"corrupted"`
+  field before tokenization, restoring a well-defined clean-vs-corrupted
+  contrast (`src/circuitkit/tasks/builtins/glue.py`).
+
+### Added
+- **Authored contrastive pairs for GLUE tasks.** `GLUETaskSpec` now honours an
+  explicit `corrupted_prompt` (+ optional `corrupted_answer` / `answer_incorrect`)
+  on each example, mirroring `GenericTaskSpec`. This is the preferred path for
+  non-syntactic tasks: an authored label-flipping pair gives a clean logit-diff
+  metric (`logit(correct) − logit(incorrect)` over the two real class tokens)
+  instead of the near-zero signal from meaning-preserving paraphrase/distractor
+  corruptions.
+- **`sparsegpt` registered in the algorithm registry.** `SparseGPTBaseline`
+  already shipped as a benchmark baseline but was missing from
+  `circuitkit.backends.ALGORITHMS` (the single source of truth), so
+  `CircuitScores` validation rejected it. It is now registered as a
+  research-tier pruning baseline.
+- **Interactive circuit visualization sample.** A rendered EAP-IG circuit for
+  GPT-2 on IOI ships at `examples/visualization/ioi_eap-ig.html` and is embedded
+  live in the [Visualization](docs/user-guide/visualization.md) docs page.
+
+### Changed
+- **Brand name `CircuitKit` renamed to `CircuitKIT`** across documentation,
+  comments, docstrings, and user-facing strings. Public Python identifiers
+  (`CircuitKitError` and its subclasses, `CircuitKitImportance`,
+  `CircuitKitLogger`, `CircuitKitFormatter`) are intentionally left unchanged to
+  preserve import/API compatibility.
+- **Example/tutorial notebooks re-run and updated.** The `examples/notebooks/`
+  set (`01`–`07`) was re-executed and refreshed with current outputs, and the
+  consolidated numbering plus the `23-jailbreak-refusal-multi-model` case study
+  are the versions that were actually run.
+
+### VRAM reduction pass — numerically identical (`perf/vram-optimizations`)
+
+A static audit of GPU memory usage across discovery, evaluation, steering and
+pruning found several sources of unnecessary VRAM that did not change any
+result. All verified bitwise/exactly identical against a pre-change reference
+on gpt2 (fp32) and Llama-3.2-1B-Instruct (bf16):
+
+- **qkv activation flags leaked across calls.** `discover_circuit()` and
+  `evaluate_circuit()` set `use_attn_result` / `use_split_qkv_input` /
+  `use_hook_mlp_in` (an ~n_heads x activation multiplier while set) and never
+  restored them, so every later step on that model paid the cost. They are now
+  scoped to the stage that needs them via a restore-on-exit context manager
+  (`circuitkit.api._qkv_flags_enabled`), and a preflight guard
+  (`_check_qkv_flag_memory_headroom`) raises an actionable `MemoryError`
+  before enabling them when the estimated activation blow-up will not fit on
+  the device, naming the algorithm, `n_heads`, and the `ibcircuit` escape
+  hatch. It is a no-op on CPU, on models under 1 GB of weights, and on
+  integer parameter dtypes.
+- **Per-batch buffers and hook closures were never freed.** The EAP-family
+  scorers (`get_scores_eap`, `get_scores_eap_ig`, `get_scores_ig_activations`,
+  `get_scores_clean_corrupted`, node- and edge-level) and both `evaluate_graph`
+  implementations allocated a fresh activation-difference buffer every batch
+  while the previous one was still referenced, so two buffers coexisted at the
+  peak. They are now released at the end of each iteration.
+- **Parameter gradients were never freed**, and the IG-activations scorers ran
+  reference forwards under autograd and needed `retain_graph=True` across every
+  node x step backward pass. Reference forwards now run under `torch.no_grad()`
+  and every scorer calls `model.zero_grad(set_to_none=True)` after scoring.
+  The EAP scorers additionally keep only the embedding weights differentiable
+  while attributing (they anchor the residual stream in the graph so every
+  backward hook still fires; nothing else is read).
+- **`discover()` -> `evaluate()` reloaded the model.** `Pipeline` now loads the
+  model once via `_ensure_model()` and threads it through both
+  `discover_circuit()` and `evaluate_circuit()`.
+- **`expandable_segments:True`** is now enabled for the CUDA allocator at
+  first use (`circuitkit.utils.device.enable_expandable_segments()`, with a
+  `CIRCUITKIT_NO_EXPANDABLE_SEGMENTS` opt-out), reducing fragmentation from
+  the variable-shaped activation buffers above.
+- **Every faithfulness pillar recomputed the same baselines.** Pillar 1
+  already computes the clean/corrupt baselines and the patched circuit's
+  score; Pillars 2 and 5 now reuse them instead of repeating those forwards.
+- **Weight steering (`CircuitWeightSteering`) held two full fine-tuned model
+  copies** for its whole lifetime just to read a few per-head weight slices
+  out of them; it now keeps only those slices (on CPU).
+- **The Taylor pruning selector** backpropagated through every parameter to
+  read grads at two (`attn.W_O`, `mlp.W_out`); it now restricts
+  `requires_grad` to the weights it actually scores.
+
+### Removed / hardened
+- `utils/optimization.py` deleted — unreferenced anywhere in the library,
+  tests, CLI or docs, and its entry point imported a module
+  (`circuitkit.backends.algorithm_optimizer`) that does not exist.
+- `utils/memory.py`'s `optimize_memory_usage()` no longer sets a flat 80%
+  per-process CUDA memory fraction unconditionally; it now scales the cap from
+  memory actually free at call time (still bounded above at 80% by default).
+
+See `perf/vram-policy-changes` for a companion set of changes that reduce
+VRAM further but change numeric output (benchmark precision default, an MMLU
+sampling fix), kept separate pending review.
+
+### VRAM policy changes — changes results, needs review (`perf/vram-policy-changes`)
+
+Companion to the numerically-identical VRAM reduction pass on
+`perf/vram-optimizations`. Kept on a separate branch since these change
+numeric output or example selection:
+
+- `run_lm_eval` / `ck.benchmark()` now default to `dtype="bfloat16"` instead of
+  `"float32"` (pass `dtype="float32"` for the old behavior). Measured on the
+  first 300 ARC-Easy validation questions: benchmark model VRAM roughly
+  halved, 99.0-99.7% of predictions unchanged across two models tested.
+- `Pipeline.benchmark()` now moves its resident TransformerLens model(s) to
+  CPU for the duration of the lm-eval/vLLM benchmark call, restoring them
+  after — the benchmark loads its own copy and previously the two could
+  collide on a single device.
+- The MMLU EAP dataloader now honors `discovery.data_params.num_examples`
+  (ported from the public 0.1.5 release): previously it ignored the cap and
+  built every subject's full sample, so `num_examples=16` built ~1000
+  examples instead of 16.
+- `tokenize_batch_pair` gained an optional `max_length` (forwarded to the
+  existing `tokenize_plus` support), default `None` — unbounded, unchanged.
+  Not yet wired to any discovery/eval config key.
+
+### Added — multi-model discovery/evaluation/intervention support (Command R7B, Aya Expanse 8B, SmolLM3-3B)
+
+Extends the TransformerLens compatibility port introduced for Tiny Aya
+(`circuitkit.backends._tl_compat`, `cohere2`) into a shared multi-architecture
+seam, and adds three new model families across all three CircuitKIT
+surfaces — discovery, evaluation, and interventions:
+
+- **Command R7B** (`CohereLabs/c4ai-command-r7b-12-2024`, `cohere2`) — same
+  architecture as Tiny Aya; new is a genuine, non-no-op `logit_scale=0.25`
+  fold and an `n_ctx` cap (132096 → 8192) to avoid TL's dense causal-mask OOM
+  on long-context configs.
+- **Aya Expanse 8B** (`CohereLabs/aya-expanse-8b`, `cohere1`/`CohereForCausalLM`) —
+  a simplification of cohere2: no sliding window, rotary applies to every
+  layer (no NoPE), `logit_scale=0.125`.
+- **SmolLM3-3B** (`HuggingFaceTB/SmolLM3-3B`, `smollm3`) — a new Llama-family
+  port: RMSNorm, sequential attn/MLP block, standard (non-interleaved) Llama
+  rotary, and **per-layer NoPE** driven by the HF config's `no_rope_layers`
+  list. New `smollm3` entry in `applications/arch_registry.py`.
+
+Each model's real-weight parity gate (TL-vs-HF next-token KL) passed several
+orders of magnitude under the `< 1e-4` gate; `discover_circuit` validated on
+5 of the 6 stable algorithms (`eap`, `eap-ig`, `eap-gp`, `ibcircuit`, `cdt` —
+`acdc` is excluded from the standard gate as impractically slow on 3–8B
+models, its test exists behind a separate opt-in flag);
+`circuitkit.api.evaluate_circuit` faithfulness confirmed finite; and pruning
+score extraction, quantization target-module resolution, and weight-steering
+setup all confirmed on real weights. Quantization validation is scoped to
+target-module resolution only (`optimum-quanto`/`llmcompressor` are optional
+dependencies not installed in the validation environment) — this is not a
+full compression run. This same intervention/evaluation validation pass also
+covers **Tiny Aya**, the pre-existing baseline model this work extends, for
+the first time.
+
+New docs: `docs/advanced/experimental-models.md` (Command R7B, Aya Expanse,
+SmolLM3), cross-linked from `docs/advanced/tiny-aya.md`; updated
+`docs/advanced/architecture-registry.md` for the expanded `cohere` family
+and new `smollm3` family. See both pages for the full architecture tables,
+config→TL mapping, and the per-model opt-in test env vars
+(`CIRCUITKIT_RUN_COMMAND_R7B`, `CIRCUITKIT_RUN_AYA_EXPANSE`,
+`CIRCUITKIT_RUN_SMOLLM3`, plus `_ACDC` variants).
+
 ## [Unreleased] (draft "1.0.0" — never published)
-
-> The work below was planned against a 1.0.0 release that was never made.
-> PyPI's newest `circuitkit` is **0.1.7**; there has been no 1.0.0.
-
 
 ### Changed (BREAKING) — submodules renamed to stop shadowing installed packages
 
@@ -77,8 +316,9 @@ invariance-group content now lives at `circuitkit.data.invariance_groups`.
   - `22-gender-bias-audit-and-mitigation.ipynb` — full responsible-AI loop:
     discover bias circuit, audit with faithfulness pillars, mitigate via
     selective fine-tuning/pruning, re-audit with capability preservation
-  - `23-jailbreak-safety-steering.ipynb` — circuit-restricted activation
-    steering for jailbreak defense with surgical-vs-global comparison
+  - `23-jailbreak-refusal-multi-model.ipynb` — localize jailbreak refusal
+    across three instruction-tuned models (Llama-3.2-1B, Qwen2.5-1.5B,
+    gemma-2-2b), separating finding a behavior from acting on it
 
 ### June 2026 — `logger` scope audit after print()→logging sweep (Issue #67)
 
@@ -651,10 +891,6 @@ documentation, and a fresh set of runnable examples. The public API
 
 ## [Unreleased] (draft "0.2.0" — never published)
 
-> Planned as 0.2.0; never published. A later section carries the 0.1.x
-> releases that actually shipped.
-
-
 ### Major Features Added
 
 #### Corruption Pipeline (Workstream A)
@@ -883,7 +1119,7 @@ from circuitkit.analysis import CircuitAnalyzer
 
 ---
 
-## [0.1.0] - 2026-08-18
+## [0.1.0] - 2025-01-15
 
 ### Initial Release
 
@@ -923,7 +1159,7 @@ from circuitkit.analysis import CircuitAnalyzer
 
 ## Versioning Policy
 
-CircuitKit follows [Semantic Versioning](https://semver.org/):
+CircuitKIT follows [Semantic Versioning](https://semver.org/):
 - **MAJOR** (0.X.0): Breaking API changes
 - **MINOR** (.0.X): New features, backward compatible
 - **PATCH** (.0.0.X): Bug fixes, backward compatible
@@ -941,7 +1177,7 @@ For issues, questions, or contributions:
 
 ## Acknowledgments
 
-CircuitKit builds on pioneering work in mechanistic interpretability:
+CircuitKIT builds on pioneering work in mechanistic interpretability:
 - ACDC by Conmy et al.
 - Integrated Gradients by Sundararajan et al.
 - TransformerLens by Nanda et al.

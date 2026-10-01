@@ -81,7 +81,7 @@ def _prop_tl_norm(rel: torch.Tensor, irrel: torch.Tensor, ln, tol: float = 1e-8)
     """CD decomposition for TL's LayerNorm / RMSNorm, including the *folded*
     ``LayerNormPre`` / ``RMSNormPre`` variants.
 
-    When CircuitKit enables ``use_attn_result`` / ``use_split_qkv_input`` /
+    When CircuitKIT enables ``use_attn_result`` / ``use_split_qkv_input`` /
     ``use_hook_mlp_in`` (which discover_circuit always does for the EAP/CD-T
     family), TransformerLens folds the LayerNorm scale/bias into the adjacent
     weight matrices and swaps in a parameter-free ``LayerNormPre``/``RMSNormPre``

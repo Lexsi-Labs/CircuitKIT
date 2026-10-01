@@ -6,14 +6,23 @@ EAP-IG can be memory-intensive, especially for large models. This page covers al
 
 ## Memory Budget by Model Size
 
-| Model | Base VRAM | EAP-IG default | With all optimizations |
-|-------|-----------|----------------|------------------------|
-| GPT-2 (124M) | ~1 GB | ~2 GB | ~0.5 GB |
-| Llama-1B | ~2.5 GB | ~4 GB | ~1.5 GB |
-| Llama-3B | ~7 GB | ~12 GB | ~4 GB |
-| Gemma-4B | ~10 GB | ~16 GB | ~6 GB |
+Peak VRAM after the `perf/vram-optimizations` fixes (qkv-flag lifecycle,
+per-batch buffer release, embedding-only gradients — see the changelog):
 
-All estimates at `ig_steps=5`, `batch_size=4`, `num_examples=128`. (The config key is `num_examples`, under `data_params`; prose sometimes calls it `n_examples` — it is the same knob.)
+| Model | EAP-IG default (measured) | With all optimizations (measured) |
+|-------|----------------------------|-------------------------------------|
+| GPT-2 (124M) | 1.0 GB | 0.5 GB |
+| Llama-3.2-1B-Instruct | 8.7 GB | 4.1 GB |
+| Llama-3B | not re-measured — order-of-magnitude only | not re-measured |
+| Gemma-4B | not re-measured — order-of-magnitude only | not re-measured |
+
+"EAP-IG default" is `ig_steps=5`, `batch_size=4`, `num_examples=128`. "With
+all optimizations" is `ig_steps=3`, `batch_size=1`, `num_examples=64` (the
+combined strategy below), both bf16. (The config key is `num_examples`, under
+`data_params`; prose sometimes calls it `n_examples` — it is the same knob.)
+The Llama-3B/Gemma-4B rows are not re-verified against the current code —
+expect the same relative reduction as the two measured rows, not these exact
+figures.
 
 ---
 
@@ -21,7 +30,7 @@ All estimates at `ig_steps=5`, `batch_size=4`, `num_examples=128`. (The config k
 
 ### 1. Model precision (bfloat16 is the default)
 
-CircuitKit already loads models in bfloat16 — it's the default, and the backend warns if you set anything else, so you get this saving out of the box:
+CircuitKIT already loads models in bfloat16 — it's the default, and the backend warns if you set anything else, so you get this saving out of the box:
 
 ```python
 discover_circuit({

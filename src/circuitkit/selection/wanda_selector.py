@@ -17,7 +17,7 @@ prune.
 
 ADAPTATION TO COMPONENT GRANULARITY
 -----------------------------------
-The CircuitKit audit operates on *components* ("A{l}.{h}" attention heads,
+The CircuitKIT audit operates on *components* ("A{l}.{h}" attention heads,
 "MLP {l}" blocks), not individual weights. We therefore compute the genuine
 Wanda per-weight metric on the output-projection layer that *consumes* each
 component's activations:

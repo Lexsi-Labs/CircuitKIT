@@ -34,7 +34,7 @@ _APP_CACHE.mkdir(parents=True, exist_ok=True)
 
 
 # Default algorithm matrix for apps cells. Mirrors the benchmark suite so
-# the per-algo comparison table covers every algorithm CircuitKit ships.
+# the per-algo comparison table covers every algorithm CircuitKIT ships.
 DEFAULT_ALGOS: List[str] = [
     "eap", "eap-ig", "eap-ig-activations", "eap-clean-corrupted",
     "relp", "atp-gd", "eap-gp", "eap-exact", "ibcircuit",

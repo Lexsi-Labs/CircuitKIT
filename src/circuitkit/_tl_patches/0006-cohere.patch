@@ -1,0 +1,200 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Pratinav Seth <pratinav.seth@lexsi.ai>
+Date: Mon, 28 Sep 2026 02:35:37 +0530
+Subject: [PATCH 6/6] cohere: CohereForCausalLM / Cohere2ForCausalLM (Aya Expanse,
+ Tiny Aya)
+
+Parallel attention+MLP block reading one bias-free LayerNorm (copied to
+ln1 and ln2), interleaved RoPE, logit_scale folded into W_U. Cohere2 adds
+sliding-window layers from config.layer_types and NoPE on full-attention
+layers via proportional_rotary_factor=0 (from 0004). Config conversion reads
+the HF config, so local checkpoint dirs of either architecture load too.
+---
+ transformer_lens/loading_from_pretrained.py   | 49 +++++++++++++++
+ .../pretrained/weight_conversions/__init__.py |  1 +
+ .../pretrained/weight_conversions/cohere.py   | 59 +++++++++++++++++++
+ transformer_lens/supported_models.py          | 12 ++++
+ 4 files changed, 121 insertions(+)
+ create mode 100644 transformer_lens/pretrained/weight_conversions/cohere.py
+
+diff --git a/transformer_lens/loading_from_pretrained.py b/transformer_lens/loading_from_pretrained.py
+index 30f216d..853a28b 100644
+--- a/transformer_lens/loading_from_pretrained.py
++++ b/transformer_lens/loading_from_pretrained.py
+@@ -33,6 +33,7 @@ from transformer_lens.pretrained.weight_conversions import (
+     convert_bert_weights,
+     convert_bloom_weights,
+     convert_coder_weights,
++    convert_cohere_weights,
+     convert_gemma4_weights,
+     convert_gemma_weights,
+     convert_gpt2_weights,
+@@ -842,6 +843,52 @@ def convert_hf_model_config(model_name: str, **kwargs: Any) -> dict[str, Any]:
+             "gated_mlp": True,
+             "default_prepend_bos": False,
+         }
++    elif architecture in ("CohereForCausalLM", "Cohere2ForCausalLM"):
++        # Cohere (Aya Expanse, Command R) and Cohere2 (Tiny Aya, Command R7B):
++        # one bias-free LayerNorm feeds attention and MLP in parallel
++        # (convert_cohere_weights copies it to ln1 and ln2), interleaved RoPE,
++        # tied embeddings with logits multiplied by logit_scale (folded into W_U).
++        if getattr(hf_config, "use_qk_norm", False) or getattr(hf_config, "attention_bias", False):
++            raise NotImplementedError(
++                f"{official_model_name}: Cohere use_qk_norm / attention_bias is not ported "
++                "to HookedTransformer."
++            )
++        d_head = getattr(hf_config, "head_dim", None) or (
++            hf_config.hidden_size // hf_config.num_attention_heads
++        )
++        cfg_dict = {
++            "d_model": hf_config.hidden_size,
++            "d_head": d_head,
++            "n_heads": hf_config.num_attention_heads,
++            "n_key_value_heads": hf_config.num_key_value_heads,
++            "d_mlp": hf_config.intermediate_size,
++            "n_layers": hf_config.num_hidden_layers,
++            "n_ctx": hf_config.max_position_embeddings,
++            "eps": hf_config.layer_norm_eps,
++            "d_vocab": hf_config.vocab_size,
++            "act_fn": hf_config.hidden_act,
++            "initializer_range": hf_config.initializer_range,
++            "normalization_type": "LN",
++            "positional_embedding_type": "rotary",
++            "rotary_base": _get_rope_theta(hf_config),
++            "rotary_adjacent_pairs": True,
++            "rotary_dim": d_head,
++            "gated_mlp": True,
++            "parallel_attn_mlp": True,
++        }
++        if architecture == "Cohere2ForCausalLM":
++            # sliding_attention layers use RoPE within a window; full_attention
++            # layers use no positional encoding at all, expressed as a
++            # proportional_rotary_factor of 0 (every pair gets an infinite period).
++            cfg_dict.update(
++                use_local_attn=True,
++                window_size=hf_config.sliding_window,
++                attn_types=[
++                    "local" if t == "sliding_attention" else "global"
++                    for t in hf_config.layer_types
++                ],
++                proportional_rotary_factor=0.0,
++            )
+     elif architecture == "Qwen2ForCausalLM":
+         # Note that Qwen1.5 models have architecture type Qwen2ForCausalLM.
+         cfg_dict = {
+@@ -2399,6 +2446,8 @@ def get_pretrained_state_dict(
+             state_dict = convert_qwen_weights(hf_model, cfg)
+         elif cfg.original_architecture == "Qwen2ForCausalLM":
+             state_dict = convert_qwen2_weights(hf_model, cfg)
++        elif cfg.original_architecture in ("CohereForCausalLM", "Cohere2ForCausalLM"):
++            state_dict = convert_cohere_weights(hf_model, cfg)
+         elif cfg.original_architecture == "Qwen3ForCausalLM":
+             state_dict = convert_qwen3_weights(hf_model, cfg)
+         elif cfg.original_architecture == "PhiForCausalLM":
+diff --git a/transformer_lens/pretrained/weight_conversions/__init__.py b/transformer_lens/pretrained/weight_conversions/__init__.py
+index 9630e28..ce1e498 100644
+--- a/transformer_lens/pretrained/weight_conversions/__init__.py
++++ b/transformer_lens/pretrained/weight_conversions/__init__.py
+@@ -1,6 +1,7 @@
+ from .bert import convert_bert_weights
+ from .bloom import convert_bloom_weights
+ from .coder import convert_coder_weights
++from .cohere import convert_cohere_weights
+ from .gemma import convert_gemma4_weights, convert_gemma_weights
+ from .gpt2 import convert_gpt2_weights
+ from .gptj import convert_gptj_weights
+diff --git a/transformer_lens/pretrained/weight_conversions/cohere.py b/transformer_lens/pretrained/weight_conversions/cohere.py
+new file mode 100644
+index 0000000..b6f3a2d
+--- /dev/null
++++ b/transformer_lens/pretrained/weight_conversions/cohere.py
+@@ -0,0 +1,59 @@
++import einops
++import torch
++
++from transformer_lens.config.hooked_transformer_config import HookedTransformerConfig
++
++
++def convert_cohere_weights(cohere, cfg: HookedTransformerConfig):
++    """CohereForCausalLM / Cohere2ForCausalLM.
++
++    Each layer has a single bias-free input_layernorm read by both attention and
++    MLP (parallel block); it is copied to ln1 and ln2. logit_scale is folded into W_U.
++    """
++    state_dict = {}
++    zeros = lambda *shape: torch.zeros(*shape, dtype=cfg.dtype)
++
++    state_dict["embed.W_E"] = cohere.model.embed_tokens.weight
++
++    assert cfg.d_mlp is not None  # keep mypy happy
++    n_kv_heads = cfg.n_key_value_heads or cfg.n_heads
++
++    for l in range(cfg.n_layers):
++        layer = cohere.model.layers[l]
++        attn = layer.self_attn
++
++        state_dict[f"blocks.{l}.ln1.w"] = layer.input_layernorm.weight
++        state_dict[f"blocks.{l}.ln1.b"] = zeros(cfg.d_model)
++        state_dict[f"blocks.{l}.ln2.w"] = layer.input_layernorm.weight
++        state_dict[f"blocks.{l}.ln2.b"] = zeros(cfg.d_model)
++
++        state_dict[f"blocks.{l}.attn.W_Q"] = einops.rearrange(
++            attn.q_proj.weight, "(n h) m->n m h", n=cfg.n_heads
++        )
++        state_dict[f"blocks.{l}.attn._W_K"] = einops.rearrange(
++            attn.k_proj.weight, "(n h) m->n m h", n=n_kv_heads
++        )
++        state_dict[f"blocks.{l}.attn._W_V"] = einops.rearrange(
++            attn.v_proj.weight, "(n h) m->n m h", n=n_kv_heads
++        )
++        state_dict[f"blocks.{l}.attn.b_Q"] = zeros(cfg.n_heads, cfg.d_head)
++        state_dict[f"blocks.{l}.attn._b_K"] = zeros(n_kv_heads, cfg.d_head)
++        state_dict[f"blocks.{l}.attn._b_V"] = zeros(n_kv_heads, cfg.d_head)
++        state_dict[f"blocks.{l}.attn.W_O"] = einops.rearrange(
++            attn.o_proj.weight, "m (n h)->n h m", n=cfg.n_heads
++        )
++        state_dict[f"blocks.{l}.attn.b_O"] = zeros(cfg.d_model)
++
++        state_dict[f"blocks.{l}.mlp.W_in"] = layer.mlp.up_proj.weight.T
++        state_dict[f"blocks.{l}.mlp.W_gate"] = layer.mlp.gate_proj.weight.T
++        state_dict[f"blocks.{l}.mlp.b_in"] = zeros(cfg.d_mlp)
++        state_dict[f"blocks.{l}.mlp.W_out"] = layer.mlp.down_proj.weight.T
++        state_dict[f"blocks.{l}.mlp.b_out"] = zeros(cfg.d_model)
++
++    state_dict["ln_final.w"] = cohere.model.norm.weight
++    state_dict["ln_final.b"] = zeros(cfg.d_model)
++
++    state_dict["unembed.W_U"] = (cohere.lm_head.weight * cohere.config.logit_scale).T
++    state_dict["unembed.b_U"] = zeros(cfg.d_vocab)
++
++    return state_dict
+diff --git a/transformer_lens/supported_models.py b/transformer_lens/supported_models.py
+index e4df0f3..378ebc6 100644
+--- a/transformer_lens/supported_models.py
++++ b/transformer_lens/supported_models.py
+@@ -108,6 +108,12 @@ OFFICIAL_MODEL_NAMES: list[str] = [
+     "google/gemma-3-27b-pt",
+     "google/gemma-4-31B-it",
+     "sarvamai/sarvam-30b",
++    "CohereLabs/aya-expanse-8b",
++    "CohereLabs/aya-expanse-32b",
++    "CohereLabs/tiny-aya-base",
++    "CohereLabs/tiny-aya-earth",
++    "CohereLabs/tiny-aya-global",
++    "CohereLabs/tiny-aya-water",
+     "google/gemma-3-4b-it",
+     "google/gemma-3-4b-pt",
+     "google/gemma-7b",
+@@ -444,6 +450,12 @@ MODEL_ALIASES: dict[str, list[str]] = {
+     "google/gemma-3-27b-it": ["gemma-3-27b-it"],
+     "google/gemma-4-31B-it": ["gemma-4-31b-it", "gemma-4-31B-it"],
+     "sarvamai/sarvam-30b": ["sarvam-30b", "sarvam-moe-30b"],
++    "CohereLabs/aya-expanse-8b": ["aya-expanse-8b"],
++    "CohereLabs/aya-expanse-32b": ["aya-expanse-32b"],
++    "CohereLabs/tiny-aya-base": ["tiny-aya-base"],
++    "CohereLabs/tiny-aya-earth": ["tiny-aya-earth"],
++    "CohereLabs/tiny-aya-global": ["tiny-aya-global"],
++    "CohereLabs/tiny-aya-water": ["tiny-aya-water"],
+     "google/gemma-3-27b-pt": ["gemma-3-27b-pt"],
+     "google/gemma-3-4b-it": ["gemma-3-4b-it"],
+     "google/gemma-3-4b-pt": ["gemma-3-4b-pt"],

@@ -1,20 +1,20 @@
 # License
 
-CircuitKit is released under the **Lexsi Labs Source Available License (LSAL) v1.2**, a source-available (not open-source) license. It grants academic research and teaching MIT-like permissions; use by any organization requires written acknowledgement or permission from Lexsi Labs (Section 1A); commercial use requires a separate license from Lexsi Labs; and responsible-use conditions apply to safety-relevant behaviors. The full terms are in [LICENSE.md](https://github.com/Lexsi-Labs/circuitkit/blob/main/LICENSE.md).
+CircuitKIT is released under the **Lexsi Labs Source Available License (LSAL) v1.2**, a source-available (not open-source) license. It grants academic research and teaching MIT-like permissions; use by any organization requires written acknowledgement or permission from Lexsi Labs (Section 1A); commercial use requires a separate license from Lexsi Labs; and responsible-use conditions apply to safety-relevant behaviors. The full terms are in [LICENSE.md](https://github.com/Lexsi-Labs/circuitkit/blob/main/LICENSE.md).
 
 In short:
 
 - **Free** for academic research and teaching, on MIT-like terms (notice intact).
 - **Organizations** must acknowledge their use or obtain permission (Section 1A) before internal evaluation, red-teaming, benchmarking, or safety auditing.
 - **No commercial use** (SaaS, hosted, embedded, or paid support/consulting) without a separate commercial license.
-- **Responsible use:** do not use CircuitKit to locate, remove, or weaken the safety behaviors of a model for deployment, and re-evaluate any intervention-exported checkpoint's safety before deploying it.
+- **Responsible use:** do not use CircuitKIT to locate, remove, or weaken the safety behaviors of a model for deployment, and re-evaluate any intervention-exported checkpoint's safety before deploying it.
 - **© 2026 Lithasa Technologies Pvt. Ltd.** Contact **support@lexsi.ai** for acknowledgements and permission requests (Section 1A) and for commercial licensing.
 
 ---
 
 ## Third-Party Licenses
 
-CircuitKit depends on and integrates with several open-source projects:
+CircuitKIT depends on and integrates with several open-source projects:
 
 | Library | License | Usage |
 |---------|---------|-------|
@@ -35,11 +35,11 @@ See each library's repository for their full license text.
 
 ## Citation
 
-If you use CircuitKit in academic work, please cite:
+If you use CircuitKIT in academic work, please cite:
 
 ```bibtex
 @software{circuitkit2026,
-  title   = {CircuitKit: Circuit Discovery, Evaluation, and Application Toolkit
+  title   = {CircuitKIT: Circuit Discovery, Evaluation, and Application Toolkit
              for Mechanistic Interpretability},
   author  = {Seth, Pratinav and Gosalia, Hem and Kasliwal, Aditya
              and Sankarapu, Vinay Kumar},

@@ -1,5 +1,5 @@
 """
-CircuitKit Corruption Module
+CircuitKIT Corruption Module
 
 Provides corruption strategies for systematic example modification across tasks.
 Corruption strategies implement the CorruptionStrategy protocol to enable:

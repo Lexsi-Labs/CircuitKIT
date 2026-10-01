@@ -1,3 +1,11 @@
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../docs/assets/circuitkit-logo-white.png">
+    <img src="../../../../../../docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
+
 # SVA (Subject-Verb Agreement)
 
 A subject-verb number-agreement task: given a prompt ending at a singular or plural subject ("The dog" vs. "The dogs"), the model must predict a number-matching verb (e.g. " is" vs. " are"). The number-contrastive structure follows Linzen et al. (2016) and Lakretz et al. (2021).

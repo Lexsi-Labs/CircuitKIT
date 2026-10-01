@@ -1,4 +1,4 @@
-# CircuitKit Features Matrix
+# CircuitKIT Features Matrix
 
 ## Version 1.0.0 - Current Feature Set
 
@@ -9,7 +9,7 @@
 
 ### Circuit Discovery Algorithms
 
-CircuitKit ships **13 discovery algorithms** across 4 backends with explicit stability
+CircuitKIT ships **13 discovery algorithms** across 4 backends with explicit stability
 tiers. Status below reflects validation maturity, not whether the code runs.
 
 | Algorithm | Backend | Tier | Notes |

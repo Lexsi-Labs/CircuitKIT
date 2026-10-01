@@ -1,6 +1,6 @@
 # Configuration
 
-CircuitKit exposes the same discovery pipeline through five equivalent interfaces. All accept the same options; pick whichever fits your workflow.
+CircuitKIT exposes the same discovery pipeline through five equivalent interfaces. All accept the same options; pick whichever fits your workflow.
 
 ```mermaid
 flowchart LR

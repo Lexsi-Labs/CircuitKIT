@@ -1,3 +1,11 @@
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../../docs/assets/circuitkit-logo-white.png">
+    <img src="../../../../docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
+
 # selective_finetuning
 
 Circuit-guided selective fine-tuning: train only the most important components (heads / MLP layers / neurons) via gradient masking.

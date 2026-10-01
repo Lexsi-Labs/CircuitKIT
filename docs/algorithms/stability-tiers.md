@@ -49,7 +49,7 @@ Attribution methods are not universally portable. A method validated on GPT-2 IO
 
 ## Runtime warnings
 
-When you request a non-Stable algorithm, CircuitKit emits a `UserWarning`:
+When you request a non-Stable algorithm, CircuitKIT emits a `UserWarning`:
 ```python
 UserWarning: Algorithm 'relp' is research-quality (only validated on GPT-2 IOI). Use 'eap-ig' for production.
 ```

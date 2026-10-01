@@ -1,5 +1,5 @@
 """
-Utility functions for CircuitKit CLI.
+Utility functions for CircuitKIT CLI.
 """
 
 import logging

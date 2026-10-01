@@ -1,8 +1,16 @@
-# CircuitKit Community Code of Conduct
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../docs/assets/circuitkit-logo-white.png">
+    <img src="../docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
+
+# CircuitKIT Community Code of Conduct
 
 ## Our Commitment
 
-We are committed to providing a welcoming and inspiring community for all. CircuitKit is dedicated to being an inclusive, safe space where all people are valued and respected.
+We are committed to providing a welcoming and inspiring community for all. CircuitKIT is dedicated to being an inclusive, safe space where all people are valued and respected.
 
 ## Our Values
 
@@ -39,9 +47,9 @@ We do not tolerate:
 ## Scope
 
 This Code of Conduct applies to:
-- All CircuitKit spaces (GitHub, discussions, issues, email)
-- Community events and conferences where CircuitKit is represented
-- Official CircuitKit communications
+- All CircuitKIT spaces (GitHub, discussions, issues, email)
+- Community events and conferences where CircuitKIT is represented
+- Official CircuitKIT communications
 
 ## Enforcement
 
@@ -69,4 +77,4 @@ If you have questions about this Code of Conduct, please contact the maintainers
 
 ---
 
-**Thank you for helping make CircuitKit a welcoming and supportive community!**
+**Thank you for helping make CircuitKIT a welcoming and supportive community!**

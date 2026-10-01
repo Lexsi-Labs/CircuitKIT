@@ -1,6 +1,6 @@
 # Quick Start
 
-Get your first circuit in 5 minutes. This walkthrough uses **GPT-2** because it runs on CPU with no setup — but every step takes a `model` field, and CircuitKit is tested across GPT-2, Pythia, Qwen 2.5 / Qwen 3, Llama 3, and Gemma 2 / Gemma 3 (see [Use a different model](#use-a-different-model) below).
+Get your first circuit in 5 minutes. This walkthrough uses **GPT-2** because it runs on CPU with no setup — but every step takes a `model` field, and CircuitKIT is tested across GPT-2, Pythia, Qwen 2.5 / Qwen 3, Llama 3, and Gemma 2 / Gemma 3 (see [Use a different model](#use-a-different-model) below).
 
 ## Step 1: Install
 

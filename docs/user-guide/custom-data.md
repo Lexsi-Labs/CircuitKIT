@@ -12,7 +12,7 @@ First, decide what kind of data you have. If you're running an EAP-family algori
 
 ## Task YAML
 
-A task YAML has three required top-level keys — `name`, `source`, and `schema` — and a few optional ones. The `schema` block maps CircuitKit's field names (the keys) onto your dataset's column names (the values).
+A task YAML has three required top-level keys — `name`, `source`, and `schema` — and a few optional ones. The `schema` block maps CircuitKIT's field names (the keys) onto your dataset's column names (the values).
 
 ### A complete, working example
 
@@ -65,7 +65,7 @@ The required keys are `prompt` and `answer`. Everything else is optional and dep
 !!! warning "Get the corrupt-column key right"
     The schema key for the corrupt prompt is `corrupted` or `corrupted_prompt` — **not** `corrupt_prompt`. The corrupt-answer key is `corrupted_answer` or `corrupt_answer`. If you write `corrupt_prompt` as a schema key it is silently ignored, and discovery falls back to the corruption strategy (or, with no strategy, to clean == corrupt with no contrastive signal). The *column name* you map onto these keys can be anything; only the key on the left has to match.
 
-CircuitKit also picks up literal `corrupted_prompt` and `corrupted_answer` columns even when the schema doesn't declare them, so data that already uses those column names works without extra mapping.
+CircuitKIT also picks up literal `corrupted_prompt` and `corrupted_answer` columns even when the schema doesn't declare them, so data that already uses those column names works without extra mapping.
 
 Required fields and either/or keys are enforced at load time — omit `name`, `source`, `schema`, or the `prompt`/`answer` schema keys and the loader raises a `ValueError`.
 

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block extrahead %}
+  {#- The theme already emits the ICO first (mkdocs.yml: theme.favicon). Declaring the SVG after it makes
+      browsers that support SVG favicons prefer it (it adapts to light/dark); Safari keeps the ICO.
+      The PNG sizes in docs/assets are for other consumers (iOS below, social cards, slides). -#}
+  <link rel="icon" type="image/svg+xml" href="{{ 'assets/favicon.svg' | url }}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ 'assets/apple-touch-icon.png' | url }}">
+  {{ super() }}
+{% endblock %}

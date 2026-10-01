@@ -1,6 +1,6 @@
 # Built-in tasks
 
-A task packages a dataset, a metric, and (for paired tasks) a way to build the corrupt half into one registered spec. CircuitKit ships 16 of them. List what's registered:
+A task packages a dataset, a metric, and (for paired tasks) a way to build the corrupt half into one registered spec. CircuitKIT ships 16 of them. List what's registered:
 
 ```python
 from circuitkit import list_tasks

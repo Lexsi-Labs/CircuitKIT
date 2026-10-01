@@ -1384,7 +1384,7 @@ class Graph:
                     f"Circuit JSON file '{json_path}' is missing required "
                     f"top-level keys: {_missing}. A valid circuit JSON must "
                     f"contain all of: {_required}. Re-export the circuit with "
-                    f"Graph.to_json(), or pass a file produced by CircuitKit."
+                    f"Graph.to_json(), or pass a file produced by CircuitKIT."
                 )
 
         g = Graph.from_model(d["cfg"], neuron_level=True, node_scores=True)
@@ -1466,7 +1466,7 @@ class Graph:
                 f"{_missing}. A valid circuit .pt file must contain all of: "
                 f"{required_keys} (found: {sorted(d.keys())}). Re-export the "
                 f"circuit with Graph.to_pt(), or pass a file produced by "
-                f"CircuitKit."
+                f"CircuitKIT."
             )
         if d["edges_scores"].shape != d["edges_in_graph"].shape:
             raise ValueError(

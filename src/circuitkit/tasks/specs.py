@@ -122,6 +122,70 @@ def _find_task_cache(
     return max(matches, key=lambda p: p.stat().st_size) if matches else None
 
 
+def encodes_to_single_token(tokenizer, text: str) -> bool:
+    """Return True iff ``text`` encodes (without special tokens) to one token.
+
+    This is the precondition every single-answer-position discovery metric
+    places on its answer strings. EAP/EAP-IG (and the IOI / greater-than / SVA
+    logit-difference metrics) score a single vocabulary entry at the answer
+    position, so an answer the tokenizer splits is scored only by one of its
+    subwords -- silently corrupting attribution rather than failing.
+
+    Whether a given string is one token depends on the *loaded* tokenizer's
+    vocabulary: a name or number that is a single token under GPT-2's 50k BPE
+    may split under a larger vocabulary (e.g. Cohere's 262k), so this must be
+    re-checked against the concrete tokenizer in hand. ``text`` must already
+    carry whatever leading space / prefix the task uses in-prompt (e.g.
+    ``" Michael"``) so the check matches the token the metric actually reads.
+    """
+    return len(tokenizer.encode(text, add_special_tokens=False)) == 1
+
+
+def require_single_token_answers(
+    tokenizer,
+    answers: List[str],
+    *,
+    task_name: str,
+    min_valid: int = 2,
+    tokenizer_name: Optional[str] = None,
+    example_limit: int = 8,
+) -> List[str]:
+    """Partition ``answers`` by single-token-ness; raise if too few survive.
+
+    Returns the sublist of ``answers`` that are single tokens under
+    ``tokenizer``. Raises :class:`ValueError` -- naming the task, the
+    tokenizer, offending examples and a remedy -- when fewer than ``min_valid``
+    single-token answers remain, which is the point at which the task cannot
+    form a valid correct/incorrect contrast at all. ``min_valid`` defaults to
+    2, the minimum a contrastive metric needs.
+
+    Callers that tolerate partial splitting (e.g. IOI, which samples a large
+    name pool) can inspect the returned list to warn on the multi-token
+    remainder while still proceeding. ``answers`` must already carry whatever
+    leading space / prefix the task uses in-prompt.
+    """
+    single: List[str] = []
+    multi: List[str] = []
+    for answer in answers:
+        (single if encodes_to_single_token(tokenizer, answer) else multi).append(answer)
+
+    if len(single) < min_valid:
+        shown = ", ".join(repr(a) for a in multi[:example_limit])
+        more = "" if len(multi) <= example_limit else f" (+{len(multi) - example_limit} more)"
+        raise ValueError(
+            f"Task {task_name!r} needs at least {min_valid} single-token answer(s) "
+            f"but only {len(single)} of {len(answers)} candidate answer(s) tokenize "
+            f"to a single token under tokenizer {tokenizer_name or '<unknown>'!r}. "
+            f"The single-answer-position discovery metric scores one vocabulary "
+            f"entry, so multi-token answers are scored only by a subword, which "
+            f"corrupts attribution. Multi-token examples: {shown}{more}. Use a task "
+            f"whose answers are single tokens under this tokenizer (e.g. "
+            f"'greater_than', which builds its own single-token operand pool) or "
+            f"author a custom single-token task."
+        )
+    return single
+
+
 class TaskSpec(Protocol):
     """
     Protocol defining the interface for task specifications.

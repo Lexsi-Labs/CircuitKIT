@@ -1,6 +1,14 @@
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/circuitkit-logo-white.png">
+    <img src="docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
+
 # Environment & Reproducibility
 
-The CircuitKit experiments were run and verified in a fixed environment. To
+The CircuitKIT experiments were run and verified in a fixed environment. To
 reproduce the results (or run a shard on another machine), match it exactly.
 
 ## Base container
@@ -64,3 +72,19 @@ PY
 Verified on a single **NVIDIA H200 (140 GB)**, driver 550.127.08. The grid
 runs on one H200; `launch_concurrent.sh` runs 3 shards per H200 concurrently.
 Smaller GPUs need lower `batch_size` / `gpu_memory_utilization` in the configs.
+
+## Gated tiny-aya (cohere2) discovery
+
+Discovering circuits on tiny-aya (`CohereLabs/tiny-aya-*`, `model_type=cohere2`)
+needs an `HF_TOKEN` with access to the **gated** CohereLabs repositories:
+
+```bash
+export HF_TOKEN=hf_...    # account granted access to CohereLabs/tiny-aya-*
+```
+
+The checkpoints load through `CohereTokenizer`, which ships with `transformers`
+and is backed by `tokenizers` / `sentencepiece` (already present in the pinned
+env). No extra dependency is required — the port stays on the pinned
+`transformer-lens` 2.18. The opt-in real-weight tests run with
+`CIRCUITKIT_RUN_TINY_AYA=1` set alongside `HF_TOKEN`; see
+[`docs/advanced/tiny-aya.md`](docs/advanced/tiny-aya.md).

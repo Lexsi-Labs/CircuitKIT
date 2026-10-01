@@ -52,7 +52,7 @@ logger = get_logger("task.double_io")
 
 class DoubleIOTaskSpec:
     """
-    DoubleIO task specification for CircuitKit.
+    DoubleIO task specification for CircuitKIT.
 
     Structurally identical to IOITaskSpec in interface — same metric,
     same dataloader format, same label schema. The only difference is

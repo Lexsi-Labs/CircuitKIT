@@ -21,7 +21,7 @@ How much do we gain from using the attribution algorithm?"
 
 import logging
 from circuitkit.utils.device import get_device, empty_cache
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import numpy as np
 import torch
@@ -234,6 +234,7 @@ class Pillar5_Baselines:
         n_random_draws: int = 5,
         device: str = "auto",
         quiet: bool = False,
+        circuit_score: Optional[float] = None,
     ) -> Dict:
         """
         Run baseline comparison evaluation on a circuit.
@@ -254,6 +255,9 @@ class Pillar5_Baselines:
                 Default: ['random', 'magnitude']
             device: Target device ("cuda" or "cpu"). Defaults to "cuda".
             quiet: Suppress progress bar. Defaults to False.
+            circuit_score: Mean patched-circuit metric on ``dataloader``, when
+                already computed for this graph/model/metric (Pillar 1's
+                ``raw_score``). Skips re-evaluating the circuit.
 
         Returns:
             Dict with keys:
@@ -297,9 +301,10 @@ class Pillar5_Baselines:
 
         # Evaluate the discovered circuit
         logger.info("Evaluating discovered circuit...")
-        circuit_score = Pillar5_Baselines._evaluate_circuit(
-            model, graph, dataloader, metric_fn, quiet=quiet
-        )
+        if circuit_score is None:
+            circuit_score = Pillar5_Baselines._evaluate_circuit(
+                model, graph, dataloader, metric_fn, quiet=quiet
+            )
         logger.info(f"  Circuit score: {circuit_score:.4f}")
 
         # Evaluate baselines

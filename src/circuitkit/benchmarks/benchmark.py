@@ -24,6 +24,8 @@ import pandas as pd
 import torch
 from transformer_lens import HookedTransformer
 
+from circuitkit.quick import _from_pretrained
+
 logger = logging.getLogger(__name__)
 
 
@@ -133,7 +135,7 @@ class CircuitBenchmark:
                 logger.info(f"Loading model: {model_name}")
 
             try:
-                model = HookedTransformer.from_pretrained(
+                model = _from_pretrained(
                     model_name,
                     device=self.device,
                     trust_remote_code=self.trust_remote_code,
@@ -658,7 +660,7 @@ class CircuitBenchmark:
             )
 
         elif output_format == "markdown":
-            report = "# CircuitKit Benchmark Report\n\n"
+            report = "# CircuitKIT Benchmark Report\n\n"
             report += f"Generated: {datetime.now().isoformat()}\n\n"
             report += "## Summary\n\n"
             report += f"- Total results: {len(self.results)}\n"
@@ -678,7 +680,7 @@ class CircuitBenchmark:
             html = f"""
             <html>
             <head>
-                <title>CircuitKit Benchmark Report</title>
+                <title>CircuitKIT Benchmark Report</title>
                 <style>
                     body {{ font-family: Arial, sans-serif; margin: 20px; }}
                     table {{ border-collapse: collapse; width: 100%; margin: 20px 0; }}
@@ -689,7 +691,7 @@ class CircuitBenchmark:
                 </style>
             </head>
             <body>
-                <h1>CircuitKit Benchmark Report</h1>
+                <h1>CircuitKIT Benchmark Report</h1>
                 <p>Generated: {datetime.now().isoformat()}</p>
 
                 <h2>Summary</h2>

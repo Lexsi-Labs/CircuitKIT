@@ -1,6 +1,6 @@
-## CircuitKit Testing Guidelines
+## CircuitKIT Testing Guidelines
 
-These guidelines summarize the current capabilities, configuration options, test focus areas, and environment setup required to validate CircuitKit across local servers, Lightning, and Colab.
+These guidelines summarize the current capabilities, configuration options, test focus areas, and environment setup required to validate CircuitKIT across local servers, Lightning, and Colab.
 
 ### Supported features (alpha)
 - Unified API for discovery and evaluation via `circuitkit.api`:
@@ -43,7 +43,7 @@ There is no `qa_params.lm_eval` config key. lm-eval-harness benchmarking is a se
 
 ### Test Suite Overview
 
-CircuitKit includes a comprehensive test suite located in the `tests/` directory:
+CircuitKIT includes a comprehensive test suite located in the `tests/` directory:
 
 #### Unit Tests (`tests/unit/`)
 - **`test_api.py`**: Tests for core API functions
@@ -118,7 +118,7 @@ circuitkit --help
   - Create a fresh virtualenv and run the install + verification commands above
   - Execute `python examples/01-quickstart.py` and one EAP-IG example with `batch_size=2`
 - Colab
-  - Use the notebooks in `examples/notebooks/` (e.g. `00_colab_setup.ipynb`, `01_quickstart_pipeline.ipynb`) — they are numbered, not prefixed `Colab_`. The setup notebook installs CircuitKit and its dependencies.
+  - Use the notebooks in `examples/notebooks/` (e.g. `00_colab_setup.ipynb`, `01_quickstart_pipeline.ipynb`) — they are numbered, not prefixed `Colab_`. The setup notebook installs CircuitKIT and its dependencies.
   - If GPU is unavailable on your Colab runtime, the CPU install path works for GPT-2-scale examples.
 
 ### Sample visualizations

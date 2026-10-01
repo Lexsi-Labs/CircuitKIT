@@ -2,7 +2,7 @@
 
 **Module**: `circuitkit.selection`
 
-Selectors are named callables that compute per-node importance scores. CircuitKit ships 14 registered selectors — 6 for circuit discovery, 7 for compression (pruning/quantization), plus a `random` baseline.
+Selectors are named callables that compute per-node importance scores. CircuitKIT ships 14 registered selectors — 6 for circuit discovery, 7 for compression (pruning/quantization), plus a `random` baseline.
 
 ---
 

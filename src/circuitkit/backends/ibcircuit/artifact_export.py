@@ -24,7 +24,7 @@ def export_circuit_artifact(
     Export IBCircuit circuit as CircuitArtifact.
 
     Converts IBCircuit's neuron importance scores to the unified CircuitArtifact
-    schema for compatibility with interventions and other CircuitKit modules.
+    schema for compatibility with interventions and other CircuitKIT modules.
 
     Args:
         neuron_scores: Dictionary mapping neuron identifiers to importance scores

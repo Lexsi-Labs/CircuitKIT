@@ -2,7 +2,7 @@
 
 ## Overview
 
-`CircuitArtifact` is the unified schema for representing circuits discovered by all CircuitKit discovery methods (ACDC, EAP, EAP-IG, IBCircuit). It provides:
+`CircuitArtifact` is the unified schema for representing circuits discovered by all CircuitKIT discovery methods (ACDC, EAP, EAP-IG, IBCircuit). It provides:
 
 - **Unified graph structure**: Nodes (circuit units) + Edges (connections)
 - **JSON serialization**: Save/load circuits for reproducibility

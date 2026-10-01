@@ -98,7 +98,7 @@ class TestGalleryGenerator:
         html = gallery.generate_html()
         assert isinstance(html, str)
         assert "Test Circuit" in html
-        assert "circuit_gallery" in html.lower() or "CircuitKit" in html
+        assert "circuit_gallery" in html.lower() or "CircuitKIT" in html
 
     def test_save_html(self, gallery, tmp_path):
         """Test saving gallery to HTML."""

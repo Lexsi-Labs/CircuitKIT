@@ -1,3 +1,11 @@
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../docs/assets/circuitkit-logo-white.png">
+    <img src="../../../../../../docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
+
 # Hypernymy
 
 A taxonomic (is-a) knowledge task: given a hyponym, the model must predict its hypernym / category (e.g. "dog" -> "animal", "car" -> "vehicle").

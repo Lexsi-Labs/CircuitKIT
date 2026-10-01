@@ -155,8 +155,8 @@ def _evaluate_direct(
 
     for subj in _SUBJECTS:
         try:
-            ds_test = load_dataset("hendrycks_test", subj, split="test")
-            ds_dev = load_dataset("hendrycks_test", subj, split="dev")
+            ds_test = load_dataset("cais/mmlu", subj, split="test")
+            ds_dev = load_dataset("cais/mmlu", subj, split="dev")
         except Exception:
             try:
                 ds_test = load_dataset("cais/mmlu", subj, split="test")

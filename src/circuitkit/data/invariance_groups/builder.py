@@ -1,5 +1,5 @@
 """
-InvarianceGroupBuilder — wraps CircuitKit's existing corruption transforms
+InvarianceGroupBuilder — wraps CircuitKIT's existing corruption transforms
 to produce typed, contracted InvarianceGroups from raw task examples.
 
 Usage:

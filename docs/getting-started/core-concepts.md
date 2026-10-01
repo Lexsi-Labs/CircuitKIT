@@ -35,7 +35,7 @@ flowchart LR
 
 Discovery uses attribution methods to score every component by how much it contributes to the target behaviour. Components are ranked and the top-K are kept as the circuit.
 
-CircuitKit implements this via `discover_circuit({...})`:
+CircuitKIT implements this via `discover_circuit({...})`:
 
 1. Loads the model and task
 2. Runs the attribution method (e.g., EAP-IG)
@@ -56,7 +56,7 @@ See [Stability Tiers](../algorithms/stability-tiers.md) for tier definitions.
 
 ### The default: `eap-ig`
 
-EAP with Integrated Gradients is the recommended default. It is **Stable** tier, runs in 1–15 minutes on GPU, works with instruction-tuned models, and is the algorithm used in the CircuitKit audit paper.
+EAP with Integrated Gradients is the recommended default. It is **Stable** tier, runs in 1–15 minutes on GPU, works with instruction-tuned models, and is the algorithm used in the CircuitKIT audit paper.
 
 ```python
 from circuitkit.backends import default_algorithm, is_stable
@@ -100,7 +100,7 @@ Custom tasks: Any HuggingFace dataset via an adapter. See [Tasks and Datasets](.
 
 ## Faithfulness evaluation
 
-After discovery, CircuitKit evaluates the circuit across 6 pillars:
+After discovery, CircuitKIT evaluates the circuit across 6 pillars:
 
 | # | Pillar | Question | Cost |
 |---|---|---|---|
@@ -128,7 +128,7 @@ report = run_full_faithfulness(model, graph, task_spec, cfg)
 
 ## Interventions
 
-After discovery and evaluation, CircuitKit provides five ways to act on the circuit:
+After discovery and evaluation, CircuitKIT provides five ways to act on the circuit:
 
 **Pruning** — removes lowest-scoring components, writes a real HF checkpoint:
 ```python
@@ -197,7 +197,7 @@ print(circuit.top_nodes(5))
 | Family | Scale | Notes |
 |---|---|---|
 | GPT-2 | 124M–1.5B | Registered arch family. Fully validated, CPU-friendly |
-| Llama 3 | 1B–3B | Registered arch family. `eap` and `eap-ig` validated |
+| Llama 3 | 1B–3B | Registered arch family. Stable-tier EAP validated |
 | Gemma | 2B–4B | Registered arch family. GQA detected at runtime; validated on Gemma-2-2B |
 | Qwen 2.5 | 0.5B–7B | Registered arch family. Chat-template auto-detection |
 | Pythia | 70M–12B | Discovery only (via TransformerLens); not a registered arch family |

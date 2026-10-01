@@ -1,5 +1,8 @@
 # Release Notes
 
+!!! note "Version numbering"
+    The current release is the newest version on [PyPI](https://pypi.org/project/circuitkit/); see the [changelog](https://github.com/Lexsi-Labs/circuitkit/blob/main/CHANGELOG.md) for its details. The `v1.0.0` entry below documents an earlier internal milestone that predates the public 0.x numbering, so its tier counts (for example "only 2 validated") describe that snapshot, not the current state. For the current tiers see [Stability tiers](../algorithms/stability-tiers.md).
+
 ---
 
 ## v1.0.0 — 2026-05-16
@@ -12,7 +15,7 @@ First stable release. This release closes a correctness-hardening cycle: an audi
 
 - EAP and EAP-IG are validated across GPT-2, Llama-3.2-1B/3B, Gemma-2-2B, Gemma-3-4B, and Qwen2.5-1.5B
 - EAP-IG-Activations and EAP-Clean-Corrupted remain Research tier — validated only on GPT-2 IOI
-- 13 discovery algorithms across 4 backends (EAP, ACDC, IBCircuit, CD-T) — but only 2 are validated at production scale (`eap`, `eap-ig`); `acdc` and `ibcircuit` are Experimental (GPT-2 scale, `ibcircuit` OOMs above ~3B) and the other 9 are Research (GPT-2 IOI only). These are the tier counts as recorded at 1.0.0; the current assignment, 6 stable and 7 research, is in [Stability Tiers](../algorithms/stability-tiers.md)
+- 13 discovery algorithms across 4 backends (EAP, ACDC, IBCircuit, CD-T) — but only 2 are validated at production scale (`eap`, `eap-ig`); `acdc` and `ibcircuit` are Experimental (GPT-2 scale, `ibcircuit` OOMs above ~3B) and the other 9 are Research (GPT-2 IOI only)
 - 14 registered selectors; 16 built-in tasks
 - 6-pillar faithfulness framework with Pillar 6 marked preliminary
 

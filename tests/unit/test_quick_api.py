@@ -468,9 +468,11 @@ def test_export_checkpoint_pruning_unwraps_circuit():
     assert mock_save.call_args[0][1] == ["A0.1", "MLP 1"]
 
 
-def test_export_checkpoint_pruning_requires_artifact():
-    with pytest.raises(ValueError, match="needs an artifact"):
+def test_export_checkpoint_without_artifact_prunes_nothing():
+    """No artifact exports the (e.g. edited) model as is."""
+    with patch("circuitkit.evaluation.save_pruned_checkpoint") as mock_save:
         quick.export_checkpoint(MagicMock(), None, "ckpt/x")
+    assert mock_save.call_args[0][1] == []
 
 
 def test_export_checkpoint_rejects_unknown_intervention():
@@ -520,17 +522,64 @@ def test_load_model_rejects_bad_algorithm():
 def test_load_model_sets_discovery_flags():
     """load_model must set the four hook flags so discovery doesn't crash."""
     pytest.importorskip("transformer_lens")
+    # Patch the class attribute: the dotted path "transformer_lens.HookedTransformer"
+    # resolves to the submodule of that name, not the class, in mock's importer.
+    from transformer_lens import HookedTransformer
 
     fake_model = MagicMock()
     fake_model.cfg = MagicMock()
 
-    with patch(
-        "transformer_lens.HookedTransformer.HookedTransformer.from_pretrained",
-        return_value=fake_model,
-    ):
+    with patch.object(HookedTransformer, "from_pretrained", return_value=fake_model):
         model = quick.load_model("gpt2", dtype="float32", device="cpu")
 
     assert model.cfg.use_attn_result is True
     assert model.cfg.use_split_qkv_input is True
     assert model.cfg.use_hook_mlp_in is True
     assert model.cfg.ungroup_grouped_query_attention is True
+
+
+def _save_tiny_tokenizer(path, vocab_size):
+    from tokenizers import Tokenizer
+    from tokenizers.models import WordLevel
+    from transformers import PreTrainedTokenizerFast
+
+    vocab = {f"t{i}": i for i in range(vocab_size)}
+    PreTrainedTokenizerFast(
+        tokenizer_object=Tokenizer(WordLevel(vocab, unk_token="t0")),
+        bos_token="t1",
+        eos_token="t2",
+        pad_token="t0",
+        unk_token="t0",
+    ).save_pretrained(path)
+
+
+def test_load_model_local_checkpoint_dir(tmp_path):
+    """A saved HF checkpoint dir (e.g. a SafeTune output) loads; arch comes from config.json."""
+    torch = pytest.importorskip("torch")
+    pytest.importorskip("transformer_lens")
+    from transformers import GPT2Config, GPT2LMHeadModel
+
+    torch.manual_seed(0)
+    hf = GPT2LMHeadModel(
+        GPT2Config(n_embd=32, n_layer=2, n_head=4, vocab_size=64, n_positions=64, n_ctx=64)
+    )
+    hf.eval().save_pretrained(tmp_path)
+    _save_tiny_tokenizer(tmp_path, 64)
+
+    model = quick.load_model(str(tmp_path), dtype="float32", device="cpu")
+
+    assert model.cfg.original_architecture == "GPT2LMHeadModel"
+    assert model.cfg.use_attn_result is True
+    tokens = torch.randint(3, 64, (2, 10))
+    with torch.no_grad():
+        ref = hf(tokens).logits.log_softmax(-1)
+        out = model(tokens).log_softmax(-1)  # from_pretrained centres the unembed
+    assert torch.allclose(out, ref, atol=1e-4)
+
+
+@pytest.mark.parametrize("model_type", ["aya_vision", "cohere_compass"])
+def test_load_model_rejects_vision_language_checkpoints(tmp_path, model_type):
+    pytest.importorskip("transformer_lens")
+    (tmp_path / "config.json").write_text(json.dumps({"model_type": model_type}))
+    with pytest.raises(ValueError, match="vision-language"):
+        quick.load_model(str(tmp_path), dtype="float32", device="cpu")

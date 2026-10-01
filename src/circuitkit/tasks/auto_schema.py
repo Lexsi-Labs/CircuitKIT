@@ -2,7 +2,7 @@
 Auto-Schema Detector for HuggingFace Datasets
 
 Automatically detects task type from column names and data patterns,
-enabling CircuitKit to work with any HF dataset without manual configuration.
+enabling CircuitKIT to work with any HF dataset without manual configuration.
 
 Key Components:
 - SchemaAnalyzer: Inspects dataset structure and infers task type

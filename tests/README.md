@@ -1,6 +1,14 @@
-# CircuitKit Test Suite
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../docs/assets/circuitkit-logo-white.png">
+    <img src="../docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
 
-This directory contains all tests for CircuitKit, organized by test type and category.
+# CircuitKIT Test Suite
+
+This directory contains all tests for CircuitKIT, organized by test type and category.
 
 ## Directory Structure
 
@@ -8,7 +16,7 @@ This directory contains all tests for CircuitKit, organized by test type and cat
 Unit tests for individual components and functions. Each test file focuses on a single module or feature.
 
 **Core Tests:**
-- `test_api.py` - CircuitKit main API functionality
+- `test_api.py` - CircuitKIT main API functionality
 - `test_bootstrap.py` - Task bootstrapping and initialization
 - `test_cli.py` - Command-line interface tests
 - `test_modules_exist.py` - Module import and structure verification

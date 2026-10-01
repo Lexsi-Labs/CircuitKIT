@@ -49,5 +49,5 @@ exclude *.temp
 # In-package data must ship in the sdist (the root-level `exclude *.csv` above
 # only matches root-level files, but without an explicit rule the src/ data was
 # omitted entirely). Keep in sync with [tool.setuptools.package-data].
-recursive-include src/circuitkit *.json *.csv
+recursive-include src/circuitkit *.json *.csv *.patch
 include src/circuitkit/backends/eap/py.typed

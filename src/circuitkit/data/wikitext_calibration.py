@@ -59,7 +59,7 @@ def _load_wikitext2_train_text():
         _caching_was_enabled = _ds.is_caching_enabled()
         _ds.disable_caching()
         try:
-            data = load_dataset("wikitext", "wikitext-2-raw-v1", split="train", keep_in_memory=True)
+            data = load_dataset("Salesforce/wikitext", "wikitext-2-raw-v1", split="train", keep_in_memory=True)
         finally:
             if _caching_was_enabled:
                 _ds.enable_caching()

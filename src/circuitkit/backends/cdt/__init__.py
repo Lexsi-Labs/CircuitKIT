@@ -1,7 +1,7 @@
 """
 CD-T (Contextual Decomposition for Transformers) backend.
 
-Sourced from the canonical CircuitKit fork. CD-T uses contextual
+Sourced from the canonical CircuitKIT fork. CD-T uses contextual
 decomposition to attribute predictions to source nodes via a
 forward-pass linearisation of every transformer component, rather
 than the gradient-based EAP family. Different paradigm: produces

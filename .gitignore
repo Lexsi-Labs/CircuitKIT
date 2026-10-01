@@ -32,7 +32,7 @@ ENV/
 env.bak/
 venv.bak/
 
-# CircuitKit Cache & Data
+# CircuitKIT Cache & Data
 cache/
 cache/**/*.csv
 logs/

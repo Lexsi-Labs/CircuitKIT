@@ -58,7 +58,7 @@ def calculate_manual_perplexity(model, tokenizer, predictions, device):
 def convert_eap_graph_to_circuitkit_scores(graph: Graph) -> dict[str, float]:
     """
     Converts node scores from an EAP-IG Graph object to the dictionary format
-    expected by CircuitKit's pruning functions.
+    expected by CircuitKIT's pruning functions.
 
     Maps 'aL.hH' -> 'AL.H' and 'mL' -> 'MLP L'.
     """
@@ -76,25 +76,25 @@ def convert_eap_graph_to_circuitkit_scores(graph: Graph) -> dict[str, float]:
             # get absolute value for score
             score = abs(score)
 
-            # Convert the node name to CircuitKit format
+            # Convert the node name to CircuitKIT format
             if isinstance(node, AttentionNode):
-                # EAP-IG: 'a1.h5' -> CircuitKit: 'A1.5'
+                # EAP-IG: 'a1.h5' -> CircuitKIT: 'A1.5'
                 circuit_kit_name = f"A{node.layer}.{node.head}"
             elif isinstance(node, MLPNode):
-                # EAP-IG: 'm1' -> CircuitKit: 'MLP 1'
+                # EAP-IG: 'm1' -> CircuitKIT: 'MLP 1'
                 circuit_kit_name = f"MLP {node.layer}"
             else:
                 continue  # Skip input/logit nodes
 
             node_scores_dict[circuit_kit_name] = score
 
-    logger.info(f"Converted {len(node_scores_dict)} node scores from EAP-IG graph to CircuitKit format.")
+    logger.info(f"Converted {len(node_scores_dict)} node scores from EAP-IG graph to CircuitKIT format.")
     return node_scores_dict
 
 
 def convert_eap_edge_scores_to_node_scores(graph: Graph) -> dict[str, float]:
     """
-    Converts edge scores from an EAP-IG Graph object to node scores for CircuitKit.
+    Converts edge scores from an EAP-IG Graph object to node scores for CircuitKIT.
     A node's score is calculated as the mean absolute score of all its outgoing edges.
     """
     outgoing_scores_by_node = defaultdict(list)

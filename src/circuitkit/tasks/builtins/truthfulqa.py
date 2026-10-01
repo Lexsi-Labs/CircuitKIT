@@ -314,7 +314,7 @@ class TruthfulQATaskSpec:
         """
         from datasets import load_dataset
 
-        ds = load_dataset("truthful_qa", "multiple_choice", split="validation")
+        ds = load_dataset("truthfulqa/truthful_qa", "multiple_choice", split="validation")
 
         examples: List[Dict[str, Any]] = []
         for ex in ds:
@@ -412,7 +412,7 @@ class TruthfulQATaskSpec:
         try:
             from datasets import load_dataset
 
-            ds = load_dataset("truthful_qa", "multiple_choice", split="validation")
+            ds = load_dataset("truthfulqa/truthful_qa", "multiple_choice", split="validation")
             indices = list(range(len(ds)))
             rng = _random.Random(seed)
             rng.shuffle(indices)

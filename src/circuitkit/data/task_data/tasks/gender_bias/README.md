@@ -1,3 +1,11 @@
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../docs/assets/circuitkit-logo-white.png">
+    <img src="../../../../../../docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
+
 # Gender bias
 
 Probes gender-stereotype behavior via occupation-to-pronoun coreference. Prompts end just before a subject pronoun ("The {occupation} said that"), with the occupation as the only gender cue (Winogender schema, Rudinger et al. 2018).

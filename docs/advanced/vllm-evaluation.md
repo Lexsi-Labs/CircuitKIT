@@ -1,6 +1,6 @@
 # vLLM Evaluation
 
-CircuitKit supports fast downstream benchmark evaluation via **vLLM**, accessed through lm-evaluation-harness's native vLLM backend. CircuitKit does not reimplement or wrap vLLM — it writes a standard HuggingFace checkpoint and hands it to `lm-eval`, which handles the vLLM serving.
+CircuitKIT supports fast downstream benchmark evaluation via **vLLM**, accessed through lm-evaluation-harness's native vLLM backend. CircuitKIT does not reimplement or wrap vLLM — it writes a standard HuggingFace checkpoint and hands it to `lm-eval`, which handles the vLLM serving.
 
 ---
 
@@ -20,7 +20,7 @@ vLLM provides a speedup for throughput-bound benchmark evaluation. For GPT-2 sca
 
 ## Installation
 
-vLLM is not part of any CircuitKit extra:
+vLLM is not part of any CircuitKIT extra:
 
 ```bash
 pip install vllm
@@ -107,7 +107,7 @@ hflm = HFLM(
 results = evaluator.simple_evaluate(model=hflm, tasks=["boolq"])
 ```
 
-Or via CircuitKit's own benchmark wrapper:
+Or via CircuitKIT's own benchmark wrapper:
 
 ```python
 import circuitkit as ck

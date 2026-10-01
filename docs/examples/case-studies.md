@@ -25,7 +25,7 @@ plumbing, not the domain claim).
 | 20 | [Transit edge deployment](https://github.com/Lexsi-Labs/circuitkit/blob/main/examples/case-studies/20-transit-edge-deployment.py) | ARM edge hardware (AFC gates) | `Qwen/Qwen2.5-0.5B-Instruct` | script |
 | 21 | [Quantization-permanent unlearning](https://github.com/Lexsi-Labs/circuitkit/blob/main/examples/case-studies/21-quantization-permanent-unlearning.ipynb) | Unlearning that survives fine-tuning | `Qwen/Qwen2.5-1.5B-Instruct` | notebook |
 | 22 | [Gender bias audit & mitigation](https://github.com/Lexsi-Labs/circuitkit/blob/main/examples/case-studies/22-gender-bias-audit-and-mitigation.ipynb) | Responsible AI loop | `Qwen/Qwen2.5-1.5B-Instruct` | notebook |
-| 23 | [Jailbreak safety steering](https://github.com/Lexsi-Labs/circuitkit/blob/main/examples/case-studies/23-jailbreak-safety-steering.ipynb) | Jailbreak defense | `Qwen/Qwen2.5-1.5B-Instruct` | notebook |
+| 23 | [Jailbreak refusal localization (multi-model)](https://github.com/Lexsi-Labs/circuitkit/blob/main/examples/case-studies/23-jailbreak-refusal-multi-model.ipynb) | Localize refusal across 3 models; find vs. act | `Llama-3.2-1B` / `Qwen2.5-1.5B` / `gemma-2-2b` | notebook |
 | 24 | [Safety refusal on custom data](https://github.com/Lexsi-Labs/circuitkit/blob/main/examples/case-studies/24-safety-refusal-custom-data.py) | Custom contrastive pairs (safety) | `gpt2` | script |
 
 ## Which one should I read?

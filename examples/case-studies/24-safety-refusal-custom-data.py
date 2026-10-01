@@ -3,7 +3,7 @@
 
 WHAT THIS VALIDATES (and what it does NOT)
 ------------------------------------------
-This script validates CircuitKit's *custom-data path* end-to-end on a
+This script validates CircuitKIT's *custom-data path* end-to-end on a
 safety-relevant, instruction-style task. It is the concrete answer to the
 review question "can you run one safety dataset end-to-end through the
 custom-data path?".
@@ -11,7 +11,7 @@ custom-data path?".
 The honest capability being demonstrated:
 
   * Safety / instruction prompts are NOT syntactic templates (IOI-style named
-    entities, subject-verb-object). CircuitKit's auto-corruption strategies
+    entities, subject-verb-object). CircuitKIT's auto-corruption strategies
     (entity_swap, token_swap, paraphrase, distractor, role_swap) were designed
     for those syntactic templates and do NOT produce meaningful contrastive
     pairs for instruction-tuned / safety prompts. So for a task like this you

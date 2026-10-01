@@ -1,6 +1,6 @@
 """CD-T adapter: runs the full contextual-decomposition forward-pass
 importance metric on the TransformerLens checkpoint already loaded by
-CircuitKit's discover_circuit pipeline.
+CircuitKIT's discover_circuit pipeline.
 
 CD-T (contextual decomposition for transformers, Singh et al. 2018;
 transformer extension Sun et al. 2024) is a gradient-free forward-pass
@@ -202,10 +202,31 @@ def _run_simple_cdt(
                     _, cache = tl_model.run_with_cache(in_ids)
 
                 for layer in range(n_layers):
-                    # Attention pattern: [batch, head, query_pos, key_pos]
+                    # Attention pattern: [batch, head, query_pos, key_pos].
+                    # TL always expands K to n_heads before computing scores
+                    # (see grouped_query_attention.calculate_attention_scores),
+                    # so hook_pattern is n_heads-sized regardless of GQA config.
                     pattern = cache[f"blocks.{layer}.attn.hook_pattern"]
-                    # Value matrix: [batch, key_pos, head, d_head]
+                    # Value matrix shape depends on cfg.ungroup_grouped_query_attention:
+                    #   ungroup=True  (api.py:discover_circuit default):
+                    #       [batch, key_pos, n_heads, d_head]
+                    #   ungroup=False (direct adapter callers, e.g. evaluation):
+                    #       [batch, key_pos, n_key_value_heads, d_head]
+                    # Under GQA (cohere2: n_heads=16 vs n_kv_heads=4) the second
+                    # form crashes the per-head scoring loop below at h=n_kv_heads
+                    # with an IndexError. Expand defensively — matches what TL
+                    # itself does in GroupedQueryAttention.calculate_z_scores.
                     value = cache[f"blocks.{layer}.attn.hook_v"]
+                    if value.shape[2] != n_heads:
+                        if n_heads % value.shape[2] != 0:
+                            raise RuntimeError(
+                                f"CD-T: hook_v head count {value.shape[2]} does not "
+                                f"divide cfg.n_heads={n_heads} evenly at layer={layer}; "
+                                f"cannot expand for per-head scoring."
+                            )
+                        value = torch.repeat_interleave(
+                            value, dim=2, repeats=n_heads // value.shape[2]
+                        )
                     # Per-head contribution at the target position:
                     # weighted V where weights are pattern[target_pos, :].
                     # Shape: [batch, head, key_pos] @ [batch, key_pos, head, d_head]

@@ -1,6 +1,6 @@
 # Architecture Registry: Multi-Model Support
 
-CircuitKit now supports pruning and quantization across **11 different Transformer architectures** through a unified, extensible **Architecture Registry**.
+CircuitKIT now supports pruning and quantization across **11 different Transformer architectures** through a unified, extensible **Architecture Registry**.
 
 ## Supported Models
 
@@ -190,7 +190,7 @@ detect_model_architecture(model)  # Clear error with supported models list
 
 ```
 =========================================================================
-Model type 'unknown_model' is not yet supported in CircuitKit.
+Model type 'unknown_model' is not yet supported in CircuitKIT.
 
 Supported models: llama, qwen, gemma, mistral, phi, falcon, gpt2, ...
 

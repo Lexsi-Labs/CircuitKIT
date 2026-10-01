@@ -1,3 +1,11 @@
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../docs/assets/circuitkit-logo-white.png">
+    <img src="../../../docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
+
 # tasks
 
 The `TaskSpec` abstraction and its registry, used for multi-task circuit discovery. It also handles dataset validation and auto-schema detection for arbitrary HuggingFace datasets.

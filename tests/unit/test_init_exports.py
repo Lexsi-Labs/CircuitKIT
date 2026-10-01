@@ -74,7 +74,7 @@ class TestPackageMetadata:
         assert isinstance(circuitkit.__version__, str)
 
     def test_version_matches_installed_metadata(self):
-        import tomllib
+        tomllib = pytest.importorskip("tomllib")  # stdlib only on Python 3.11+
         from pathlib import Path
 
         import circuitkit

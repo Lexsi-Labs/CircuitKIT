@@ -1,5 +1,5 @@
 """
-The ``Circuit`` result class for CircuitKit's flat front-door API.
+The ``Circuit`` result class for CircuitKIT's flat front-door API.
 
 A :class:`Circuit` is a thin, typed wrapper around the artifacts produced by
 :func:`circuitkit.discover` (and the lower-level
@@ -255,8 +255,16 @@ class Circuit:
         elif self.scores:
             import json
 
+            from .artifacts.scores import interop_fields
+
+            data = {"node_scores": self.scores}
+            data.update(
+                interop_fields(
+                    self.scores, self.model_name, method=f"discover.{self.algorithm or 'unknown'}"
+                )
+            )
             with open(path.parent / f"{path.stem}_scores.json", "w", encoding="utf-8") as f:
-                json.dump({"node_scores": self.scores}, f, indent=2)
+                json.dump(data, f, indent=2, default=str)
         return path
 
     # ------------------------------------------------------------------ #

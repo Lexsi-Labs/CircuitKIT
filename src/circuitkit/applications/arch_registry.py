@@ -8,7 +8,7 @@ Each family entry defines:
   - name: Human-readable description
   - models: List of HF model_type values that use this architecture
   - layers_path, attn, mlp: Layer structure definitions
-  - status: PRODUCTION, READY, NOT_STARTED
+  - status: PRODUCTION, READY, EXPERIMENTAL, NOT_STARTED
   - notes: Special handling required
 
 Usage:
@@ -116,6 +116,118 @@ MODEL_ARCH_REGISTRY = {
         "status": "PRODUCTION",
         "priority": 3,
         "notes": "Gemma-3 text decoder; LLaMA-compatible nn.Linear layout, GQA",
+    },
+    # TIER: EXPERIMENTAL — discovery supported via the circuitkit TransformerLens
+    # port (circuitkit.backends._tl_compat), not upstream TL. Intervention
+    # (pruning/quantization) path not yet validated.
+    "cohere": {
+        "name": "Cohere Command R / Aya Expanse (cohere), Command R7B / Tiny Aya (cohere2)",
+        "models": ["cohere", "cohere2"],  # HF model_type values
+        "layers_path": ["model.layers"],
+        "attn": {
+            "module": "self_attn",
+            "k_proj": "k_proj",
+            "v_proj": "v_proj",
+            "q_proj": "q_proj",
+            "o_proj": "o_proj",
+            "head_dim": "head_dim",
+        },
+        "mlp": {
+            "gate_proj": "gate_proj",
+            "up_proj": "up_proj",
+            "down_proj": "down_proj",
+        },
+        "gqa_capable": True,
+        "transformer_lens_support": "full",  # via circuitkit._tl_compat port (not upstream TL)
+        "status": "EXPERIMENTAL",
+        "priority": 11,
+        "notes": (
+            "cohere2 (tiny-aya, Command R7B): parallel attn+MLP block with a "
+            "single input_layernorm, GQA, and per-layer sliding-window vs full "
+            "attention (NoPE on full-attention layers). cohere (Aya Expanse): "
+            "same shape but rotary applies to every layer (no NoPE, no sliding "
+            "window). Discovery via the circuitkit _tl_compat TransformerLens "
+            "port; gated weights (Command R7B, Aya Expanse, tiny-aya) need "
+            "HF_TOKEN. See docs/advanced/tiny-aya.md.\n"
+            "Stage 5 intervention validation (real weights, all three models: "
+            "tiny-aya/CohereLabs/tiny-aya-base, Command R7B/CohereLabs/"
+            "c4ai-command-r7b-12-2024, Aya Expanse/CohereLabs/aya-expanse-8b): "
+            "evaluation (circuitkit.api.evaluate_circuit faithfulness, "
+            "patching+ablation pillars) confirmed finite on greater_than for "
+            "all three. Pruning (applications/pruning/score_extractor."
+            "build_importance_dict) confirmed resolving real k_proj/gate_proj "
+            "nn.Linear modules via this family's layers_path/attn/mlp config "
+            "on a real layer subset for all three. Quantization "
+            "(applications/quantization/quant_utils.build_patterns) confirmed "
+            "its fnmatch patterns match real nn.Linear submodules on all three "
+            "real loaded models; optimum-quanto's actual quantize()/freeze() "
+            "call itself was NOT run (optional dependency not installed in the "
+            "validation environment) -- only target-module resolution was "
+            "exercised, which is what this family config is responsible for. "
+            "Weight steering (applications/steering/weight_steering."
+            "CircuitWeightSteering) confirmed resolving real per-head W_Q/W_K/"
+            "W_V/W_O weight slices (including the GQA query-head -> kv-head "
+            "floor-div mapping) and applying a steering vector on real weights "
+            "for all three, producing a still-finite forward pass; note this "
+            "module's circuit format ('A{layer}.{head}') is unrelated to and "
+            "does not match the discovery Graph's node-name convention "
+            "('a{layer}.h{head}') -- a pre-existing property of the module, "
+            "not something this family's registry entry controls. See "
+            "tests/regression/test_{cohere,command_r7b,aya_expanse}_"
+            "{evaluation,interventions}.py."
+        ),
+    },
+    "smollm3": {
+        "name": "SmolLM3-3B",
+        "models": ["smollm3"],  # HF model_type value
+        "layers_path": ["model.layers"],
+        "attn": {
+            "module": "self_attn",
+            "k_proj": "k_proj",
+            "v_proj": "v_proj",
+            "q_proj": "q_proj",
+            "o_proj": "o_proj",
+            "head_dim": "head_dim",
+        },
+        "mlp": {
+            "gate_proj": "gate_proj",
+            "up_proj": "up_proj",
+            "down_proj": "down_proj",
+        },
+        "gqa_capable": True,
+        "transformer_lens_support": "full",  # via circuitkit._tl_compat port (not upstream TL)
+        "status": "EXPERIMENTAL",
+        "priority": 12,
+        "notes": (
+            "SmolLM3-3B: Llama-family (sequential attn/MLP block, RMSNorm, "
+            "gated SiLU MLP), GQA, standard (non-interleaved) Llama rotary with "
+            "per-layer NoPE driven by the HF config's no_rope_layers list (every "
+            "4th layer skips rotary on the real checkpoint), tied embeddings, no "
+            "logit scale. Discovery via the circuitkit _tl_compat TransformerLens "
+            "port; public weights, no HF_TOKEN required. See docs/advanced/ "
+            "(SmolLM3 page, once added in Stage 6).\n"
+            "Stage 5 intervention validation (real weights, HuggingFaceTB/"
+            "SmolLM3-3B): evaluation (circuitkit.api.evaluate_circuit "
+            "faithfulness, patching+ablation pillars) confirmed finite on "
+            "greater_than. Pruning (applications/pruning/score_extractor."
+            "build_importance_dict) confirmed resolving real k_proj/gate_proj "
+            "nn.Linear modules via this family's layers_path/attn/mlp config on "
+            "a real layer subset. Quantization (applications/quantization/"
+            "quant_utils.build_patterns) confirmed its fnmatch patterns match "
+            "real nn.Linear submodules on the real loaded model; "
+            "optimum-quanto's actual quantize()/freeze() call itself was NOT "
+            "run (optional dependency not installed in the validation "
+            "environment) -- only target-module resolution was exercised, "
+            "which is what this family config is responsible for. Weight "
+            "steering (applications/steering/weight_steering."
+            "CircuitWeightSteering) confirmed resolving real per-head W_Q/W_K/"
+            "W_V/W_O weight slices (including the 16:4 GQA query-head -> "
+            "kv-head floor-div mapping) and applying a steering vector on real "
+            "weights, producing a still-finite forward pass. This model was "
+            "small enough (~6GB bf16) that no CPU fallback was needed for any "
+            "Stage 5 gate, unlike the two ~7-8B cohere-family models. See "
+            "tests/regression/test_smollm3_{evaluation,interventions}.py."
+        ),
     },
     # TIER 2: READY FOR SUPPORT (High confidence, minimal testing needed)
     "mistral": {
@@ -313,3 +425,6 @@ SUPPORTED_FAMILIES = list(MODEL_ARCH_REGISTRY.keys())
 SUPPORTED_MODELS = list(_MODEL_TO_FAMILY.keys())  # All HF model_type values
 PRODUCTION_FAMILIES = [f for f, cfg in MODEL_ARCH_REGISTRY.items() if cfg["status"] == "PRODUCTION"]
 READY_FAMILIES = [f for f, cfg in MODEL_ARCH_REGISTRY.items() if cfg["status"] == "READY"]
+EXPERIMENTAL_FAMILIES = [
+    f for f, cfg in MODEL_ARCH_REGISTRY.items() if cfg["status"] == "EXPERIMENTAL"
+]
