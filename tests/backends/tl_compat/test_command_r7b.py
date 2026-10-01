@@ -120,9 +120,7 @@ class TestCommandR7bConfigConversion:
         # logit_scale is folded at weight-conversion time, not threaded
         # through the HookedTransformerConfig -- same contract as tiny-aya.
         assert "logit_scale" not in cfg_dict
-        # n_ctx is capped, not the real max_position_embeddings=132096 --
-        # see TestCommandR7bContextLengthCap below for why.
-        assert cfg_dict["n_ctx"] == cohere_patch._MAX_SAFE_N_CTX
+        assert cfg_dict["n_ctx"] == fake_hf_cfg.max_position_embeddings == 132096
 
     def test_sliding_window_pattern_4_matches_real_layer_types(self):
         # sliding_window_pattern=4 -> SWA, SWA, SWA, full, repeating; every
@@ -156,35 +154,19 @@ class TestCommandR7bConfigConversion:
         assert cfg.attn_types[0] == "local"
 
 
-class TestCommandR7bContextLengthCap:
-    """Command R7B's real max_position_embeddings is 132096. TL's
-    AbstractAttention allocates a *dense* n_ctx x n_ctx causal mask per
-    attention block -- at the real value that is a ~65 GB float32 tensor for
-    a single layer, which OOMs model construction before ``ck.load_model()``
-    even finishes (discovered while running the Stage 2 real-weight parity
-    gate: HookedTransformer.from_pretrained silently allocated the full
-    132096x132096 mask and was killed by the OOM killer). TL's own stock
-    converters hit this for other long-context models and cap n_ctx in the
-    config they return for exactly this reason; this pins that Command R7B
-    does the same and by how much."""
+class TestCommandR7bContextLength:
+    """TL 3.8 builds causal masks for the active input length, so preserve the
+    checkpoint's full max_position_embeddings in its model config."""
 
-    def test_n_ctx_is_capped_not_the_real_132096(self):
+    def test_n_ctx_preserves_the_real_132096(self):
         fake_hf_cfg = _make_command_r7b_hf_config()
         assert fake_hf_cfg.max_position_embeddings == 132096
         with patch("transformers.AutoConfig.from_pretrained", return_value=fake_hf_cfg):
             cfg_dict = tl_loading.convert_hf_model_config(MODEL_NAME)
-        assert cfg_dict["n_ctx"] == 8192
-        assert cfg_dict["n_ctx"] < fake_hf_cfg.max_position_embeddings
+        assert cfg_dict["n_ctx"] == fake_hf_cfg.max_position_embeddings
 
-    def test_cap_covers_the_sliding_window_boundary_test(self):
-        """The parity gate's sliding-window-boundary test runs a
-        window(4096) + 100 token sequence; the cap must stay comfortably
-        above that or that gate becomes unrunnable too."""
-        assert cohere_patch._MAX_SAFE_N_CTX > 4096 + 100
-
-    def test_cap_is_a_floor_not_a_ceiling_on_small_models(self):
-        """A hypothetical short-context cohere2 model must not be padded up
-        to the cap -- min() should take the smaller of the two."""
+    def test_short_context_is_preserved(self):
+        """A short-context checkpoint retains its own configured limit."""
         fake_hf_cfg = _make_command_r7b_hf_config(max_position_embeddings=2048)
         with patch("transformers.AutoConfig.from_pretrained", return_value=fake_hf_cfg):
             cfg_dict = tl_loading.convert_hf_model_config(MODEL_NAME)

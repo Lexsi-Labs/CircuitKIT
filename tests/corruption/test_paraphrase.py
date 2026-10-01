@@ -109,7 +109,7 @@ class TestCacheOperations:
                     cache_file = Path(tmpdir) / "paraphrase_cache.json"
                     assert cache_file.exists()
 
-                    loaded = json.loads(cache_file.read_text())
+                    loaded = json.loads(cache_file.read_text(encoding="utf-8"))
                     assert loaded["test_key"] == "test_value"
 
 

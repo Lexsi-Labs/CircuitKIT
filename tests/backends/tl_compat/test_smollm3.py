@@ -56,8 +56,8 @@ MODEL_NAME = "HuggingFaceTB/SmolLM3-3B"
 # integration guide): 36 layers, d_model 2048, 16 query / 4 KV heads, d_head
 # 128 (hidden_size // n_heads, not an explicit config field), d_mlp 11008
 # (gated SiLU), vocab 128256, rope_theta 5000000, rms_norm_eps 1e-6, tied
-# embeddings, max_position_embeddings 65536 (> the port's _MAX_SAFE_N_CTX
-# cap), no_rope_layers = [1,1,1,0] * 9 (NoPE every 4th layer, 0-indexed at
+# embeddings, max_position_embeddings 65536, no_rope_layers = [1,1,1,0] * 9
+# (NoPE every 4th layer, 0-indexed at
 # positions 3, 7, 11, ...).
 _N_LAYERS = 36
 _NO_ROPE_LAYERS = [1, 1, 1, 0] * (_N_LAYERS // 4)
@@ -136,16 +136,14 @@ class TestSmolLM3ConfigConversion:
         # No logit_scale for SmolLM3 -- unlike the whole cohere family.
         assert "logit_scale" not in cfg_dict
 
-    def test_real_context_length_is_capped(self):
-        """max_position_embeddings=65536 exceeds the port's _MAX_SAFE_N_CTX
-        (8192) -- must be capped, not padded up (the OOM-avoidance case, same
-        as Command R7B's 132096; unlike Aya Expanse's 8192, which sits at the
-        cap exactly)."""
+    def test_real_context_length_is_preserved(self):
+        """TL 3.8 builds causal masks for the active input length, so retain
+        the checkpoint's full max_position_embeddings in the config."""
         fake_hf_cfg = _make_smollm3_hf_config(head_dim=128)
         assert fake_hf_cfg.max_position_embeddings == 65536
         with patch("transformers.AutoConfig.from_pretrained", return_value=fake_hf_cfg):
             cfg_dict = tl_loading.convert_hf_model_config(MODEL_NAME)
-        assert cfg_dict["n_ctx"] == smollm3_patch._MAX_SAFE_N_CTX == 8192
+        assert cfg_dict["n_ctx"] == fake_hf_cfg.max_position_embeddings == 65536
 
     def test_head_dim_fallback_when_config_omits_it(self):
         """SmolLM3Config does not always set an explicit head_dim (confirmed

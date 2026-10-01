@@ -40,7 +40,7 @@ def _read_rows(run_dir: Path, script_glob: str) -> Dict[str, List[Dict[str, Any]
         if not rows_path.exists():
             continue
         try:
-            rows = json.loads(rows_path.read_text())
+            rows = json.loads(rows_path.read_text(encoding="utf-8"))
             if isinstance(rows, list):
                 out[script_dir.name] = rows
         except json.JSONDecodeError:
@@ -80,7 +80,7 @@ def main() -> int:
                         rp = child / "rows.json"
                         if rp.exists():
                             try:
-                                apps_data[n] = json.loads(rp.read_text())
+                                apps_data[n] = json.loads(rp.read_text(encoding="utf-8"))
                                 seen_apps.add(n)
                             except json.JSONDecodeError:
                                 pass
@@ -89,7 +89,7 @@ def main() -> int:
                         rp = child / "rows.json"
                         if rp.exists():
                             try:
-                                bench_data[n] = json.loads(rp.read_text())
+                                bench_data[n] = json.loads(rp.read_text(encoding="utf-8"))
                                 seen_bench.add(n)
                             except json.JSONDecodeError:
                                 pass

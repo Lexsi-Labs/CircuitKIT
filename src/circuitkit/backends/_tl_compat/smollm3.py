@@ -1,4 +1,4 @@
-"""The SmolLM3 port for TransformerLens 2.18 / 3.8: SmolLM3-3B (``SmolLM3ForCausalLM``).
+"""The SmolLM3 port for TransformerLens 3.8: SmolLM3-3B (``SmolLM3ForCausalLM``).
 
 Registers ``HuggingFaceTB/SmolLM3-3B`` as a known TransformerLens model and
 teaches ``transformer_lens.loading_from_pretrained`` how to build a
@@ -86,22 +86,6 @@ SMOLLM3_MODEL_NAMES = [
 ]
 
 _SMOLLM3_ARCHITECTURE = "SmolLM3ForCausalLM"
-
-# SmolLM3-3B ships max_position_embeddings=65536. TL's AbstractAttention
-# allocates a *dense* n_ctx x n_ctx causal mask per attention block -- at the
-# real value that would be a large (>16 GB float32) tensor per layer, the
-# same class of OOM the cohere.py port's own _MAX_SAFE_N_CTX cap (also 8192)
-# exists to avoid for Command R7B's 132096 (see cohere.py's docstring for the
-# full rationale, including the reference to TL's own stock converters doing
-# the same thing for other long-context models). Duplicated here rather than
-# imported from cohere.py: this constant is not exposed as shared
-# _tl_compat infrastructure (it lives as a private module-level constant in
-# cohere.py, not in registry.py), and mirroring the same safe value in a
-# self-contained new port module is preferable to reaching into another
-# port's private constant. Callers needing more can still pass
-# ``HookedTransformer.from_pretrained(..., n_ctx=<value>)``, applied *after*
-# this converter runs.
-_MAX_SAFE_N_CTX = 8192
 
 # Per official_model_name, the resolved ``no_rope_layers`` list (one entry per
 # block; 0 = skip rotary, non-zero = apply it) -- see the module docstring for
@@ -266,7 +250,7 @@ def _convert_smollm3_config(official_model_name: str, **kwargs: Any) -> dict:
         "n_key_value_heads": n_kv_heads,
         "d_mlp": hf_config.intermediate_size,
         "n_layers": n_layers,
-        "n_ctx": min(hf_config.max_position_embeddings, _MAX_SAFE_N_CTX),
+        "n_ctx": hf_config.max_position_embeddings,
         "eps": hf_config.rms_norm_eps,
         "d_vocab": hf_config.vocab_size,
         "act_fn": hf_config.hidden_act,
@@ -323,7 +307,7 @@ def _wrap_get_pretrained_state_dict(
             kwargs.setdefault("use_safetensors", True)
             hf_model = AutoModelForCausalLM.from_pretrained(
                 official_model_name,
-                torch_dtype=dtype,
+                dtype=dtype,
                 token=_resolve_hf_token(),
                 **kwargs,
             )

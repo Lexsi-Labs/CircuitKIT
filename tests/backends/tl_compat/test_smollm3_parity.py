@@ -80,7 +80,7 @@ def hf_model():
 
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_NAME,
-        torch_dtype=torch.float32,
+        dtype=torch.float32,
         token=_hf_token(),
         use_safetensors=True,
         low_cpu_mem_usage=True,

@@ -144,7 +144,7 @@ def _build_lora_model(base_model_name: str, device: str,
     tok = AutoTokenizer.from_pretrained(base_model_name)
     tok.pad_token = tok.eos_token
     model = AutoModelForCausalLM.from_pretrained(
-        base_model_name, torch_dtype=torch.float32,
+        base_model_name, dtype=torch.float32,
         device_map={"": device},
     )
 

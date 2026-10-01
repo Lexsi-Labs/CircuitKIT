@@ -79,7 +79,7 @@ class TestPackageMetadata:
 
         import circuitkit
         pyproject = Path(__file__).parents[2] / "pyproject.toml"
-        metadata_version = tomllib.loads(pyproject.read_text())["project"]["version"]
+        metadata_version = tomllib.loads(pyproject.read_text(encoding="utf-8"))["project"]["version"]
         assert circuitkit.__version__ == metadata_version
 
     def test_author_is_string(self):

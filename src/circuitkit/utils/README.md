@@ -23,7 +23,6 @@ Low-level helpers used across CircuitKIT: device, config, and logging setup, mem
 - `bootstrap.py` — `bootstrap`: resampling loop for metric confidence intervals.
 - `debug.py` / `debugging.py` — `Debugger` and `PerformanceProfiler`, breakpoint/watch and timing/memory profiling utilities.
 - `profiling.py` — `PerformanceMetrics` and detailed profiling/monitoring with optimization recommendations.
-- `optimization.py` — gradient checkpointing and mixed-precision optimization helpers.
 - `async_processing.py` — `AsyncIO` and concurrent/batch I/O utilities.
 - `distributed.py` — `DistributedTraining`: multi-GPU/multi-node (DDP) helpers.
 - `corruption_validation.py` — deprecated compatibility shim re-exporting `corruption.validators`.

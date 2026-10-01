@@ -17,6 +17,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- TransformerLens compatibility now targets **3.8.0 only**; the former 2.18 path
+  is not supported. Cohere config conversion is maintained in `_tl_compat/cohere.py`,
+  and Cohere/SmolLM3/Gemma-4 converters preserve the HF context limit because TL 3.8
+  constructs causal masks for active input lengths.
+- Gemma-4 and Sarvam-MoE are documented as discovery-only experimental ports, with
+  weight-memory estimates and Sarvam's `trust_remote_code=True` requirement.
+- TransformerLens patch `0005-memory-no-weight-copies` is now opt-in via
+  `CIRCUITKIT_TL_MEMORY_PATCH=1` because it changes bf16 accumulation order.
+- CUDA `expandable_segments` is configured at model load, not when importing
+  CircuitKIT, avoiding an allocator side effect from a package import.
+- Gemma-4 and Sarvam-MoE TransformerLens ports are documented as discovery-only;
+  end-to-end evaluation/intervention support is not claimed.
 - **Logo refresh.** New chip-mark identity across the repo: the CircuitKIT lockup (wordmark now spelled with a capital "KIT"),
   a vector mark, and a favicon set, all in `docs/assets/`. The docs header, favicon and landing hero use them, and every README,
   the root docs and the example notebooks carry the lockup. The lockup PNGs have true transparency (no baked-in halo). The old
@@ -92,8 +104,9 @@ The next release after 0.1.8; the release pipeline assigns its number. (The `[1.
   `node_scores` (`CircuitScores.to_json(top_fraction=...)`). Readers of
   `node_scores` are unchanged; `CircuitScores.from_dict` ignores the new keys.
 - `arch_registry`: the `cohere` family's name lists Aya Expanse and Tiny Aya.
-- TransformerLens patch series: Gemma-4 (`google/gemma-4-31B-it`) and Sarvam-MoE
-  (`sarvamai/sarvam-30b`) `HookedTransformer` support on transformer-lens 3.8.0.
+- Experimental, discovery-only TransformerLens ports for Gemma-4
+  (`google/gemma-4-31B-it`) and Sarvam-MoE (`sarvamai/sarvam-30b`) on
+  transformer-lens 3.8.0; evaluation/intervention support is not claimed.
   It replaces the TransformerLens fork vendored in the audit repo.
   The new `0004-gemma4-hf-parity` fixes three places where that fork disagreed
   with Hugging Face on Gemma-4: global-layer RoPE, the final logit softcap and
@@ -197,10 +210,11 @@ on gpt2 (fp32) and Llama-3.2-1B-Instruct (bf16):
 - **`discover()` -> `evaluate()` reloaded the model.** `Pipeline` now loads the
   model once via `_ensure_model()` and threads it through both
   `discover_circuit()` and `evaluate_circuit()`.
-- **`expandable_segments:True`** is now enabled for the CUDA allocator at
-  first use (`circuitkit.utils.device.enable_expandable_segments()`, with a
+- **`expandable_segments:True`** is enabled at model-load time, not at package
+  import (`circuitkit.utils.device.enable_expandable_segments()`, with a
   `CIRCUITKIT_NO_EXPANDABLE_SEGMENTS` opt-out), reducing fragmentation from
-  the variable-shaped activation buffers above.
+  variable-shaped activation buffers without changing allocator state merely
+  by importing CircuitKIT.
 - **Every faithfulness pillar recomputed the same baselines.** Pillar 1
   already computes the clean/corrupt baselines and the patched circuit's
   score; Pillars 2 and 5 now reuse them instead of repeating those forwards.

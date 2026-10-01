@@ -384,7 +384,7 @@ class Pipeline:
 
             self._hf_model = AutoModelForCausalLM.from_pretrained(
                 self.model_name,
-                torch_dtype=torch_dtype,
+                dtype=torch_dtype,
                 device_map="auto" if self.device == "cuda" else self.device,
             )
         return self._hf_model

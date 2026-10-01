@@ -1,4 +1,4 @@
-"""The cohere port for TransformerLens 2.18 / 3.8: tiny-aya, Command R7B (cohere2)
+"""The cohere port for TransformerLens 3.8: tiny-aya, Command R7B (cohere2)
 and Aya Expanse 8B (cohere1).
 
 Registers the tiny-aya, Command R7B and Aya Expanse repo IDs as known
@@ -126,23 +126,6 @@ AYA_EXPANSE_MODEL_NAMES = [
 _COHERE2_ARCHITECTURE = "Cohere2ForCausalLM"
 _COHERE1_ARCHITECTURE = "CohereForCausalLM"
 
-# Command R7B ships max_position_embeddings=132096. TL's AbstractAttention
-# allocates a *dense* n_ctx x n_ctx causal mask per attention block
-# (torch.tril(torch.ones((n_ctx, n_ctx)))) -- at the real value that is a
-# ~65 GB float32 tensor for a single layer, which OOMs on ordinary hardware
-# before the model even finishes constructing. TL's own stock converters hit
-# this for other long-context models (Gemma-3 up to 131K, several others)
-# and cap n_ctx in the returned config for exactly this reason ("capped due
-# to memory issues" in transformer_lens.loading_from_pretrained). This value
-# matches Gemma-3's own safe default and comfortably covers this port's
-# sliding-window parity test (past the 4096-token window). Callers that need
-# more can still raise it explicitly via
-# ``HookedTransformer.from_pretrained(..., n_ctx=<value>)`` --
-# get_pretrained_model_config applies that override *after* this converter
-# runs, so it is never silently clamped back down.
-_MAX_SAFE_N_CTX = 8192
-
-
 def _resolve_hf_token() -> Any:
     """Pick the best HF auth to hand ``transformers`` for a gated-repo fetch.
 
@@ -223,6 +206,24 @@ def _cohere1_should_skip_rotary(cfg: Any, layer_id: Any, layer_attn_type: str) -
 def _wrap_convert_hf_model_config(original: Callable[..., dict]) -> Callable[..., dict]:
     def wrapped(model_name: str, **kwargs: Any) -> dict:
         port = _registry.resolve_by_model_name(model_name)
+        if port is None:
+            # Local adapter/checkpoint folders are not in TransformerLens's or
+            # our Hub-name tables. Resolve the architecture from their local
+            # config so the same cohere.py port handles them without keeping a
+            # second copy of the Cohere config converter in patch 0006.
+            from pathlib import Path
+            import json
+
+            local_config = Path(model_name).expanduser() / "config.json"
+            if local_config.is_file():
+                try:
+                    architectures = json.loads(local_config.read_text(encoding="utf-8")).get(
+                        "architectures", []
+                    )
+                except (OSError, json.JSONDecodeError):
+                    architectures = []
+                if architectures:
+                    port = _registry.resolve_by_architecture(architectures[0])
         if port is not None:
             return port.config_converter(model_name, **kwargs)
         return original(model_name, **kwargs)
@@ -271,7 +272,7 @@ def _convert_cohere2_config(official_model_name: str, **kwargs: Any) -> dict:
         "n_key_value_heads": n_kv_heads,
         "d_mlp": hf_config.intermediate_size,
         "n_layers": hf_config.num_hidden_layers,
-        "n_ctx": min(hf_config.max_position_embeddings, _MAX_SAFE_N_CTX),
+        "n_ctx": hf_config.max_position_embeddings,
         "eps": hf_config.layer_norm_eps,
         "d_vocab": hf_config.vocab_size,
         "act_fn": hf_config.hidden_act,
@@ -360,7 +361,7 @@ def _convert_cohere1_config(official_model_name: str, **kwargs: Any) -> dict:
         "n_key_value_heads": n_kv_heads,
         "d_mlp": hf_config.intermediate_size,
         "n_layers": hf_config.num_hidden_layers,
-        "n_ctx": min(hf_config.max_position_embeddings, _MAX_SAFE_N_CTX),
+        "n_ctx": hf_config.max_position_embeddings,
         "eps": hf_config.layer_norm_eps,
         "d_vocab": hf_config.vocab_size,
         "act_fn": hf_config.hidden_act,
@@ -422,7 +423,7 @@ def _wrap_get_pretrained_state_dict(
             kwargs.setdefault("use_safetensors", True)
             hf_model = AutoModelForCausalLM.from_pretrained(
                 official_model_name,
-                torch_dtype=dtype,
+                dtype=dtype,
                 token=_resolve_hf_token(),
                 **kwargs,
             )

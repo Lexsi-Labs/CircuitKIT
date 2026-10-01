@@ -1046,25 +1046,25 @@ class TestSaveEvaluationResultsToTxt:
     def test_file_contains_model_name(self, tmp_path):
         path = str(tmp_path / "r.txt")
         self._call(self._make_results(), custom_path=path)
-        content = Path(path).read_text()
+        content = Path(path).read_text(encoding="utf-8")
         assert "gpt2" in content
 
     def test_file_contains_evaluation_mode(self, tmp_path):
         path = str(tmp_path / "r.txt")
         self._call(self._make_results(), custom_path=path)
-        content = Path(path).read_text()
+        content = Path(path).read_text(encoding="utf-8")
         assert "both" in content
 
     def test_file_contains_task_results(self, tmp_path):
         path = str(tmp_path / "r.txt")
         self._call(self._make_results(), custom_path=path)
-        content = Path(path).read_text()
+        content = Path(path).read_text(encoding="utf-8")
         assert "gsm8k" in content
 
     def test_file_marks_original_and_pruned_sections(self, tmp_path):
         path = str(tmp_path / "r.txt")
         self._call(self._make_results(), custom_path=path)
-        content = Path(path).read_text()
+        content = Path(path).read_text(encoding="utf-8")
         assert "ORIGINAL" in content.upper()
         assert "PRUNED" in content.upper()
 

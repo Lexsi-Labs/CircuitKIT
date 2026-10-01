@@ -266,7 +266,7 @@ index 3b8cac7..3ef9943 100644
 +            "n_key_value_heads_local": 16,
 +            "d_mlp": 21504,
 +            "n_layers": 60,
-+            "n_ctx": 8192,  # Safe default (model supports far more). Override via cfg_kwargs={"n_ctx": ...}
++            "n_ctx": 262144,  # HF max_position_embeddings; TL 3.8 masks active sequence length.
 +            "eps": 1e-06,
 +            "d_vocab": 262144,
 +            "act_fn": "gelu_pytorch_tanh",

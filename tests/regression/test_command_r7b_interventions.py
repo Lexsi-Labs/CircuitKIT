@@ -84,7 +84,7 @@ def hf_model():
 
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_NAME,
-        torch_dtype=torch.bfloat16,
+        dtype=torch.bfloat16,
         device_map=_HF_DEVICE,
         token=os.environ.get("HF_TOKEN"),
     )

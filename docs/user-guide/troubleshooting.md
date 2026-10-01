@@ -126,7 +126,7 @@ pipe.evaluate(pillars=None, target_task="sva")
 
 Ensure the reloaded model uses the same dtype and device as the original:
 ```python
-model = AutoModelForCausalLM.from_pretrained(path, torch_dtype=torch.float32)
+model = AutoModelForCausalLM.from_pretrained(path, dtype=torch.float32)
 ```
 
 ## Visualization

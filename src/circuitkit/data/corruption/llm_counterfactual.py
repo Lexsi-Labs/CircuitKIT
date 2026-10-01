@@ -136,7 +136,7 @@ class HFGenerator:
         self._model = (
             AutoModelForCausalLM.from_pretrained(
                 self.model_name,
-                torch_dtype=torch_dtype,
+                dtype=torch_dtype,
             )
             .to(self.device)
             .eval()

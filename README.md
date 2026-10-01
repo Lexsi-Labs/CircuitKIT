@@ -110,6 +110,11 @@ the five validated on real weights are `eap`, `eap-ig`, `eap-gp`, `ibcircuit`,
 weights; the actual `optimum-quanto`/`llmcompressor` compression call is not
 exercised in every environment, since those are optional dependencies.
 
+Gemma-4 and Sarvam-MoE have separate **experimental, discovery-only**
+TransformerLens ports; this is not a claim of end-to-end CircuitKIT support.
+Their hardware and Sarvam loading requirements are documented in
+[Experimental Models](docs/advanced/experimental-models.md#gemma-4-and-sarvam-moe-discovery-only-transformerlens-ports).
+
 All four are **experimental** — see [Tiny Aya](https://circuitkit.lexsi.ai/advanced/tiny-aya/)
 and [Experimental Models](https://circuitkit.lexsi.ai/advanced/experimental-models/)
 for architecture details, config mapping, and the full opt-in test matrix.

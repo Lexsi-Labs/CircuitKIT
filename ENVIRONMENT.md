@@ -51,7 +51,7 @@ import importlib.metadata as md
 expect = {
     "torch": "2.9.0a0", "vllm": "0.10.1.1", "transformers": "4.57.6",
     "optimum-quanto": "0.2.7", "llmcompressor": "0.10.0.2",
-    "lm_eval": "0.4.8", "transformer-lens": "2.18.0", "datasets": "4.6.0",
+    "lm_eval": "0.4.8", "transformer-lens": "3.8.0", "datasets": "4.6.0",
 }
 for p, want in expect.items():
     got = md.version(p)
@@ -84,7 +84,7 @@ export HF_TOKEN=hf_...    # account granted access to CohereLabs/tiny-aya-*
 
 The checkpoints load through `CohereTokenizer`, which ships with `transformers`
 and is backed by `tokenizers` / `sentencepiece` (already present in the pinned
-env). No extra dependency is required — the port stays on the pinned
-`transformer-lens` 2.18. The opt-in real-weight tests run with
+env). No extra dependency is required — the port targets the pinned
+`transformer-lens` 3.8.0. The opt-in real-weight tests run with
 `CIRCUITKIT_RUN_TINY_AYA=1` set alongside `HF_TOKEN`; see
 [`docs/advanced/tiny-aya.md`](docs/advanced/tiny-aya.md).

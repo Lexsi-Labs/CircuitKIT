@@ -173,7 +173,7 @@ def test_export_writes_edited_weights(arch, tmp_path):
         got = hf(tokens).logits.log_softmax(-1)
     assert torch.allclose(got, ref, atol=1e-4)
 
-    prov = json.loads((tmp_path / "out" / FILENAME).read_text())
+    prov = json.loads((tmp_path / "out" / FILENAME).read_text(encoding="utf-8"))
     assert prov["schema"] == "lexsi.provenance/1" and prov["library"] == "circuitkit"
     assert prov["version"] == ck.__version__
     assert prov["params"]["weights"] == "current"
@@ -190,7 +190,7 @@ def test_export_of_folded_model_warns_and_keeps_original_weights(tmp_path):
         out = ck.export_checkpoint(model, ["MLP 0"], str(tmp_path / "out"))
     hf = transformers.AutoModelForCausalLM.from_pretrained(out)
     assert not hf.transformer.h[0].mlp.c_proj.weight.any()  # the pruning still lands
-    assert json.loads((tmp_path / "out" / FILENAME).read_text())["params"]["weights"] == "original"
+    assert json.loads((tmp_path / "out" / FILENAME).read_text(encoding="utf-8"))["params"]["weights"] == "original"
 
 
 @pytest.mark.parametrize("arch", ARCHS)
@@ -213,7 +213,7 @@ def test_stack_runs(arch, tmp_path):
     assert circuit.scores
 
     # SafeTune's core/circuit_kit/adapter.py reads these keys.
-    blob = json.loads((tmp_path / "c_scores.json").read_text())
+    blob = json.loads((tmp_path / "c_scores.json").read_text(encoding="utf-8"))
     units, sugg = blob["safety_units"], blob["layer_suggestions"]
     assert units["unit_ids"] and set(units["unit_ids"]) <= set(blob["node_scores"])
     prefix = "transformer.h." if arch == "gpt2" else "model.layers."

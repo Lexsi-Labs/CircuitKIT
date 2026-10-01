@@ -103,7 +103,7 @@ def test_transfer_matrix_json_converts_nan_inside_array(tmp_path):
     assert matrix[1][1] == 0.8
 
     # And the raw file text must not contain a bare 'NaN' literal.
-    assert "NaN" not in out_path.read_text()
+    assert "NaN" not in out_path.read_text(encoding="utf-8")
 
 
 def test_transfer_matrix_json_handles_nested_nan_in_analysis(tmp_path):

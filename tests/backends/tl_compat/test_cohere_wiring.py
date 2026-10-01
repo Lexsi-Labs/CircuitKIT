@@ -5,7 +5,7 @@ Scope: this suite validates the wiring in ``circuitkit.api.discover_circuit``
 that the plan flagged as "likely no functional change, but add a device/dtype
 guard" for the 3.35B tiny-aya model:
 
-  1. ``ungroup_grouped_query_attention`` is a real TransformerLens 2.18 config
+  1. ``ungroup_grouped_query_attention`` is a real TransformerLens 3.8 config
      field (so api.py's ``hasattr``-gated assignment at ~L1124 takes effect),
      and our cohere2 patch populates the GQA fields the EAP guard keys on.
   2. The EAP-family qkv-flag block (api.py ~L1157) applies uniformly to every
@@ -99,14 +99,14 @@ class _FakeModel:
 
 
 # --------------------------------------------------------------------------
-# 1. ungroup_grouped_query_attention is a real TL 2.18 field + our cohere2
+# 1. ungroup_grouped_query_attention is a real TL 3.8 field + our cohere2
 #    cfg exposes it — validates api.py:1123-1124 will actually take effect.
 # --------------------------------------------------------------------------
 
 
 class TestUngroupGqaField:
     def test_hooked_transformer_config_has_ungroup_field(self):
-        """Guardrail: if TL 2.18 renames or drops the field, api.py's
+        """Guardrail: if TL 3.8 renames or drops the field, api.py's
         hasattr-gated assignment will silently no-op. Fail loudly here first."""
         from transformer_lens import HookedTransformerConfig
 

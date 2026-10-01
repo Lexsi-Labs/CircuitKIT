@@ -87,7 +87,7 @@ def hf_model():
     from transformers import AutoModelForCausalLM
 
     model = AutoModelForCausalLM.from_pretrained(
-        MODEL_NAME, torch_dtype=torch.bfloat16, device_map=_HF_DEVICE
+        MODEL_NAME, dtype=torch.bfloat16, device_map=_HF_DEVICE
     )
     model.eval()
     yield model

@@ -512,7 +512,7 @@ def main(args: argparse.Namespace) -> None:
     t0 = time.time()
     base_model = LlamaForCausalLM.from_pretrained(
         args.model_name,
-        torch_dtype=dtype,
+        dtype=dtype,
     )
     base_model.to(device)
     base_model.config.pad_token_id = tokenizer.pad_token_id
