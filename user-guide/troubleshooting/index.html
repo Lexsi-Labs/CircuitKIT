@@ -2035,12 +2035,13 @@
 </code></pre></div>
 <h2 id="gpu-memory">GPU / Memory<a class="headerlink" href="#gpu-memory" title="Permanent link">&para;</a></h2>
 <h3 id="cuda-out-of-memory-during-discovery">CUDA out of memory during discovery<a class="headerlink" href="#cuda-out-of-memory-during-discovery" title="Permanent link">&para;</a></h3>
-<p>For EAP-family algorithms on large models, a preflight guard now raises an
-actionable <code>MemoryError</code> before the per-head activation flags are enabled
-(naming the algorithm, <code>n_heads</code>, and the <code>ibcircuit</code> escape hatch) instead of
-an opaque allocator abort partway through discovery. If you hit it, the
-options below still apply — or switch to <code>ibcircuit</code>, which doesn't need
-those flags.</p>
+<p>For EAP-family algorithms, CircuitKIT estimates the qkv-flag activation
+footprint from batch size, sequence length, model dimensions and dtype, then
+compares it with CUDA's current free memory. If it looks tight, it emits an
+advisory <code>RuntimeWarning</code> and continues; the estimate is not a hard block. Set
+<code>CIRCUITKIT_SKIP_MEM_GUARD=1</code> to silence the warning. If allocation later fails,
+reduce sequence length or batch size, or use <code>ibcircuit</code>, which does not need
+the qkv flags.</p>
 <p>Reduce example count or batch size:
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">discover_circuit</span><span class="p">({</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="s2">"discovery"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"data_params"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"num_examples"</span><span class="p">:</span> <span class="mi">32</span><span class="p">,</span> <span class="s2">"batch_size"</span><span class="p">:</span> <span class="mi">2</span><span class="p">},</span> <span class="o">...</span><span class="p">},</span>
@@ -2101,7 +2102,7 @@ Suppress with <code>warnings.filterwarnings("ignore")</code> only after verifica
 </ul>
 <h3 id="reloaded-checkpoint-has-different-behaviour">Reloaded checkpoint has different behaviour<a class="headerlink" href="#reloaded-checkpoint-has-different-behaviour" title="Permanent link">&para;</a></h3>
 <p>Ensure the reloaded model uses the same dtype and device as the original:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">model</span> <span class="o">=</span> <span class="n">AutoModelForCausalLM</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">torch_dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">model</span> <span class="o">=</span> <span class="n">AutoModelForCausalLM</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
 </code></pre></div></p>
 <h2 id="visualization">Visualization<a class="headerlink" href="#visualization" title="Permanent link">&para;</a></h2>
 <h3 id="graph-is-empty">Graph is empty<a class="headerlink" href="#graph-is-empty" title="Permanent link">&para;</a></h3>

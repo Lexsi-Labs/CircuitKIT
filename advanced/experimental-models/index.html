@@ -1164,6 +1164,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#gemma-4-and-sarvam-moe-discovery-only-transformerlens-ports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gemma-4 and Sarvam-MoE: discovery-only TransformerLens ports
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#supported-checkpoints" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1209,10 +1220,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#n_ctx-capping" class="md-nav__link">
+  <a href="#context-length-and-memory" class="md-nav__link">
     <span class="md-ellipsis">
       
-        n_ctx capping
+        Context length and memory
       
     </span>
   </a>
@@ -1738,6 +1749,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#gemma-4-and-sarvam-moe-discovery-only-transformerlens-ports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gemma-4 and Sarvam-MoE: discovery-only TransformerLens ports
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#supported-checkpoints" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1783,10 +1805,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#n_ctx-capping" class="md-nav__link">
+  <a href="#context-length-and-memory" class="md-nav__link">
     <span class="md-ellipsis">
       
-        n_ctx capping
+        Context length and memory
       
     </span>
   </a>
@@ -1968,7 +1990,7 @@ rotary (NoPE) policy. Three more model families now ride that seam:</p>
 </tbody>
 </table>
 <p>All four are <strong>experimental</strong> discovery/evaluation/intervention targets:
-TransformerLens (2.18 or 3.8) has no native support for any of <code>cohere</code>, <code>cohere2</code>, or
+TransformerLens 3.8.0 has no native support for any of <code>cohere</code>, <code>cohere2</code>, or
 <code>smollm3</code>; the port adds it additively, at import time, with every patch
 falling through to stock TL for any other architecture. Command R7B and Aya
 Expanse are <strong>not gated on the Hub the way tiny-aya is</strong>, but both are
@@ -1982,6 +2004,38 @@ repository — no <code>HF_TOKEN</code> needed.</p>
 trusted once the real-weight <strong>parity gate</strong> passes on your machine (see
 <a href="#tests">Tests</a> below).</p>
 </div>
+<div class="admonition note">
+<p class="admonition-title">Local checkpoint folders</p>
+<p>TransformerLens 3.8 uses <code>llama</code> and <code>gemma</code> substrings in a local checkpoint
+path for loader selection before it reads <code>config.json</code>. CircuitKIT rejects
+ambiguous local paths with a rename/symlink suggestion; use a neutral folder
+name such as <code>./checkpoint</code>. Local SmolLM3 checkpoint folders are not
+supported by the current port; load <code>HuggingFaceTB/SmolLM3-3B</code> by Hub ID.</p>
+</div>
+<h2 id="gemma-4-and-sarvam-moe-discovery-only-transformerlens-ports">Gemma-4 and Sarvam-MoE: discovery-only TransformerLens ports<a class="headerlink" href="#gemma-4-and-sarvam-moe-discovery-only-transformerlens-ports" title="Permanent link">&para;</a></h2>
+<p>The Gemma-4 and Sarvam-MoE patches provide a <strong>discovery-only</strong> TransformerLens
+path. They do not establish support for CircuitKIT evaluation, pruning,
+quantization, steering or interventions; those surfaces are not validated for
+these models. Treat successful loading as experimental, not as full model
+support.</p>
+<table>
+<thead>
+<tr>
+<th>Checkpoint</th>
+<th>Scope and requirements</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>google/gemma-4-31B-it</code></td>
+<td>Text-side discovery only; the multimodal vision tower is not exposed through the TransformerLens port. At bf16, weights alone are about 58 GiB; use an 80 GB-class GPU or larger to leave room for activations.</td>
+</tr>
+<tr>
+<td><code>sarvamai/sarvam-30b</code></td>
+<td>TransformerLens discovery only. Sarvam ships its modeling code in the repository rather than in <code>transformers</code>, so it needs <code>trust_remote_code</code>: <code>load_model(..., trust_remote_code=True)</code>, <code>trust_remote_code: true</code> under <code>model:</code> in a YAML/dict config, or <code>circuitkit discover --trust-remote-code</code>. This executes code from the model repository, so it is off by default and never inferred. At bf16, weights alone are about 56 GiB; use an 80 GB-class GPU or larger to leave room for activations.</td>
+</tr>
+</tbody>
+</table>
 <hr />
 <h2 id="supported-checkpoints">Supported checkpoints<a class="headerlink" href="#supported-checkpoints" title="Permanent link">&para;</a></h2>
 <ul>
@@ -2093,9 +2147,9 @@ trusted once the real-weight <strong>parity gate</strong> passes on your machine
 </tr>
 <tr>
 <td>Max position embeddings (real ckpt)</td>
-<td>132096 (capped to 8192, see below)</td>
-<td>8192 (cap is a no-op)</td>
-<td>65536 (capped to 8192, see below)</td>
+<td>132096 (preserved)</td>
+<td>8192</td>
+<td>65536 (preserved)</td>
 </tr>
 <tr>
 <td>Gated on the Hub?</td>
@@ -2263,19 +2317,13 @@ explicit <code>head_dim</code>, so this is a separate function rather than a bra
 </tr>
 </tbody>
 </table>
-<h3 id="n_ctx-capping"><code>n_ctx</code> capping<a class="headerlink" href="#n_ctx-capping" title="Permanent link">&para;</a></h3>
-<p>Command R7B (<code>max_position_embeddings=132096</code>) and SmolLM3-3B
-(<code>max_position_embeddings=65536</code>) both exceed TL's practical <code>n_ctx</code> limit:
-<code>AbstractAttention</code> allocates a <strong>dense</strong> <code>n_ctx × n_ctx</code> causal mask per
-layer, and at either of those raw values that mask alone is tens of GB of
-float32 per layer — enough to OOM model construction before a single
-forward pass. Both ports cap <code>n_ctx</code> to <code>min(max_position_embeddings, 8192)</code>
-(the same value, and the same rationale, TL's own stock converters use for
-other long-context models such as Gemma-3). Aya Expanse's own
-<code>max_position_embeddings=8192</code> sits exactly at this cap, so it is a no-op
-there. Callers needing more context can still pass
-<code>HookedTransformer.from_pretrained(..., n_ctx=&lt;value&gt;)</code>, applied <em>after</em>
-this converter runs.</p>
+<h3 id="context-length-and-memory">Context length and memory<a class="headerlink" href="#context-length-and-memory" title="Permanent link">&para;</a></h3>
+<p>The ports preserve each checkpoint's full <code>max_position_embeddings</code> in
+TransformerLens 3.8. That release keeps an empty causal-mask buffer and builds
+the mask for the active input length at forward time; it does not allocate a
+dense <code>n_ctx × n_ctx</code> mask during model construction. Longer input sequences
+still require more attention memory, so choose sequence length and batch size
+for the available device rather than relying on an artificial 8192-token cap.</p>
 <h3 id="weight-conversion">Weight conversion<a class="headerlink" href="#weight-conversion" title="Permanent link">&para;</a></h3>
 <p>Command R7B and Aya Expanse share <code>convert_cohere2_weights</code> (see
 <a href="../tiny-aya/#weight-conversion-get_pretrained_state_dict">Tiny Aya</a> for the
@@ -2335,7 +2383,7 @@ ACDC has no built-in <code>greater_than</code> support.</p>
 <p>Offline unit tests (no network, no GPU, no gated weights) run in ordinary CI:</p>
 <ul>
 <li><code>tests/backends/tl_compat/test_command_r7b.py</code> — registration, config
-  mapping (including the <code>logit_scale=0.25</code> fold and the <code>n_ctx</code> cap).</li>
+  mapping (including the <code>logit_scale=0.25</code> fold and the preserved context length).</li>
 <li><code>tests/backends/tl_compat/test_aya_expanse.py</code> — registration, the cohere1
   config converter (no sliding window / <code>attn_types</code>, <code>head_dim</code> fallback,
   <code>use_qk_norm</code> guard), rotary-everywhere NoPE policy.</li>
@@ -2398,7 +2446,8 @@ needed):</p>
   (four orders of magnitude under the gate); SmolLM3-3B KL ≈ 2.9e-8–1.1e-7
   (four to five orders of magnitude under the gate), with argmax agreement
   and the exact per-layer NoPE mask (<code>{3, 7, 11, ..., 35}</code> skip rotary) both
-  confirmed directly on the loaded model.</li>
+  confirmed directly on the loaded model. These figures are from manual
+  real-weight GPU runs; CI does not reproduce this parity measurement.</li>
 <li><strong>Discovery</strong> (<code>test_*_discovery.py</code>) — end-to-end <code>discover_circuit</code> on
   <code>greater_than</code> for 5 of the 6 stable algorithms (<code>eap</code>, <code>eap-ig</code>,
   <code>eap-gp</code>, <code>ibcircuit</code>, <code>cdt</code>); asserts finite, non-degenerate node scores.</li>
@@ -2446,7 +2495,7 @@ that its entire discovery gate ran on GPU with no CPU fallback.</p>
   models extend; its Tests section documents <code>CIRCUITKIT_RUN_TINY_AYA</code>.</li>
 <li><a href="../architecture-registry/">Architecture Registry</a> — the <code>cohere</code> family
   (now covering Tiny Aya, Command R7B, and Aya Expanse) and the new
-  <code>smollm3</code> family, plus what Stage 5's intervention validation actually
+  <code>smollm3</code> family, plus what the intervention validation actually
   covered per model.</li>
 <li><code>circuitkit.backends._tl_compat</code> — the port source
   (<code>registry.py</code>, <code>cohere.py</code>, <code>smollm3.py</code>).</li>

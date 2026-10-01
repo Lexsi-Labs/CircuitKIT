@@ -1847,9 +1847,9 @@
 
 <h1 id="tiny-aya-cohere2">Tiny Aya (Cohere2)<a class="headerlink" href="#tiny-aya-cohere2" title="Permanent link">&para;</a></h1>
 <p>CircuitKIT ships a TransformerLens <strong>compatibility port</strong> that teaches
-TransformerLens (2.18 or 3.8) how to load Cohere's tiny-aya checkpoints
+TransformerLens 3.8 how to load Cohere's tiny-aya checkpoints
 (<code>model_type="cohere2"</code>) so the discovery pipeline can run on them. Upstream
-TransformerLens (2.18 or 3.8) does not know about <code>cohere2</code>; the port adds it
+TransformerLens 3.8 does not know about <code>cohere2</code>; the port adds it
 additively, without forking or pinning a different TL version.</p>
 <div class="admonition note">
 <p class="admonition-title">Now a multi-architecture seam</p>
@@ -1949,7 +1949,7 @@ TransformerLens uses internally) cannot load.</p>
 <p>All of the port lives in <code>circuitkit.backends._tl_compat</code>:</p>
 <ul>
 <li><strong><code>_tl_compat/__init__.py</code></strong> — an idempotent <code>apply_patches()</code> guarded to
-  TransformerLens <strong>2.18</strong> or <strong>3.8</strong> (with an <code>importlib.metadata</code> fallback for installs
+  TransformerLens <strong>3.8</strong> (with an <code>importlib.metadata</code> fallback for installs
   where <code>transformer_lens.__version__</code> is empty).</li>
 <li><strong><code>_tl_compat/cohere.py</code></strong> — the port itself: registers the repo IDs, wraps
   <code>convert_hf_model_config</code> and <code>get_pretrained_state_dict</code>, and monkeypatches
