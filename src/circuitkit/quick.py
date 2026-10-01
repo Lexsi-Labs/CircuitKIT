@@ -129,6 +129,18 @@ def _register_checkpoint(name: str) -> None:
     """
     from transformer_lens import loading_from_pretrained as loading
     from transformers import PretrainedConfig
+    from pathlib import Path
+
+    local_path = Path(name).expanduser()
+    if local_path.is_dir():
+        path_lower = str(local_path).lower()
+        if "llama" in path_lower or "gemma" in path_lower:
+            raise ValueError(
+                f"Local checkpoint path {str(local_path)!r} contains 'llama' or 'gemma'. "
+                "TransformerLens 3.8 selects some model loaders from the path name "
+                "before reading config.json. Rename or symlink the directory to a "
+                "neutral path (for example, ./checkpoint) and retry."
+            )
 
     if name.lower() in loading.make_model_alias_map():
         return

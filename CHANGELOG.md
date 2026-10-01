@@ -26,6 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The EAP qkv activation-memory preflight now estimates activation storage from
+  batch size, sequence length, model dimensions and dtype, and uses CUDA's
+  actual free-memory query. It emits an advisory `RuntimeWarning` instead of
+  refusing a run from an approximate estimate; set
+  `CIRCUITKIT_SKIP_MEM_GUARD=1` to silence it.
 - Docs and README pointed at `lexsi-labs.github.io/circuitkit/`, which 404s; the site lives at `https://circuitkit.lexsi.ai/`.
   Also fixed the README "Applications" deep link.
 - Stale version strings: landing-page chip, both BibTeX blocks and the install check said `1.0.0`; they now read the installed package version.

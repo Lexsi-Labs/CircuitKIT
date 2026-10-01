@@ -11,11 +11,9 @@ guard" for the 3.35B tiny-aya model:
   2. The EAP-family qkv-flag block (api.py ~L1157) applies uniformly to every
      algorithm that requires per-head attribution, and excludes the two
      algorithms (ibcircuit, cdt) that intentionally opt out.
-  3. The new ``_check_qkv_flag_memory_headroom`` preflight surfaces a clear,
-     actionable ``MemoryError`` when the estimated per-head activation blow-up
-     will not fit on the current CUDA device — instead of an opaque allocator
-     abort ``n_layers`` forwards later. Preflight is invoked strictly before
-     the flag assignments so a raise leaves ``model.cfg`` unchanged.
+  3. The ``_check_qkv_flag_memory_headroom`` preflight emits an advisory
+     ``RuntimeWarning`` when the estimated per-head activation footprint may
+     exceed currently free memory. It does not refuse a run based on an estimate.
 
 Like ``test_cohere.py`` (Group A), everything below runs offline: no gated
 tiny-aya weights, no network, no GPU. The GPU-conditional preflight is
@@ -28,6 +26,7 @@ the actual architecture.
 
 from __future__ import annotations
 
+import warnings
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -64,6 +63,7 @@ def _make_cohere2_cfg(
         d_head=d_head,
         d_model=d_model,
         d_mlp=d_mlp,
+        n_ctx=4096,
         parallel_attn_mlp=True,
         positional_embedding_type="rotary",
         rotary_adjacent_pairs=True,
@@ -199,14 +199,9 @@ def _patch_cuda(
     without touching a real GPU."""
     monkeypatch.setattr(torch.cuda, "is_available", lambda: available)
     if available:
-        monkeypatch.setattr(
-            torch.cuda,
-            "get_device_properties",
-            lambda idx: SimpleNamespace(total_memory=int(total_gb * 1024**3)),
-        )
-        monkeypatch.setattr(
-            torch.cuda, "memory_reserved", lambda idx=0: int(reserved_gb * 1024**3)
-        )
+        free_bytes = int((total_gb - reserved_gb) * 1024**3)
+        total_bytes = int(total_gb * 1024**3)
+        monkeypatch.setattr(torch.cuda, "mem_get_info", lambda device=None: (free_bytes, total_bytes))
 
 
 class TestQkvFlagMemoryGuard:
@@ -231,20 +226,16 @@ class TestQkvFlagMemoryGuard:
         ck_api._check_qkv_flag_memory_headroom(model, "eap-ig")
 
     def test_noop_for_small_models_even_when_gpu_tight(self, monkeypatch):
-        """Small models (<1 GB weights) do not stress the qkv-flag activation
-        blow-up meaningfully; preflight must not false-positive on them."""
-        # Tight 1 GB GPU, but only ~4 KB of weights → well under the skip floor.
+        """Small activation shapes should not warn even on a tight GPU."""
         _patch_cuda(monkeypatch, available=True, total_gb=1.0)
-        model = _FakeModel(
-            _make_cohere2_cfg(),
-            [_fake_param(1_000, torch.float32, "cuda", 0)],
-        )
+        small_cfg = _make_cohere2_cfg(n_layers=2, n_heads=2, d_model=8)
+        small_cfg.n_ctx = 16
+        model = _FakeModel(small_cfg, [_fake_param(1_000, torch.float32, "cuda", 0)])
         ck_api._check_qkv_flag_memory_headroom(model, "eap-ig")
 
-    def test_raises_memory_error_when_over_threshold(self, monkeypatch):
-        """The tiny-aya-base scenario in miniature: pretend to have 2 GB of
-        weights on cuda:0 and a 4 GB device; preflight must raise MemoryError
-        naming the algorithm, ``n_heads``, and the algorithm-swap escape hatch."""
+    def test_warns_when_activation_estimate_exceeds_free_memory(self, monkeypatch):
+        """The tiny-aya-base scenario in miniature: a small free-memory budget
+        should produce an advisory warning with dimensions and algorithm."""
         _patch_cuda(monkeypatch, available=True, total_gb=4.0, reserved_gb=0.0)
         # 2 GB bf16 = 1e9 params × 2 bytes
         n_params = (2 * 1024**3) // 2
@@ -252,24 +243,24 @@ class TestQkvFlagMemoryGuard:
             _make_cohere2_cfg(),
             [_fake_param(int(n_params), torch.bfloat16, "cuda", 0)],
         )
-        with pytest.raises(MemoryError) as exc_info:
+        with pytest.warns(RuntimeWarning) as exc_info:
             ck_api._check_qkv_flag_memory_headroom(model, "eap-ig")
-        msg = str(exc_info.value)
-        assert "eap-ig" in msg
-        assert "n_heads=16" in msg
-        # Escape-hatch guidance: point users to ibcircuit or smaller model.
-        assert "ibcircuit" in msg
+        msg = str(exc_info[0].message)
+        assert "eap-ig" in msg and "heads=16" in msg and "activations" in msg
 
-    def test_does_not_raise_when_ample_free_memory(self, monkeypatch):
+    def test_no_warning_when_activation_estimate_fits(self, monkeypatch):
         """Same tiny-aya-base scenario, but on an H100-class device with 80 GB
-        free: preflight must not raise."""
+        free: the activation estimate should not warn."""
         _patch_cuda(monkeypatch, available=True, total_gb=80.0, reserved_gb=0.0)
         n_params = (2 * 1024**3) // 2  # 2 GB bf16
         model = _FakeModel(
             _make_cohere2_cfg(),
             [_fake_param(int(n_params), torch.bfloat16, "cuda", 0)],
         )
-        ck_api._check_qkv_flag_memory_headroom(model, "eap-ig")
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            ck_api._check_qkv_flag_memory_headroom(model, "eap-ig")
+        assert not caught
 
     def test_noop_when_model_has_no_parameters(self, monkeypatch):
         """Degenerate model → the preflight must not blow up on
@@ -291,18 +282,18 @@ class TestQkvFlagMemoryGuard:
 
     def test_uses_free_memory_not_total(self, monkeypatch):
         """80 GB total device but 78 GB already reserved by other allocations
-        → only 2 GB free. Preflight must key off free, not total, and raise."""
+        → only 2 GB free. Preflight must key off free, not total, and warn."""
         _patch_cuda(monkeypatch, available=True, total_gb=80.0, reserved_gb=78.0)
         n_params = (2 * 1024**3) // 2  # 2 GB bf16
         model = _FakeModel(
             _make_cohere2_cfg(),
             [_fake_param(int(n_params), torch.bfloat16, "cuda", 0)],
         )
-        with pytest.raises(MemoryError):
+        with pytest.warns(RuntimeWarning):
             ck_api._check_qkv_flag_memory_headroom(model, "eap-ig")
 
-    def test_message_reflects_actual_algo_name(self, monkeypatch):
-        """The MemoryError must interpolate whichever algo triggered it, so
+    def test_warning_reflects_actual_algo_name(self, monkeypatch):
+        """The warning must interpolate whichever algo triggered it, so
         the diagnostic points the user at the exact caller."""
         _patch_cuda(monkeypatch, available=True, total_gb=4.0)
         n_params = (2 * 1024**3) // 2
@@ -310,40 +301,35 @@ class TestQkvFlagMemoryGuard:
             _make_cohere2_cfg(),
             [_fake_param(int(n_params), torch.bfloat16, "cuda", 0)],
         )
-        with pytest.raises(MemoryError) as exc_info:
+        with pytest.warns(RuntimeWarning) as exc_info:
             ck_api._check_qkv_flag_memory_headroom(model, "atp-gd")
-        assert "atp-gd" in str(exc_info.value)
+        assert "atp-gd" in str(exc_info[0].message)
 
 
 # --------------------------------------------------------------------------
-# 4. Ordering: preflight is invoked before the qkv-flag assignments, so a
-#    MemoryError leaves ``model.cfg`` untouched and the caller can retry with
-#    a different algorithm or a smaller batch.
+# 4. Ordering: the advisory runs before the qkv flags are enabled.
 # --------------------------------------------------------------------------
 
 
 class TestPreflightOrdering:
-    def test_preflight_call_precedes_flag_assignments(self):
-        """Replicate api.py's exact qkv-flag stanza and confirm the preflight
-        raise short-circuits the assignments (this file cannot invoke
-        discover_circuit end-to-end without a real dataloader/task)."""
+    def test_preflight_warning_does_not_prevent_flag_assignments(self, monkeypatch):
+        """An advisory estimate must never block the actual discovery run."""
+        _patch_cuda(monkeypatch, available=True, total_gb=4.0)
         cfg = _make_cohere2_cfg()
-
-        def _boom(m, a):
-            raise MemoryError("preflight boom")
-
-        raised = False
-        try:
-            _boom(cfg, "eap-ig")
+        model = _FakeModel(
+            cfg,
+            [_fake_param((2 * 1024**3) // 2, torch.bfloat16, "cuda", 0)],
+        )
+        with pytest.warns(RuntimeWarning):
+            ck_api._check_qkv_flag_memory_headroom(
+                model, "eap-ig", batch_size=1, seq_len=4096
+            )
             cfg.use_attn_result = True
             cfg.use_split_qkv_input = True
             cfg.use_hook_mlp_in = True
-        except MemoryError:
-            raised = True
-        assert raised
-        assert cfg.use_attn_result is False
-        assert cfg.use_split_qkv_input is False
-        assert cfg.use_hook_mlp_in is False
+        assert cfg.use_attn_result is True
+        assert cfg.use_split_qkv_input is True
+        assert cfg.use_hook_mlp_in is True
 
     def test_api_module_exposes_the_preflight(self):
         """Regression guard: the preflight is a documented internal seam.

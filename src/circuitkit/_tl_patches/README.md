@@ -10,9 +10,9 @@
 
 Adds `HookedTransformer` support for Gemma-4 (`google/gemma-4-31B-it`),
 Sarvam-MoE (`sarvamai/sarvam-30b`) and Cohere / Cohere2 (Aya Expanse, Tiny Aya) to
-**transformer-lens 3.8.0**. It replaces the
-fork vendored at `c-delta-theta-multilingual-safety-audit@09092026:vendor/transformer_lens`
-(commit `dc0caa76`, ported from `CircuitKit_old@gemma4-cdelta-theta`).
+**transformer-lens 3.8.0**. It replaces a locally maintained TransformerLens
+fork with a small, versioned patch series that is applied in memory and
+checked against upstream source.
 
 Ministral-3 needs no patch. Upstream 3.8.0 supports `Ministral3ForCausalLM` through
 `TransformerBridge` only; neither upstream nor the fork has a `HookedTransformer` path

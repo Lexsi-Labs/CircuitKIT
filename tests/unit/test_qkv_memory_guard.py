@@ -4,6 +4,7 @@ No model download, no GPU: ``torch.cuda`` is monkey-patched and parameters are
 duck-typed, so the guard's branches run on CPU-only CI.
 """
 
+import warnings
 from types import SimpleNamespace
 
 import pytest
@@ -15,7 +16,9 @@ _GB_BF16_PARAMS = (2 * 1024**3) // 2  # parameter count of 2 GB of bf16 weights
 
 
 def _cfg(**flags):
-    return SimpleNamespace(n_heads=16, **flags)
+    values = dict(n_heads=16, d_model=4096, n_layers=32, n_ctx=4096)
+    values.update(flags)
+    return SimpleNamespace(**values)
 
 
 def _fake_param(numel, dtype, device_type, device_index=0):
@@ -35,12 +38,9 @@ class _FakeModel:
 def _patch_cuda(monkeypatch, *, available=True, total_gb=80.0, reserved_gb=0.0):
     monkeypatch.setattr(torch.cuda, "is_available", lambda: available)
     if available:
-        monkeypatch.setattr(
-            torch.cuda,
-            "get_device_properties",
-            lambda idx: SimpleNamespace(total_memory=int(total_gb * 1024**3)),
-        )
-        monkeypatch.setattr(torch.cuda, "memory_reserved", lambda idx=0: int(reserved_gb * 1024**3))
+        free_bytes = int((total_gb - reserved_gb) * 1024**3)
+        total_bytes = int(total_gb * 1024**3)
+        monkeypatch.setattr(torch.cuda, "mem_get_info", lambda device=None: (free_bytes, total_bytes))
 
 
 def _two_gb_model():
@@ -59,7 +59,10 @@ class TestQkvFlagMemoryGuard:
 
     def test_noop_for_small_models_on_a_tight_gpu(self, monkeypatch):
         _patch_cuda(monkeypatch, total_gb=1.0)
-        model = _FakeModel([_fake_param(1_000, torch.float32, "cuda")])
+        model = _FakeModel(
+            [_fake_param(1_000, torch.float32, "cuda")],
+            _cfg(n_heads=2, d_model=8, n_layers=2, n_ctx=16),
+        )
         ck_api._check_qkv_flag_memory_headroom(model, "eap-ig")
 
     def test_noop_when_model_has_no_parameters(self, monkeypatch):
@@ -71,21 +74,32 @@ class TestQkvFlagMemoryGuard:
         model = _FakeModel([_fake_param(int(1e6), torch.int8, "cuda")])
         ck_api._check_qkv_flag_memory_headroom(model, "eap-ig")
 
-    def test_raises_when_estimate_exceeds_free_memory(self, monkeypatch):
+    def test_warns_when_activation_estimate_exceeds_free_memory(self, monkeypatch):
         _patch_cuda(monkeypatch, total_gb=4.0)
-        with pytest.raises(MemoryError) as exc:
+        with pytest.warns(RuntimeWarning) as exc:
             ck_api._check_qkv_flag_memory_headroom(_two_gb_model(), "atp-gd")
-        msg = str(exc.value)
-        assert "atp-gd" in msg and "n_heads=16" in msg and "ibcircuit" in msg
+        msg = str(exc[0].message)
+        assert "atp-gd" in msg and "heads=16" in msg and "activations" in msg
 
-    def test_passes_with_ample_free_memory(self, monkeypatch):
+    def test_no_warning_with_ample_free_memory(self, monkeypatch):
         _patch_cuda(monkeypatch, total_gb=80.0)
-        ck_api._check_qkv_flag_memory_headroom(_two_gb_model(), "eap-ig")
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            ck_api._check_qkv_flag_memory_headroom(_two_gb_model(), "eap-ig")
+        assert not caught
 
     def test_uses_free_not_total_memory(self, monkeypatch):
         _patch_cuda(monkeypatch, total_gb=80.0, reserved_gb=78.0)
-        with pytest.raises(MemoryError):
+        with pytest.warns(RuntimeWarning):
             ck_api._check_qkv_flag_memory_headroom(_two_gb_model(), "eap-ig")
+
+    def test_skip_mem_guard_environment_variable(self, monkeypatch):
+        _patch_cuda(monkeypatch, total_gb=1.0)
+        monkeypatch.setenv("CIRCUITKIT_SKIP_MEM_GUARD", "1")
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            ck_api._check_qkv_flag_memory_headroom(_two_gb_model(), "eap-ig")
+        assert not caught
 
 
 class TestQkvFlagsEnabled:

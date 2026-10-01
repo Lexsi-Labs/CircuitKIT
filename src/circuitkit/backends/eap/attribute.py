@@ -408,7 +408,7 @@ def get_scores_ig_activations(
         def output_interpolation_hook(k: int, clean: torch.Tensor, corrupted: torch.Tensor):
             def hook_fn(activations: torch.Tensor, hook):
                 alpha = k / steps
-                new_output = alpha * clean + (1 - alpha) * corrupted
+                new_output = alpha * clean + (1 - alpha) * corrupted + activations * 0
                 return new_output
 
             return hook_fn

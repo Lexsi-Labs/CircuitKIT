@@ -43,6 +43,17 @@ def _tiny(arch, path):
     if arch == "gpt2":
         cfg = transformers.GPT2Config(n_embd=64, n_layer=2, n_head=4, n_positions=64, n_ctx=64, **shape)
         cls = transformers.GPT2LMHeadModel
+    elif arch == "llama":
+        cfg = transformers.LlamaConfig(
+            hidden_size=64,
+            intermediate_size=96,
+            num_hidden_layers=2,
+            num_attention_heads=4,
+            num_key_value_heads=2,
+            max_position_embeddings=64,
+            **shape,
+        )
+        cls = transformers.LlamaForCausalLM
     else:
         shape.update(
             hidden_size=64,
@@ -114,6 +125,32 @@ def _down_weight(hf, arch):
 
 
 ARCHS = ["gpt2", "cohere", "cohere2"]
+
+
+def test_eap_ig_activations_llama_has_nonzero_scores():
+    """Activation IG must retain a gradient path through rotary decoder blocks."""
+    import tempfile
+    from pathlib import Path
+
+    # Keep the local checkpoint path neutral: TransformerLens uses path-name
+    # heuristics for Llama/Gemma and rejects ambiguous local directory names.
+    with tempfile.TemporaryDirectory(prefix="ck-model-") as directory:
+        root = Path(directory)
+        src = _tiny("llama", root / "model")
+        task = _task(root, "tl3_activation_ig_llama")
+        model = ck.load_model(src, dtype="float32", device="cpu")
+        circuit = ck.discover(
+            model,
+            task,
+            algorithm="eap-ig-activations",
+            n_examples=4,
+            batch_size=2,
+            ig_steps=2,
+            output_path=str(root / "eap-ig-activations.pt"),
+        )
+
+    assert circuit.scores
+    assert any(abs(float(score)) > 0 for score in circuit.scores.values())
 
 
 @pytest.mark.parametrize("arch", ARCHS)

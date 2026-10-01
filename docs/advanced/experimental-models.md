@@ -30,6 +30,13 @@ repository — no `HF_TOKEN` needed.
     trusted once the real-weight **parity gate** passes on your machine (see
     [Tests](#tests) below).
 
+!!! note "Local checkpoint folders"
+    TransformerLens 3.8 uses `llama` and `gemma` substrings in a local checkpoint
+    path for loader selection before it reads `config.json`. CircuitKIT rejects
+    ambiguous local paths with a rename/symlink suggestion; use a neutral folder
+    name such as `./checkpoint`. Local SmolLM3 checkpoint folders are not
+    supported by the current port; load `HuggingFaceTB/SmolLM3-3B` by Hub ID.
+
 ---
 
 ## Supported checkpoints

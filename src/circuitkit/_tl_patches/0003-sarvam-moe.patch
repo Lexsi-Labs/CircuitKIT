@@ -44,8 +44,8 @@ index d58d65e..407e2dd 100644
          self.hook_expert_indices = HookPoint()
  
 +        # --- MoE-C-DeltaTheta Phase A component hooks -------------------------
-+        # The objects the method attributes safety behaviour to (see
-+        # New_exp/activation-steering/docs/MOE_CDELTA_THETA_METHOD.md):
++        # These are the routed and shared-expert components used for
++        # activation-level analysis:
 +        #   c_{l,e}(x) = g_{l,e}(x) * E_{l,e}(h_l)   -- the ROUTED contribution,
 +        #     i.e. the expert output already scaled by its routing weight, NOT
 +        #     the router probability and NOT the unscaled expert output.
