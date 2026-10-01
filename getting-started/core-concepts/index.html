@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://lexsi-labs.github.io/circuitkit/getting-started/core-concepts/">
+        <link rel="canonical" href="https://circuitkit.lexsi.ai/getting-started/core-concepts/">
       
       
         <link rel="prev" href="../quickstart/">
@@ -22,12 +22,12 @@
         
       
       
-      <link rel="icon" href="../../assets/favicon.png">
+      <link rel="icon" href="../../assets/favicon.ico">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>Core Concepts - CircuitKit</title>
+        <title>Core Concepts - CircuitKIT</title>
       
     
     
@@ -62,7 +62,10 @@
       
 
     
-    
+    <link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../assets/apple-touch-icon.png">
+  
+
   </head>
   
   
@@ -102,7 +105,7 @@
 
 <header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="CircuitKit" class="md-header__button md-logo" aria-label="CircuitKit" data-md-component="logo">
+    <a href="../.." title="CircuitKIT" class="md-header__button md-logo" aria-label="CircuitKIT" data-md-component="logo">
       
   <img src="../../assets/circuitkit-mark-white.svg" alt="logo">
 
@@ -115,7 +118,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            CircuitKit
+            CircuitKIT
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -386,12 +389,12 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="CircuitKit" class="md-nav__button md-logo" aria-label="CircuitKit" data-md-component="logo">
+    <a href="../.." title="CircuitKIT" class="md-nav__button md-logo" aria-label="CircuitKIT" data-md-component="logo">
       
   <img src="../../assets/circuitkit-mark-white.svg" alt="logo">
 
     </a>
-    CircuitKit
+    CircuitKIT
   </label>
   
     <div class="md-nav__source">
@@ -1400,7 +1403,7 @@
     style ablated fill:#fee2e2,stroke:#dc2626</code></pre>
 <h2 id="circuit-discovery">Circuit discovery<a class="headerlink" href="#circuit-discovery" title="Permanent link">&para;</a></h2>
 <p>Discovery uses attribution methods to score every component by how much it contributes to the target behaviour. Components are ranked and the top-K are kept as the circuit.</p>
-<p>CircuitKit implements this via <code>discover_circuit({...})</code>:</p>
+<p>CircuitKIT implements this via <code>discover_circuit({...})</code>:</p>
 <ol>
 <li>Loads the model and task</li>
 <li>Runs the attribution method (e.g., EAP-IG)</li>
@@ -1442,7 +1445,7 @@
 </table>
 <p>See <a href="../../algorithms/stability-tiers/">Stability Tiers</a> for tier definitions.</p>
 <h3 id="the-default-eap-ig">The default: <code>eap-ig</code><a class="headerlink" href="#the-default-eap-ig" title="Permanent link">&para;</a></h3>
-<p>EAP with Integrated Gradients is the recommended default. It is <strong>Stable</strong> tier, runs in 1–15 minutes on GPU, works with instruction-tuned models, and is the algorithm used in the CircuitKit audit paper.</p>
+<p>EAP with Integrated Gradients is the recommended default. It is <strong>Stable</strong> tier, runs in 1–15 minutes on GPU, works with instruction-tuned models, and is the algorithm used in the CircuitKIT audit paper.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.backends</span><span class="w"> </span><span class="kn">import</span> <span class="n">default_algorithm</span><span class="p">,</span> <span class="n">is_stable</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">default_algorithm</span><span class="p">())</span>   <span class="c1"># "eap-ig"</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">is_stable</span><span class="p">(</span><span class="s2">"eap-ig"</span><span class="p">))</span>   <span class="c1"># True</span>
@@ -1551,7 +1554,7 @@
 </div>
 <p>Custom tasks: Any HuggingFace dataset via an adapter. See <a href="../../user-guide/tasks/">Tasks and Datasets</a>.</p>
 <h2 id="faithfulness-evaluation">Faithfulness evaluation<a class="headerlink" href="#faithfulness-evaluation" title="Permanent link">&para;</a></h2>
-<p>After discovery, CircuitKit evaluates the circuit across 6 pillars:</p>
+<p>After discovery, CircuitKIT evaluates the circuit across 6 pillars:</p>
 <table>
 <thead>
 <tr>
@@ -1615,7 +1618,7 @@
 <p>Generalization is implemented but not yet validated at scale.</p>
 </div>
 <h2 id="interventions">Interventions<a class="headerlink" href="#interventions" title="Permanent link">&para;</a></h2>
-<p>After discovery and evaluation, CircuitKit provides five ways to act on the circuit:</p>
+<p>After discovery and evaluation, CircuitKIT provides five ways to act on the circuit:</p>
 <p><strong>Pruning</strong> — removes lowest-scoring components, writes a real HF checkpoint:
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">pruned</span> <span class="o">=</span> <span class="n">ck</span><span class="o">.</span><span class="n">prune</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">circuit</span><span class="p">,</span> <span class="n">sparsity</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="s2">"both"</span><span class="p">)</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">ck</span><span class="o">.</span><span class="n">export_checkpoint</span><span class="p">(</span><span class="n">pruned</span><span class="p">,</span> <span class="n">circuit</span><span class="p">,</span> <span class="s2">"./output/pruned"</span><span class="p">)</span>
@@ -1717,7 +1720,7 @@
 <tr>
 <td>Llama 3</td>
 <td>1B–3B</td>
-<td>Registered arch family. <code>eap</code> and <code>eap-ig</code> validated</td>
+<td>Registered arch family. Stable-tier EAP validated</td>
 </tr>
 <tr>
 <td>Gemma</td>
@@ -1848,7 +1851,7 @@
     
     
     
-    <a href="https://github.com/Lexsi-Labs/circuitkit" target="_blank" rel="noopener" title="CircuitKit on GitHub" class="md-social__link">
+    <a href="https://github.com/Lexsi-Labs/circuitkit" target="_blank" rel="noopener" title="CircuitKIT on GitHub" class="md-social__link">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
     </a>
   
@@ -1856,7 +1859,7 @@
     
     
     
-    <a href="https://pypi.org/project/circuitkit/" target="_blank" rel="noopener" title="CircuitKit on PyPI" class="md-social__link">
+    <a href="https://pypi.org/project/circuitkit/" target="_blank" rel="noopener" title="CircuitKIT on PyPI" class="md-social__link">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
     </a>
   
