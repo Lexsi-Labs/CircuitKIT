@@ -8,7 +8,7 @@ The backends module provides the stability tier registry, algorithm enumeration,
 
 ## Stability Tiers
 
-CircuitKit ships **13 discovery algorithms** across 4 backends, each with an explicit stability tier. Six are stable and have been tested across the GPT-2, Llama, Gemma, and Qwen families. The other seven are research: implemented and validated on GPT-2/IOI but not yet exercised at scale or across architectures. No discovery algorithm is in the experimental tier at the moment.
+CircuitKIT ships **13 discovery algorithms** across 4 backends, each with an explicit stability tier. Six are stable and have been tested across the GPT-2, Llama, Gemma, and Qwen families. The other seven are research: implemented and validated on GPT-2/IOI but not yet exercised at scale or across architectures. No discovery algorithm is in the experimental tier at the moment.
 
 | Tier | Algorithms |
 |------|-----------|
@@ -45,7 +45,7 @@ from circuitkit.backends import (
 `Dict[str, str]` — maps algorithm/selector name → tier string (`"stable"`, `"experimental"`, `"research"`).
 
 !!! note
-    `STABILITY` includes both the 13 discovery algorithms AND the 8 compression selector keys (`random`, `magnitude`, `taylor`, `wanda`, `multi_granular`, `gptq`, `awq`, `tacq`). Use `DISCOVERY_ALGORITHMS` when you want only the discovery algorithms.
+    `STABILITY` includes both the 13 discovery algorithms AND the 9 compression selector/baseline keys (`random`, `magnitude`, `taylor`, `wanda`, `multi_granular`, `sparsegpt`, `gptq`, `awq`, `tacq`). Use `DISCOVERY_ALGORITHMS` when you want only the discovery algorithms.
 
 ```python
 from circuitkit.backends import STABILITY

@@ -56,7 +56,7 @@ class StreamlitCircuitDashboard:
     def _setup_page() -> None:
         """Setup Streamlit page configuration."""
         st.set_page_config(
-            page_title="CircuitKit Dashboard",
+            page_title="CircuitKIT Dashboard",
             page_icon="⚡",
             layout="wide",
             initial_sidebar_state="expanded",
@@ -82,7 +82,7 @@ class StreamlitCircuitDashboard:
 
     def run(self) -> None:
         """Run the main dashboard."""
-        st.sidebar.title("CircuitKit Dashboard")
+        st.sidebar.title("CircuitKIT Dashboard")
         page = st.sidebar.radio(
             "Select Page",
             [
@@ -111,11 +111,11 @@ class StreamlitCircuitDashboard:
     @staticmethod
     def page_home() -> None:
         """Home page with overview and instructions."""
-        st.title("⚡ CircuitKit Dashboard")
+        st.title("⚡ CircuitKIT Dashboard")
 
         st.markdown(
             """
-        Welcome to the CircuitKit visualization dashboard!
+        Welcome to the CircuitKIT visualization dashboard!
 
         ### Features
         - **Circuit Visualization**: Visualize circuit graphs with node importance and edge attribution

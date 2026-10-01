@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>CircuitKIT</title>
+  <style>svg{color:#07080A}@media (prefers-color-scheme:dark){svg{color:#FFFFFF}}</style>
+  <rect x="19" y="19" width="26" height="26" rx="5" fill="none" stroke="currentColor" stroke-width="6"/>
+  <g stroke="currentColor" stroke-width="3" stroke-linecap="butt">
+    <path d="M24,16L24,9.5"/>
+    <path d="M24,48L24,54.5"/>
+    <path d="M16,24L9.5,24"/>
+    <path d="M48,24L54.5,24"/>
+    <path d="M32,16L32,9.5"/>
+    <path d="M32,48L32,54.5"/>
+    <path d="M16,32L9.5,32"/>
+    <path d="M48,32L54.5,32"/>
+    <path d="M40,16L40,9.5"/>
+    <path d="M40,48L40,54.5"/>
+    <path d="M16,40L9.5,40"/>
+    <path d="M48,40L54.5,40"/>
+  </g>
+  <g fill="currentColor">
+    <circle cx="24" cy="8" r="2.7"/>
+    <circle cx="24" cy="56" r="2.7"/>
+    <circle cx="8" cy="24" r="2.7"/>
+    <circle cx="56" cy="24" r="2.7"/>
+    <circle cx="32" cy="8" r="2.7"/>
+    <circle cx="8" cy="32" r="2.7"/>
+    <circle cx="40" cy="8" r="2.7"/>
+    <circle cx="40" cy="56" r="2.7"/>
+    <circle cx="56" cy="40" r="2.7"/>
+  </g>
+  <g fill="#FF4B0A">
+    <rect x="26.5" y="26.5" width="11" height="11" rx="1.8"/>
+    <circle cx="32" cy="56" r="2.7"/>
+    <circle cx="56" cy="32" r="2.7"/>
+    <circle cx="8" cy="40" r="2.7"/>
+  </g>
+</svg>

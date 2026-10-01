@@ -1,6 +1,6 @@
 # FILE: circuitkit/applications/editing/memit_wrapper.py
 """
-MEMIT (Mass Editing Memory in a Transformer) Wrapper for CircuitKit.
+MEMIT (Mass Editing Memory in a Transformer) Wrapper for CircuitKIT.
 
 Implements MEMIT for efficient batch editing of multiple facts in transformers.
 MEMIT extends ROME by computing a single edit that modifies multiple facts

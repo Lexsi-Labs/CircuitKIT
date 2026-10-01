@@ -48,7 +48,7 @@ def detect_model_architecture(hf_model: nn.Module) -> str:
     except KeyError as e:
         raise UnsupportedArchitectureError(
             f"\n{'='*70}\n"
-            f"Model type '{model_type}' is not yet supported in CircuitKit.\n\n"
+            f"Model type '{model_type}' is not yet supported in CircuitKIT.\n\n"
             f"Supported model types: {', '.join(SUPPORTED_MODELS)}\n\n"
             f"To add support for '{model_type}':\n"
             f"  1. Identify which architecture family it belongs to\n"

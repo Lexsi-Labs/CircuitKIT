@@ -6,12 +6,12 @@ hide:
 
 <div class="ck-hero" markdown>
 
-<div class="ck-hero-logo-wrap"><img class="ck-hero-mark ck-lexsi-on-light" src="assets/circuitkit-mark-black.svg" alt=""><img class="ck-hero-mark ck-lexsi-on-dark" src="assets/circuitkit-mark-white.svg" alt=""></div>
+<div class="ck-hero-logo-wrap"><div id="ck-hero-anim" class="ck-hero-anim" role="img" aria-label="A layered neural network with a circuit resolving through its connections"><img class="ck-hero-mark ck-lexsi-on-light" src="assets/circuitkit-mark-black.svg" alt=""><img class="ck-hero-mark ck-lexsi-on-dark" src="assets/circuitkit-mark-white.svg" alt=""></div></div>
 
 <h1 class="ck-hero-title">Discover a circuit.<br><em>Then act on it.</em></h1>
 
 <p class="ck-tagline">
-CircuitKit is a unified framework for mechanistic interpretability.<br>
+CircuitKIT is a unified framework for mechanistic interpretability.<br>
 13 discovery algorithms · 6-pillar faithfulness evaluation · real interventions
 </p>
 
@@ -19,7 +19,6 @@ CircuitKit is a unified framework for mechanistic interpretability.<br>
 [View on GitHub](https://github.com/Lexsi-Labs/circuitkit){ .md-button }
 
 <p class="ck-chips">
-<span>v1.0.0</span>
 <span>LSAL v1.2</span>
 <span>Python 3.10+</span>
 <span>13 algorithms</span>
@@ -28,7 +27,7 @@ CircuitKit is a unified framework for mechanistic interpretability.<br>
 
 </div>
 
-Given a model and a task, CircuitKit discovers the circuit driving that behaviour,
+Given a model and a task, CircuitKIT discovers the circuit driving that behaviour,
 evaluates how faithful it is, and lets you act on it — prune, quantize, edit, steer,
 or fine-tune — then export a reloadable HuggingFace checkpoint.</p>
 
@@ -164,10 +163,10 @@ flowchart LR
 |---|---|---|
 | **01** Quickstart Pipeline — discover → evaluate → prune → export | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/Lexsi-Labs/circuitkit/blob/main/examples/notebooks/01_quickstart_pipeline.ipynb) | no GPU |
 | **02** Algorithm Comparison — 6 algorithms head-to-head | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/Lexsi-Labs/circuitkit/blob/main/examples/notebooks/02_algorithm_comparison.ipynb) | GPU helps |
-| **03** Custom Data — bring-your-own CSV | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/Lexsi-Labs/circuitkit/blob/main/examples/notebooks/03_custom_data_jailbreak.ipynb) | GPU helps |
-| **23** Jailbreak Safety Steering — circuit-restricted defense on Qwen 2.5 | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/Lexsi-Labs/circuitkit/blob/main/examples/case-studies/23-jailbreak-safety-steering.ipynb) | GPU (T4+) |
+| **03** Evaluation Deep Dive — all 6 faithfulness pillars | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/Lexsi-Labs/circuitkit/blob/main/examples/notebooks/03_evaluation_deep_dive.ipynb) | GPU helps |
+| **23** Jailbreak Refusal Localization — find vs. act, across 3 instruction-tuned models | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/Lexsi-Labs/circuitkit/blob/main/examples/case-studies/23-jailbreak-refusal-multi-model.ipynb) | GPU (T4+) |
 
-All 9 tutorial notebooks, the 13 numbered scripts, and 11 domain
+All 8 tutorial notebooks, the 13 numbered scripts, and 11 domain
 [case studies](examples/case-studies.md) (compliance auditing, banking safety,
 gender-bias mitigation, permanent unlearning, edge deployment) are catalogued
 in the [Examples overview](examples/overview.md).
@@ -188,12 +187,11 @@ in the [Examples overview](examples/overview.md).
 
 ```bibtex
 @software{circuitkit2026,
-  title  = {CircuitKit: Circuit Discovery, Evaluation, and Application Toolkit
+  title  = {CircuitKIT: Circuit Discovery, Evaluation, and Application Toolkit
             for Mechanistic Interpretability},
   author = {Seth, Pratinav and Gosalia, Hem and Kasliwal, Aditya
             and Sankarapu, Vinay Kumar},
   year   = {2026},
-  version = {1.0.0},
   url    = {https://github.com/Lexsi-Labs/circuitkit}
 }
 ```

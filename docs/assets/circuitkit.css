@@ -1,7 +1,7 @@
 /* ============================================================================
-   CircuitKit — design system
+   CircuitKIT — design system
    Direction: minimal, technical, monochrome + restrained orange accent
-   matching the CircuitKit logo (EC5A2C).
+   matching the CircuitKIT logo (FF4B0A).
    Type: Bricolage Grotesque (display) · Schibsted Grotesk (text, via theme)
          · IBM Plex Mono (code, via theme)
    ========================================================================== */
@@ -11,8 +11,8 @@
 :root {
   --ck-ink: #0f172a;
   --ck-ink-2: #1e293b;
-  --ck-accent: #EC5A2C;
-  --ck-accent-dim: rgba(236, 90, 44, 0.12);
+  --ck-accent: #FF4B0A;
+  --ck-accent-dim: rgba(255, 75, 10, 0.12);
   --ck-paper: #f8fafc;
   --ck-display: "Bricolage Grotesque", "Schibsted Grotesk", sans-serif;
 }
@@ -69,7 +69,7 @@
 .md-header__button.md-logo svg {
   height: 1.6rem;
   width: auto;
-  filter: drop-shadow(0 0 4px rgba(236, 90, 44, 0.15));
+  filter: drop-shadow(0 0 4px rgba(255, 75, 10, 0.15));
 }
 
 .md-tabs {
@@ -132,35 +132,63 @@
   margin-bottom: 0.8rem;
 }
 
-.ck-hero .ck-hero-logo-wrap::before {
-  content: "";
-  position: absolute;
-  inset: -24px;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--ck-accent-dim) 0%, transparent 70%);
-  animation: ck-pulse 2.4s ease-in-out infinite;
-  pointer-events: none;
+/* ── Landing hero: layered-circuit animation ────────────────────────────── */
+.ck-hero .ck-hero-anim {
+  width: min(340px, 74vw);
+  margin: 0 auto;
+  line-height: 0;
 }
 
-.ck-hero .ck-hero-logo-wrap::after {
-  content: "";
-  position: absolute;
-  inset: -10px;
-  border-radius: 50%;
-  border: 1.5px solid var(--ck-accent);
-  opacity: 0.25;
-  animation: ck-ring 2.4s ease-in-out infinite;
-  pointer-events: none;
+.ck-hero .ck-hero-anim svg {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
-@keyframes ck-pulse {
-  0%, 100% { transform: scale(1); opacity: 0.6; }
-  50%      { transform: scale(1.12); opacity: 1; }
+[data-md-color-scheme="default"] {
+  --ck-anim-edge: rgba(15, 23, 42, 0.13);
+  --ck-anim-node: rgba(15, 23, 42, 0.42);
+  --ck-anim-glow: rgba(255, 75, 10, 0.30);
 }
 
-@keyframes ck-ring {
-  0%, 100% { transform: scale(1); opacity: 0.2; }
-  50%      { transform: scale(1.08); opacity: 0.45; }
+[data-md-color-scheme="slate"] {
+  --ck-anim-edge: rgba(148, 163, 184, 0.16);
+  --ck-anim-node: rgba(214, 225, 240, 0.50);
+  --ck-anim-glow: rgba(255, 75, 10, 0.55);
+}
+
+.ck-hero-anim .ck-edge {
+  fill: none;
+  stroke: var(--ck-anim-edge);
+  stroke-width: 1.8;
+  transition: stroke 0.55s ease, filter 0.55s ease;
+}
+
+.ck-hero-anim .ck-edge.is-on {
+  stroke: var(--ck-accent);
+  filter: drop-shadow(0 0 3px var(--ck-anim-glow));
+}
+
+.ck-hero-anim .ck-node {
+  fill: var(--ck-anim-node);
+  transition: fill 0.55s ease, filter 0.55s ease;
+}
+
+.ck-hero-anim .ck-node.is-on {
+  fill: var(--ck-accent);
+  filter: drop-shadow(0 0 5px var(--ck-anim-glow));
+}
+
+.ck-hero-anim .ck-pulse {
+  fill: var(--ck-accent);
+  filter: drop-shadow(0 0 5px var(--ck-anim-glow));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ck-hero-anim .ck-edge,
+  .ck-hero-anim .ck-node {
+    transition: none;
+  }
 }
 
 .ck-hero h1.ck-hero-title {
@@ -213,7 +241,7 @@
 }
 
 .ck-hero .md-button--primary:hover {
-  background-color: #d04e24;
+  background-color: #E14108;
   border-color: var(--ck-accent);
   transform: translateY(-1px);
 }

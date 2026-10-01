@@ -118,7 +118,7 @@ def class_pruning(circuit: ck.Circuit) -> None:
 
 
 def class_quantization(circuit: ck.Circuit) -> None:
-    """B2. circuit_quantize() directly -- the underlying CircuitKit logic
+    """B2. circuit_quantize() directly -- the underlying CircuitKIT logic
     behind ck.quantize(). Optional `low_weights`/`high_weights` qtype kwargs
     (e.g. optimum.quanto's qint4/qint8) can tune the precision tiers further
     if optimum-quanto is installed.

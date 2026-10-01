@@ -1,1 +1,1 @@
-# CircuitKit Test Suite
+# CircuitKIT Test Suite

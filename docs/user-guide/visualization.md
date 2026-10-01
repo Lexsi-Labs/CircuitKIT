@@ -45,6 +45,18 @@ Pass `output` to write an HTML export, or omit it for the inline widget:
 ck.visualize_circuit(circuit, mode="graph", output="./circuit_graph.html")
 ```
 
+### Live example
+
+The graph below is a real EAP-IG circuit for GPT-2 on the IOI task, exported
+with the code above. Hover a node for its layer, head, and importance score;
+drag to pan and scroll to zoom.
+
+<iframe src="../../assets/ioi_eap-ig.html" title="Interactive IOI circuit (GPT-2, EAP-IG)" width="100%" height="640" loading="lazy" style="border:1px solid var(--md-default-fg-color--lightest);border-radius:8px;"></iframe>
+
+The same file ships in the repo at
+[`examples/visualization/ioi_eap-ig.html`](https://github.com/Lexsi-Labs/circuitkit/blob/main/examples/visualization/ioi_eap-ig.html)
+if you would rather open it directly in a browser.
+
 ## Mode 2: Comparison dashboard
 
 Compare two circuits side-by-side: algorithm comparisons, cross-task transfer, or before/after pruning.

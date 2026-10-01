@@ -675,7 +675,7 @@ def combine_token_scores(interval_dict, scores):
 
 # data helper
 def load_agnews_data():
-    raw_agnews = load_dataset("ag_news", split="test")
+    raw_agnews = load_dataset("fancyzhx/ag_news", split="test")
     label_classes = np.unique(raw_agnews["label"])
     le = preprocessing.LabelEncoder()
     le.fit(label_classes)
@@ -689,7 +689,7 @@ def load_agnews_data():
 
 
 def load_sst2_data():
-    raw_sst2 = load_dataset("glue", "sst2", split="validation")
+    raw_sst2 = load_dataset("nyu-mll/glue", "sst2", split="validation")
     label_classes = np.unique(raw_sst2["label"])
     le = preprocessing.LabelEncoder()
     le.fit(label_classes)

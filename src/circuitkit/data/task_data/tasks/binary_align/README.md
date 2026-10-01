@@ -1,3 +1,11 @@
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../docs/assets/circuitkit-logo-white.png">
+    <img src="../../../../../../docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
+
 # Binary align
 
 This task probes model alignment/refusal behavior. It uses length-matched pairs of structurally identical benign and harmful requests, optionally framed by safe vs. jailbreak system prompts.

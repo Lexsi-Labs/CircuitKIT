@@ -1,3 +1,11 @@
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../../../docs/assets/circuitkit-logo-white.png">
+    <img src="../../../../../docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
+
 # tasks
 
 Task datasets and metric constructors for the ACDC backend. Each `get_all_*_things`

@@ -1,6 +1,14 @@
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../docs/assets/circuitkit-logo-white.png">
+    <img src="../../../docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
+
 # applications
 
-The "Intervene" layer of CircuitKit: model surgery and deployment on discovered circuits.
+The "Intervene" layer of CircuitKIT: model surgery and deployment on discovered circuits.
 
 ## Key modules
 
@@ -18,4 +26,4 @@ Re-exported from `__init__.py`: the architecture registry constants (`MODEL_ARCH
 
 ## How it fits
 
-This package takes circuits discovered and evaluated elsewhere in CircuitKit and applies them to real models: pruning, quantization, selective finetuning, and related interventions, all sharing the architecture registry/utilities defined here.
+This package takes circuits discovered and evaluated elsewhere in CircuitKIT and applies them to real models: pruning, quantization, selective finetuning, and related interventions, all sharing the architecture registry/utilities defined here.

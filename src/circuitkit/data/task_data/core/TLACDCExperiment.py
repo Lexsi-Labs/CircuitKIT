@@ -2,8 +2,8 @@ import pickle
 import random
 import time
 
-# from acdc.global_cache import GlobalCache  # Commented out - not available in CircuitKit
-# from acdc.acdc_graphics import log_metrics_to_wandb  # Commented out - not available in CircuitKit
+# from acdc.global_cache import GlobalCache  # Commented out - not available in CircuitKIT
+# from acdc.acdc_graphics import log_metrics_to_wandb  # Commented out - not available in CircuitKIT
 import warnings
 from argparse import Namespace
 from collections import OrderedDict
@@ -12,7 +12,7 @@ from typing import Callable, Dict, List, Literal, Optional, Tuple, TypeVar, Unio
 
 import torch
 
-# from acdc.acdc_graphics import show  # Commented out - not available in CircuitKit
+# from acdc.acdc_graphics import show  # Commented out - not available in CircuitKIT
 from transformer_lens.HookedTransformer import HookedTransformer
 
 try:  # wandb is an optional dependency — only needed for opt-in logging

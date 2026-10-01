@@ -1,9 +1,14 @@
 """
-CircuitKit: A comprehensive toolkit for circuit discovery in transformer models.
+CircuitKIT: A comprehensive toolkit for circuit discovery in transformer models.
 """
 
-# Version information
-__version__ = "0.1.8"
+from ._tl_patches import install as _install_tl_patches
+
+# Must run before transformer_lens is first imported (see _tl_patches).
+_install_tl_patches()
+
+# The release pipeline (scripts/release.py set-version) rewrites this line.
+__version__ = "0.1.9"
 __author__ = "Pratinav Seth, Hem Gosalia, Aditya Kasliwal, Vinay Kumar Sankarapu"
 __description__ = "Unified Discover, Evaluate, Intervene toolkit for mechanistic interpretability"
 _API_EXPORTS = {"discover_circuit", "evaluate_circuit", "load_circuit"}

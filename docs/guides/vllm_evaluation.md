@@ -1,16 +1,16 @@
 # Fast Evaluation with vLLM
 
-CircuitKit supports fast benchmark evaluation through [vLLM](https://docs.vllm.ai/),
-**via lm-evaluation-harness's native vLLM backend**. CircuitKit does *not* reimplement
+CircuitKIT supports fast benchmark evaluation through [vLLM](https://docs.vllm.ai/),
+**via lm-evaluation-harness's native vLLM backend**. CircuitKIT does *not* reimplement
 vLLM or wrap it directly — it simply hands a checkpoint to `lm-eval`, which knows how
 to load and serve that checkpoint with vLLM.
 
 This means:
 
-- vLLM is an **optional, user-installed dependency**. CircuitKit never installs it for
+- vLLM is an **optional, user-installed dependency**. CircuitKIT never installs it for
   you and has no hard dependency on it.
 - All vLLM behaviour, flags, and performance characteristics come from `lm-eval` + vLLM
-  upstream — CircuitKit does not intercept or modify them.
+  upstream — CircuitKIT does not intercept or modify them.
 - The same evaluation works with the default HuggingFace backend; vLLM is purely a
   speed optimisation for the throughput-bound parts of benchmark evaluation.
 
@@ -24,14 +24,14 @@ paged-attention serving. Use it when:
 - The model is large enough that the default HuggingFace backend is throughput-bound.
 - You have a CUDA GPU — vLLM is GPU-oriented.
 
-For circuit *discovery* and the 6-pillar *faithfulness* evaluation, CircuitKit uses
+For circuit *discovery* and the 6-pillar *faithfulness* evaluation, CircuitKIT uses
 TransformerLens / HuggingFace directly; vLLM is not involved there. vLLM only enters at
 the **downstream benchmark evaluation** stage, after you have a concrete checkpoint on
 disk.
 
 ## Installation
 
-vLLM is not part of any CircuitKit extra. Install it yourself, alongside `lm-eval`:
+vLLM is not part of any CircuitKIT extra. Install it yourself, alongside `lm-eval`:
 
 ```bash
 pip install vllm
@@ -45,7 +45,7 @@ fall back to the default HuggingFace backend (the `HFLM` model class, or `--mode
 
 ## Workflow: evaluate a pruned checkpoint with vLLM
 
-The pattern has three steps. The first two are pure CircuitKit; the third is `lm-eval`.
+The pattern has three steps. The first two are pure CircuitKIT; the third is `lm-eval`.
 
 ### 1. Discover a circuit and select components to prune
 
@@ -67,7 +67,7 @@ circuit = discover_circuit({
 
 `circuitkit.evaluation.hf_checkpoint.save_pruned_checkpoint` writes a standard
 HuggingFace checkpoint with the selected components zeroed out. A standard checkpoint
-is exactly what vLLM needs — there is no CircuitKit-specific format involved:
+is exactly what vLLM needs — there is no CircuitKIT-specific format involved:
 
 ```python
 from circuitkit.evaluation.hf_checkpoint import save_pruned_checkpoint
@@ -80,7 +80,7 @@ save_pruned_checkpoint(model, pruned_nodes, "./checkpoints/pruned", overwrite=Tr
 ### 3. Evaluate the checkpoint with lm-eval's vLLM backend
 
 Point `lm-eval` at the saved checkpoint directory and request the vLLM backend. This is
-ordinary `lm-eval` usage — the only CircuitKit-specific input is the checkpoint path:
+ordinary `lm-eval` usage — the only CircuitKIT-specific input is the checkpoint path:
 
 ```python
 from lm_eval import evaluator
@@ -125,10 +125,10 @@ To run the identical pipeline against the default HuggingFace backend instead (u
 ## Notes and caveats
 
 - **vLLM is user-installed and optional.** `pip install vllm` is required to use
-  the vLLM backend (`--model vllm`); CircuitKit will not install it.
-- **CircuitKit does not reimplement vLLM.** The acceleration is entirely `lm-eval` +
+  the vLLM backend (`--model vllm`); CircuitKIT will not install it.
+- **CircuitKIT does not reimplement vLLM.** The acceleration is entirely `lm-eval` +
   vLLM upstream. Any vLLM-specific tuning (tensor parallelism, dtype, GPU memory
-  fraction) is passed through `lm-eval`'s `model_args`, not through CircuitKit.
+  fraction) is passed through `lm-eval`'s `model_args`, not through CircuitKIT.
 - **Use vLLM only at the benchmark stage.** Discovery and 6-pillar faithfulness
   evaluation run on TransformerLens / HuggingFace and are unaffected by vLLM.
 - vLLM and TransformerLens can contend for GPU memory if held simultaneously. The

@@ -1,3 +1,11 @@
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../../../../docs/assets/circuitkit-logo-white.png">
+    <img src="../../../../../../docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
+
 # WMDP
 
 Multiple-choice knowledge probing on the WMDP (Weapons of Mass Destruction Proxy) benchmark, for circuit discovery over hazardous-knowledge question answering.

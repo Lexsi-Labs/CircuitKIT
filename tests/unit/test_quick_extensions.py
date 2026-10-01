@@ -237,10 +237,12 @@ class TestExportCheckpointErrorPaths:
         with pytest.raises(ValueError, match="intervention"):
             export_checkpoint(MagicMock(), None, "path", intervention="explode")
 
-    def test_pruning_without_artifact_raises(self):
+    def test_pruning_without_artifact_exports_unpruned(self):
+        """No artifact exports the (e.g. edited) model without pruning."""
         from circuitkit.quick import export_checkpoint
-        with pytest.raises(ValueError, match="artifact"):
+        with patch("circuitkit.evaluation.save_pruned_checkpoint") as mock_save:
             export_checkpoint(MagicMock(), None, "path", intervention="pruning")
+        assert mock_save.call_args[0][1] == []
 
     def test_push_to_hub_without_repo_raises(self):
         """push_to_hub=True without hub_repo must raise before any network call."""
@@ -344,6 +346,24 @@ class TestVisualize:
         c.plot = MagicMock(return_value="<html/>")
         visualize_circuit(c, mode="graph", output="out.html")
         c.plot.assert_called_once_with("out.html")
+
+    def test_graph_mode_forwards_plot_kwargs(self):
+        # max_nodes/max_edges/edge_threshold must reach Circuit.plot, not be
+        # silently dropped.
+        from circuitkit.quick import visualize_circuit
+        c = _make_circuit()
+        c.plot = MagicMock(return_value=None)
+        visualize_circuit(
+            c,
+            mode="graph",
+            output="out.json",
+            max_nodes=5,
+            max_edges=10,
+            edge_threshold=0.1,
+        )
+        c.plot.assert_called_once_with(
+            "out.json", max_nodes=5, max_edges=10, edge_threshold=0.1
+        )
 
     def test_comparison_returns_dashboard_when_no_output(self):
         from circuitkit.quick import visualize_circuit

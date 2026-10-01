@@ -1,7 +1,7 @@
 """
-CircuitKit's flat, typed, Pythonic front-door API.
+CircuitKIT's flat, typed, Pythonic front-door API.
 
-This module is a *thin facade* over the existing CircuitKit engine. It exists
+This module is a *thin facade* over the existing CircuitKIT engine. It exists
 so researchers can run the common Discover -> Evaluate -> Intervene workflow
 with ordinary keyword arguments instead of hand-writing nested ``dict`` configs.
 
@@ -39,7 +39,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
     from transformer_lens import HookedTransformer
 
     from .evaluation.report import FaithfulnessReport
-
+    
     from pathlib import Path
 
 __all__ = [
@@ -112,12 +112,85 @@ def _check_level(level: str) -> str:
 # --------------------------------------------------------------------------- #
 # load_model                                                                  #
 # --------------------------------------------------------------------------- #
+#: ``model_type`` values rejected by :func:`load_model`: TransformerLens has no
+#: vision tower, so only text-only checkpoints can be loaded.
+VISION_LANGUAGE_MODEL_TYPES = {
+    "aya_vision": "Aya Vision",
+    "cohere_compass": "North Micro Vision",
+}
+
+
+def _register_checkpoint(name: str) -> None:
+    """Let ``HookedTransformer.from_pretrained`` take a local dir or unlisted Hub id.
+
+    TransformerLens only accepts names in its ``OFFICIAL_MODEL_NAMES``, but its
+    config and weight loaders already handle local paths and read the
+    architecture from ``config.json``; registering the name unlocks them.
+    """
+    from transformer_lens import loading_from_pretrained as loading
+    from transformers import PretrainedConfig
+
+    if name.lower() in loading.make_model_alias_map():
+        return
+    # Raw dict, not AutoConfig: a model_type this transformers does not know
+    # should still produce the message below.
+    model_type = PretrainedConfig.get_config_dict(name)[0].get("model_type")
+    if model_type in VISION_LANGUAGE_MODEL_TYPES:
+        raise ValueError(
+            f"{name!r} is {VISION_LANGUAGE_MODEL_TYPES[model_type]} ({model_type}), a "
+            "vision-language model. CircuitKIT's TransformerLens path has no vision "
+            "tower and does not load this checkpoint. Use a text-only Cohere model "
+            "(cohere / cohere2, e.g. Aya Expanse or Tiny Aya) instead."
+        )
+    # ponytail: name-based branches in TL's config loader (paths containing "llama"
+    # or "gemma") still bypass config.json; upstream TL limitation.
+    loading.OFFICIAL_MODEL_NAMES.append(name)
+
+
+def _from_pretrained(
+    name: str,
+    *,
+    fold_ln: bool = False,
+    center_writing_weights: bool = False,
+    center_unembed: bool = False,
+    fold_value_biases: bool = False,
+    **from_pretrained_kwargs: Any,
+) -> "HookedTransformer":
+    """``HookedTransformer.from_pretrained`` for a TL name, a local checkpoint dir or a Hub id.
+
+    The shared loader behind :func:`load_model`, the dict-config API, the CLI, the
+    benchmarks and the score extractors. Weight processing is off by default (see
+    :func:`load_model`). It records the source (and the folder's
+    ``lexsi_provenance.json``, if any) as ``model.lexsi_input`` for export provenance.
+    """
+    from transformer_lens import HookedTransformer
+
+    from .provenance import read_provenance
+
+    _register_checkpoint(name)
+    model = HookedTransformer.from_pretrained(
+        name,
+        fold_ln=fold_ln,
+        center_writing_weights=center_writing_weights,
+        center_unembed=center_unembed,
+        fold_value_biases=fold_value_biases,
+        **from_pretrained_kwargs,
+    )
+    model.lexsi_input = {"kind": "model", "ref": name, "provenance": read_provenance(name)}
+    return model
+
+
 def load_model(
     name: str,
     *,
     dtype: str = "bfloat16",
     device: Optional[str] = None,
     algorithm: Optional[str] = None,
+    fold_ln: bool = False,
+    center_writing_weights: bool = False,
+    center_unembed: bool = False,
+    fold_value_biases: bool = False,
+    **from_pretrained_kwargs: Any,
 ) -> "HookedTransformer":
     """Load a TransformerLens model with the flags circuit discovery needs.
 
@@ -133,8 +206,10 @@ def load_model(
     * ``ungroup_grouped_query_attention`` (when the model exposes it)
 
     Args:
-        name: HuggingFace / TransformerLens model id (e.g. ``"gpt2"``,
-            ``"pythia-70m"``, ``"Qwen/Qwen2-0.5B"``).
+        name: TransformerLens model name (e.g. ``"gpt2"``, ``"pythia-70m"``,
+            ``"Qwen/Qwen2-0.5B"``), a local checkpoint directory, or any Hugging
+            Face Hub repo id (e.g. a SafeTune / AlignTune output). For the last
+            two the architecture is read from the checkpoint's ``config.json``.
         dtype: Torch dtype string — ``"bfloat16"`` (default), ``"float32"``,
             ``"float16"``, ...
         device: Target device. ``None`` (default) auto-selects ``"cuda"`` when
@@ -142,13 +217,23 @@ def load_model(
         algorithm: If given, only the flags that algorithm needs are set. When
             omitted, the safe superset (all four flags) is enabled so the model
             works with any algorithm.
+        fold_ln, center_writing_weights, center_unembed, fold_value_biases:
+            TransformerLens weight processing, all off by default: the weights
+            then equal the Hugging Face ones, which :func:`export_checkpoint`
+            needs to write edited weights back, and which TransformerLens
+            recommends at reduced precision. Gemma-4, Sarvam-MoE and Cohere are
+            only validated unprocessed.
+        **from_pretrained_kwargs: Passed to
+            ``HookedTransformer.from_pretrained``.
 
     Returns:
         A configured :class:`~transformer_lens.HookedTransformer`, ready to pass
         straight to :func:`discover`.
 
     Raises:
-        ValueError: If ``algorithm`` is given but not a known discovery algorithm.
+        ValueError: If ``algorithm`` is given but not a known discovery algorithm,
+            or ``name`` is a vision-language checkpoint (see
+            ``VISION_LANGUAGE_MODEL_TYPES``).
 
     Example:
         >>> import circuitkit as ck
@@ -156,7 +241,17 @@ def load_model(
         >>> circuit = ck.discover(model, "ioi", n_examples=16)
     """
     import torch
-    from transformer_lens import HookedTransformer
+
+    from .utils.device import enable_expandable_segments
+
+    enable_expandable_segments()
+
+    # Importing circuitkit.backends applies CircuitKIT's TransformerLens
+    # compatibility ports (idempotently) before from_pretrained resolves the
+    # model name — notably the tiny-aya / cohere2 registration. Without this,
+    # ``load_model("CohereLabs/tiny-aya-base")`` (no ``algorithm=``) would call
+    # from_pretrained before the port runs and TL would reject the model name.
+    from . import backends as _backends  # noqa: F401
 
     if algorithm is not None:
         algorithm = _check_algorithm(algorithm)
@@ -172,7 +267,16 @@ def load_model(
             f"'bfloat16', 'float32' or 'float16'."
         ) from exc
 
-    model = HookedTransformer.from_pretrained(name, device=device, dtype=torch_dtype)
+    model = _from_pretrained(
+        name,
+        device=device,
+        dtype=torch_dtype,
+        fold_ln=fold_ln,
+        center_writing_weights=center_writing_weights,
+        center_unembed=center_unembed,
+        fold_value_biases=fold_value_biases,
+        **from_pretrained_kwargs,
+    )
 
     # Enable the hook points discovery relies on. When an algorithm is given we
     # still set the safe superset for EAP-family algorithms (they all need the
@@ -498,28 +602,29 @@ def faithfulness(
     # path uses (populates graph.nodes_scores, pins out-of-scope nodes, then
     # apply_topn to set node membership AND the 2-D edge matrix that
     # evaluate_graph reads, with prune() for connectivity).
-    from .api import _reconstruct_circuit_graph
+    from .api import _qkv_flags_enabled, _reconstruct_circuit_graph
 
     scores_data = {"node_scores": circuit.scores}
-    graph = _reconstruct_circuit_graph(model, scores_data, discovery_cfg, pruning_cfg, device)
-    dataloader = task_spec.build_dataloader(model, discovery_cfg, device)
+    with _qkv_flags_enabled(model):
+        graph = _reconstruct_circuit_graph(model, scores_data, discovery_cfg, pruning_cfg, device)
+        dataloader = task_spec.build_dataloader(model, discovery_cfg, device)
 
-    return run_full_faithfulness(
-        model=model,
-        graph=graph,
-        task_spec=task_spec,
-        discovery_cfg=discovery_cfg,
-        device=device,
-        pillars=pillars,
-        # Reward-oriented, per-sample metric (loss=False) so clean > corrupt and
-        # the faithfulness ratio is well-defined. task_spec.metric_fn() is the
-        # loss-style *discovery* metric, which would invert the denominator and
-        # make Pillars 1/2 spuriously report status='invalid' on canonical tasks.
-        metric_fn=_make_eval_metric(task_spec),
-        dataloader=dataloader,
-        pruning_cfg=pruning_cfg,
-        **kw,
-    )
+        return run_full_faithfulness(
+            model=model,
+            graph=graph,
+            task_spec=task_spec,
+            discovery_cfg=discovery_cfg,
+            device=device,
+            pillars=pillars,
+            # Reward-oriented, per-sample metric (loss=False) so clean > corrupt and
+            # the faithfulness ratio is well-defined. task_spec.metric_fn() is the
+            # loss-style *discovery* metric, which would invert the denominator and
+            # make Pillars 1/2 spuriously report status='invalid' on canonical tasks.
+            metric_fn=_make_eval_metric(task_spec),
+            dataloader=dataloader,
+            pruning_cfg=pruning_cfg,
+            **kw,
+        )
 
 
 # --------------------------------------------------------------------------- #
@@ -656,7 +761,9 @@ def quantize(
     import re
 
     if backend not in ("quanto", "llmcompressor"):
-        raise ValueError(f"backend must be 'quanto' or 'llmcompressor', got {backend!r}")
+        raise ValueError(
+            f"backend must be 'quanto' or 'llmcompressor', got {backend!r}"
+        )
 
     if not circuit.scores:
         raise ValueError(
@@ -686,7 +793,9 @@ def quantize(
         n_layers = getattr(cfg, "num_hidden_layers", None)
         if n_layers is None and cfg is not None:
             # Gemma-3 / multimodal configs nest the decoder under text_config.
-            n_layers = getattr(getattr(cfg, "text_config", None), "num_hidden_layers", None)
+            n_layers = getattr(
+                getattr(cfg, "text_config", None), "num_hidden_layers", None
+            )
         if n_layers is None and max_layer >= 0:
             n_layers = max_layer + 1
     if not n_layers:
@@ -698,9 +807,9 @@ def quantize(
         if tokenizer is None:
             from transformers import AutoTokenizer
 
-            repo_id = (
-                getattr(getattr(model, "config", None), "_name_or_path", None) or circuit.model_name
-            )
+            repo_id = getattr(
+                getattr(model, "config", None), "_name_or_path", None
+            ) or circuit.model_name
             if not repo_id:
                 raise ValueError(
                     "quantize(backend='llmcompressor') needs a tokenizer; pass "
@@ -761,8 +870,9 @@ def export_checkpoint(
             ``HookedTransformer``; for ``intervention="quantization"`` an
             already-quantized HF ``AutoModelForCausalLM``.
         artifact: For pruning, the pruning artifact — a :class:`Circuit`, a
-            node-name list, or a neuron dict. Ignored for quantization
-            (pass ``None``).
+            node-name list, or a neuron dict. ``None`` exports the model's
+            current weights without pruning (e.g. after a ROME edit or weight
+            steering). Ignored for quantization (pass ``None``).
         path: Destination directory for the HF checkpoint.
         intervention: ``"pruning"`` (default) or ``"quantization"``.
         overwrite: Overwrite ``path`` if it already exists.
@@ -773,14 +883,14 @@ def export_checkpoint(
             ``push_to_hub`` is ``True``.
         hub_private: Create the Hub repo as private (default ``True``).
         **kw: Extra keyword arguments forwarded to the underlying ``save_*``
-            helper (e.g. ``tokenizer_name`` for quantization).
+            helper (e.g. ``weights="current"`` for pruning, ``tokenizer_name``
+            for quantization).
 
     Returns:
         The checkpoint directory path.
 
     Raises:
-        ValueError: If ``intervention`` is unknown, a pruning export is
-            requested without an ``artifact``, or ``push_to_hub`` is set
+        ValueError: If ``intervention`` is unknown or ``push_to_hub`` is set
             without ``hub_repo``.
 
     Example:
@@ -794,9 +904,7 @@ def export_checkpoint(
 
     if intervention == "pruning":
         nodes = artifact.nodes if isinstance(artifact, Circuit) else artifact
-        if nodes is None:
-            raise ValueError("export_checkpoint(intervention='pruning') needs an artifact.")
-        save_pruned_checkpoint(model, nodes, path, overwrite=overwrite, **kw)
+        save_pruned_checkpoint(model, nodes or [], path, overwrite=overwrite, **kw)
     elif intervention == "quantization":
         save_quantized_checkpoint(model, path, overwrite=overwrite, **kw)
     else:
@@ -808,7 +916,9 @@ def export_checkpoint(
     return path
 
 
-def _push_checkpoint_to_hub(path: str, hub_repo: Optional[str], hub_private: bool) -> None:
+def _push_checkpoint_to_hub(
+    path: str, hub_repo: Optional[str], hub_private: bool
+) -> None:
     """Upload a written checkpoint directory to the HuggingFace Hub.
 
     Opt-in archival path for :func:`export_checkpoint`. The local checkpoint is
@@ -816,7 +926,9 @@ def _push_checkpoint_to_hub(path: str, hub_repo: Optional[str], hub_private: boo
     authenticated token (``huggingface-cli login`` or ``HF_TOKEN``).
     """
     if not hub_repo:
-        raise ValueError("export_checkpoint(push_to_hub=True) needs hub_repo='org/name'.")
+        raise ValueError(
+            "export_checkpoint(push_to_hub=True) needs hub_repo='org/name'."
+        )
     try:
         from huggingface_hub import HfApi
     except ImportError as exc:  # pragma: no cover - optional dependency
@@ -840,7 +952,7 @@ def benchmark(
     limit: Optional[int] = None,
     fewshot: int = 0,
     device: Optional[str] = None,
-    dtype: str = "float32",
+    dtype: str = "bfloat16",
     **kw: Any,
 ) -> Dict[str, Dict[str, float]]:
     """Run lm-evaluation-harness on a saved HF checkpoint.
@@ -857,7 +969,9 @@ def benchmark(
         limit: Cap examples per task — handy for quick smoke tests.
         fewshot: Few-shot example count.
         device: Torch device for the ``hf`` backend. ``None`` auto-selects.
-        dtype: Model dtype string for the ``hf`` backend.
+        dtype: Model dtype string. Defaults to ``"bfloat16"`` (half the VRAM of
+            float32, slightly different scores); pass ``"float32"`` to reproduce
+            earlier numbers.
         **kw: Extra keyword arguments forwarded to ``run_lm_eval`` (e.g.
             ``tokenizer``, ``batch_size``, ``apply_chat_template``).
 
@@ -890,8 +1004,7 @@ def benchmark(
         dtype=dtype,
         **kw,
     )
-
-
+    
 # --------------------------------------------------------------------------- #
 # load_scores                                                                  #
 # --------------------------------------------------------------------------- #
@@ -1019,7 +1132,6 @@ def selective_finetune(
             )
         try:
             from transformers import AutoConfig
-
             hf_cfg = AutoConfig.from_pretrained(resolved_model)
             if n_layers is None:
                 n_layers = hf_cfg.num_hidden_layers
@@ -1146,5 +1258,6 @@ def visualize_circuit(
         return None
 
     raise ValueError(
-        f"Unknown visualization mode: {mode!r}. " "Use 'graph', 'comparison', or 'dashboard'."
+        f"Unknown visualization mode: {mode!r}. "
+        "Use 'graph', 'comparison', or 'dashboard'."
     )

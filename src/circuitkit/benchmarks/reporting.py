@@ -362,7 +362,7 @@ class BenchmarkReporter:
         <!DOCTYPE html>
         <html>
         <head>
-            <title>CircuitKit Benchmark Report</title>
+            <title>CircuitKIT Benchmark Report</title>
             <meta charset="UTF-8">
             <style>
                 * {{
@@ -450,7 +450,7 @@ class BenchmarkReporter:
         </head>
         <body>
             <div class="container">
-                <h1>CircuitKit Benchmark Report</h1>
+                <h1>CircuitKIT Benchmark Report</h1>
 
                 <h2>Executive Summary</h2>
                 <p>Comprehensive benchmarking of circuit-guided interventions
@@ -548,7 +548,7 @@ class BenchmarkReporter:
         \usepackage{booktabs}
         \usepackage{hyperref}
 
-        \title{CircuitKit Benchmark Report}
+        \title{CircuitKIT Benchmark Report}
         \author{}
         \date{}
 
@@ -595,7 +595,7 @@ class BenchmarkReporter:
 
     def _generate_markdown_report(self, summary: Dict[str, Any]) -> str:
         """Generate Markdown report."""
-        md = f"""# CircuitKit Benchmark Report
+        md = f"""# CircuitKIT Benchmark Report
 
 Generated: {datetime.now().isoformat()}
 

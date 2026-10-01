@@ -1,4 +1,12 @@
-# CircuitKit Analysis Module
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../docs/assets/circuitkit-logo-white.png">
+    <img src="../../../docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
+
+# CircuitKIT Analysis Module
 
 Analysis tools for evaluating and understanding circuit behavior.
 
@@ -155,7 +163,7 @@ for component, score in ranked[:10]:
 
 ## Integration with Evaluation Framework
 
-The analysis module integrates with CircuitKit's main evaluation pipeline:
+The analysis module integrates with CircuitKIT's main evaluation pipeline:
 
 ```python
 from circuitkit import evaluate_circuit

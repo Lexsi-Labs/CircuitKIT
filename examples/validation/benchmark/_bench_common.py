@@ -4,7 +4,7 @@ Each per-(model,task) script imports `run_benchmark_cell` and runs every
 algorithm in ALL_ALGOS, then writes a per-cell JSON with discovery wall
 time + 6-pillar faithfulness scores from evaluate_circuit().
 
-What we measure (Pillars 1-6 from CircuitKit's run_full_faithfulness):
+What we measure (Pillars 1-6 from CircuitKIT's run_full_faithfulness):
   Pillar 1 — Patching:        circuit reproduces clean-input behaviour
                               when out-of-circuit edges are ablated.
   Pillar 2 — Ablation:        complement (the in-circuit edges, when

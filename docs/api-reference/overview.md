@@ -1,6 +1,6 @@
 # API Reference Overview
 
-CircuitKit exposes three API surfaces for the same underlying engine. Pick whichever fits your workflow.
+CircuitKIT exposes three API surfaces for the same underlying engine. Pick whichever fits your workflow.
 
 ---
 

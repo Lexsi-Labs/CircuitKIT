@@ -1,6 +1,6 @@
 # YAML Configuration
 
-CircuitKit's dict-config API and CLI both accept YAML files. This page covers the full YAML schema for discovery configs and task files.
+CircuitKIT's dict-config API and CLI both accept YAML files. This page covers the full YAML schema for discovery configs and task files.
 
 ---
 
@@ -126,9 +126,9 @@ See [Corruption strategies](../user-guide/data-corruption.md) for when these app
 
 ## Schema Column Names
 
-The `schema` block maps your CSV/JSONL column names to CircuitKit's expected fields:
+The `schema` block maps your CSV/JSONL column names to CircuitKIT's expected fields:
 
-| CircuitKit field | Description | Required |
+| CircuitKIT field | Description | Required |
 |-----------------|-------------|----------|
 | `prompt` | The clean (factual) prompt | Yes |
 | `answer` | The expected answer token/string | Yes |

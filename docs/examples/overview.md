@@ -1,6 +1,6 @@
 # Examples Overview
 
-CircuitKit ships three sets of runnable examples: **Python scripts** in `examples/` (CI-testable, CPU-friendly tutorials on GPT-2), **Jupyter notebooks** in `examples/notebooks/` (Colab-ready, with GPU tracks on Gemma / Qwen / Llama), and **[case studies](case-studies.md)** in `examples/case-studies/` (domain-framed end-to-end walkthroughs — compliance, safety steering, unlearning, edge deployment — on domain-appropriate models).
+CircuitKIT ships three sets of runnable examples: **Python scripts** in `examples/` (CI-testable, CPU-friendly tutorials on GPT-2), **Jupyter notebooks** in `examples/notebooks/` (Colab-ready, with GPU tracks on Gemma / Qwen / Llama), and **[case studies](case-studies.md)** in `examples/case-studies/` (domain-framed end-to-end walkthroughs — compliance, safety steering, unlearning, edge deployment — on domain-appropriate models).
 
 ---
 

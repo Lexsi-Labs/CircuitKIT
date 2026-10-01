@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>IOI Circuit — gpt2 / eap-ig</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/elkjs/lib/elk.bundled.min.js"></script>
+<style>
+/* ---- Reset & base ---- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ---- CSS variables (set by JS from theme) ---- */
+:root {
+  --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", "Fira Code", monospace;
+  --bg: #FFFFFF;
+  --bg-paper: #F8F9FA;
+  --text: #212529;
+  --text-muted: #6C757D;
+  --border: #E9ECEF;
+  --accent: #1D4ED8;
+}
+
+/* ---- Top bar ---- */
+#topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  height: 52px;
+  background: var(--bg-paper);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+#topbar h1 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 380px;
+}
+
+/* ---- Controls ---- */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+#threshold-slider {
+  width: 160px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+#threshold-value {
+  min-width: 32px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+}
+
+#toggle-background {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.stats-pill {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 3px 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ---- SVG canvas ---- */
+#graph-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+#graph-svg {
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+#graph-svg:active { cursor: grabbing; }
+
+/* Edge and node styles */
+.edge {
+  stroke-linecap: round;
+  transition: opacity 0.25s ease;
+  /* Hover is handled by the invisible wide .edge-hit lines drawn on top. */
+  pointer-events: none;
+}
+
+.edge-hit {
+  stroke: transparent;
+  stroke-width: 9;
+  pointer-events: stroke;
+}
+
+.node-bg {
+  transition: opacity 0.25s ease;
+}
+
+.node-circuit {
+  transition: opacity 0.25s ease;
+  cursor: pointer;
+}
+
+.node-label {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  fill: var(--text);
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.layer-label {
+  font-family: var(--font);
+  font-size: 10px;
+  fill: var(--text-muted);
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+/* ---- Tooltip ---- */
+#tooltip {
+  position: fixed;
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text);
+  pointer-events: none;
+  opacity: 0;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  max-width: 220px;
+  transition: opacity 0.15s ease;
+  z-index: 9999;
+}
+
+#tooltip.visible { opacity: 1; }
+
+#tooltip .tt-name {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+#tooltip .tt-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+#tooltip .tt-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+#tooltip .tt-key { color: var(--text-muted); }
+
+#tooltip .tt-status-in  { color: #2DC653; font-weight: 600; }
+#tooltip .tt-status-out { color: #6C757D; }
+
+/* ---- Legend ---- */
+#legend {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.8;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  min-width: 140px;
+}
+
+#legend h3 {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ---- Reset button ---- */
+#reset-zoom {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text);
+  font-family: var(--font);
+}
+
+#reset-zoom:hover {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* ---- Too-large fallback ---- */
+#graph-toolarge {
+  display: none;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.toolarge-box {
+  max-width: 480px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.toolarge-box h2 {
+  font-size: 16px;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+
+.toolarge-box p {
+  margin-bottom: 8px;
+}
+</style>
+</head>
+<body>
+
+<!-- Top bar: title + controls -->
+<div id="topbar">
+  <h1 id="title-text">IOI Circuit — gpt2 / eap-ig</h1>
+
+  <div class="controls">
+    <div class="control-group">
+      <label for="threshold-slider">Edge threshold</label>
+      <input type="range" id="threshold-slider"
+             min="0" max="1" step="0.01" value="0.0"/>
+      <span id="threshold-value">0.00</span>
+    </div>
+
+    <div class="control-group">
+      <input type="checkbox" id="toggle-background" checked/>
+      <label for="toggle-background">Show pruned nodes</label>
+    </div>
+
+    <button id="reset-zoom">⟳ Reset view</button>
+
+    <div class="stats-pill" id="stats-pill">—</div>
+  </div>
+</div>
+
+<!-- Main SVG canvas -->
+<div id="graph-container">
+  <svg id="graph-svg">
+    <defs><!-- arrowhead markers are generated by JS, binned by edge weight --></defs>
+    <g id="root-g">
+      <g id="edges-g"></g>
+      <g id="edges-hit-g"></g>
+      <g id="nodes-bg-g"></g>
+      <g id="nodes-circuit-g"></g>
+      <g id="labels-g"></g>
+      <g id="layer-labels-g"></g>
+    </g>
+  </svg>
+
+  <!-- Tooltip (absolutely positioned) -->
+  <div id="tooltip"></div>
+
+  <!-- Legend -->
+  <div id="legend">
+    <h3>Node types</h3>
+    <div id="legend-items"></div>
+    <div style="margin-top:8px; border-top: 1px solid var(--border); padding-top:8px;">
+      <div class="legend-row">
+        <div class="legend-dot"
+             style="background:#CED4DA; border: 1px solid #ADB5BD;"></div>
+        <span>Pruned node</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Too-large fallback (hidden unless the size guard trips) -->
+<div id="graph-toolarge">
+  <div class="toolarge-box">
+    <h2>This circuit is too large to render interactively</h2>
+    <p id="toolarge-detail"></p>
+    <p>Try raising the edge threshold, increasing sparsity to prune more
+       nodes, or exporting a static image instead.</p>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// Embedded data
+// ============================================================
+const GRAPH   = {"metadata": {"task": "ioi", "model": "gpt2", "algorithm": "eap-ig", "timestamp": "2026-07-10T18:08:47.528908Z", "n_total_nodes": 156, "n_circuit_nodes": 110, "n_pruned_nodes": 46}, "nodes": [{"id": "A0.0", "type": "attn_head", "layer": 0, "head": 0, "raw_score": 0.0017657459247857332, "log_norm_score": 0.44841095173877, "in_circuit": true, "rank": 84, "x": 0.0, "y": -3.96}, {"id": "A0.1", "type": "attn_head", "layer": 0, "head": 1, "raw_score": 0.03592011332511902, "log_norm_score": 0.7016931835340267, "in_circuit": true, "rank": 11, "x": 0.0, "y": -3.2399999999999998}, {"id": "A0.2", "type": "attn_head", "layer": 0, "head": 2, "raw_score": 0.0007938923663459718, "log_norm_score": 0.3812063580497314, "in_circuit": true, "rank": 108, "x": 0.0, "y": -2.52}, {"id": "A0.3", "type": "attn_head", "layer": 0, "head": 3, "raw_score": 0.01405069138854742, "log_norm_score": 0.6227821309046156, "in_circuit": true, "rank": 28, "x": 0.0, "y": -1.7999999999999998}, {"id": "A0.4", "type": "attn_head", "layer": 0, "head": 4, "raw_score": 0.020988507196307182, "log_norm_score": 0.6565200427714002, "in_circuit": true, "rank": 19, "x": 0.0, "y": -1.08}, {"id": "A0.5", "type": "attn_head", "layer": 0, "head": 5, "raw_score": 0.008158072829246521, "log_norm_score": 0.5770758760794444, "in_circuit": true, "rank": 41, "x": 0.0, "y": -0.36}, {"id": "A0.6", "type": "attn_head", "layer": 0, "head": 6, "raw_score": 0.0032153611537069082, "log_norm_score": 0.49880018976354656, "in_circuit": true, "rank": 72, "x": 0.0, "y": 0.36}, {"id": "A0.7", "type": "attn_head", "layer": 0, "head": 7, "raw_score": 0.0009541233885101974, "log_norm_score": 0.396662369448206, "in_circuit": true, "rank": 102, "x": 0.0, "y": 1.08}, {"id": "A0.8", "type": "attn_head", "layer": 0, "head": 8, "raw_score": 0.0017463915282860398, "log_norm_score": 0.44748436117500123, "in_circuit": true, "rank": 85, "x": 0.0, "y": 1.7999999999999998}, {"id": "A0.9", "type": "attn_head", "layer": 0, "head": 9, "raw_score": 0.007284936960786581, "log_norm_score": 0.5675591265402556, "in_circuit": true, "rank": 42, "x": 0.0, "y": 2.52}, {"id": "A0.10", "type": "attn_head", "layer": 0, "head": 10, "raw_score": 0.04867606237530708, "log_norm_score": 0.7272414672355797, "in_circuit": true, "rank": 4, "x": 0.0, "y": 3.2399999999999998}, {"id": "A0.11", "type": "attn_head", "layer": 0, "head": 11, "raw_score": 0.0002940576814580709, "log_norm_score": 0.29770956471023274, "in_circuit": false, "rank": 138, "x": 0.0, "y": 3.96}, {"id": "MLP 0", "type": "mlp", "layer": 0, "head": null, "raw_score": 1.2483487129211426, "log_norm_score": 1.0, "in_circuit": true, "rank": 1, "x": 0.0, "y": 4.824}, {"id": "A1.0", "type": "attn_head", "layer": 1, "head": 0, "raw_score": 0.001043609343469143, "log_norm_score": 0.4041991099048735, "in_circuit": true, "rank": 97, "x": 1.8, "y": -3.96}, {"id": "A1.1", "type": "attn_head", "layer": 1, "head": 1, "raw_score": 0.0010848741512745619, "log_norm_score": 0.4074592728466424, "in_circuit": true, "rank": 96, "x": 1.8, "y": -3.2399999999999998}, {"id": "A1.2", "type": "attn_head", "layer": 1, "head": 2, "raw_score": 0.00020065663557033986, "log_norm_score": 0.26557930835111504, "in_circuit": false, "rank": 145, "x": 1.8, "y": -2.52}, {"id": "A1.3", "type": "attn_head", "layer": 1, "head": 3, "raw_score": 0.0005687928642146289, "log_norm_score": 0.3531744889627791, "in_circuit": false, "rank": 119, "x": 1.8, "y": -1.7999999999999998}, {"id": "A1.4", "type": "attn_head", "layer": 1, "head": 4, "raw_score": 0.00043228259892202914, "log_norm_score": 0.3301023589823846, "in_circuit": false, "rank": 130, "x": 1.8, "y": -1.08}, {"id": "A1.5", "type": "attn_head", "layer": 1, "head": 5, "raw_score": 0.0004920050851069391, "log_norm_score": 0.34098192460604887, "in_circuit": false, "rank": 127, "x": 1.8, "y": -0.36}, {"id": "A1.6", "type": "attn_head", "layer": 1, "head": 6, "raw_score": 0.0012701773084700108, "log_norm_score": 0.4207166138089441, "in_circuit": true, "rank": 94, "x": 1.8, "y": 0.36}, {"id": "A1.7", "type": "attn_head", "layer": 1, "head": 7, "raw_score": 0.0009868842316791415, "log_norm_score": 0.39950057877413253, "in_circuit": true, "rank": 101, "x": 1.8, "y": 1.08}, {"id": "A1.8", "type": "attn_head", "layer": 1, "head": 8, "raw_score": 0.001029584207572043, "log_norm_score": 0.4030616156772242, "in_circuit": true, "rank": 98, "x": 1.8, "y": 1.7999999999999998}, {"id": "A1.9", "type": "attn_head", "layer": 1, "head": 9, "raw_score": 0.00021983271290082484, "log_norm_score": 0.27325259576984134, "in_circuit": false, "rank": 143, "x": 1.8, "y": 2.52}, {"id": "A1.10", "type": "attn_head", "layer": 1, "head": 10, "raw_score": 0.0006146348896436393, "log_norm_score": 0.3596909943694233, "in_circuit": false, "rank": 114, "x": 1.8, "y": 3.2399999999999998}, {"id": "A1.11", "type": "attn_head", "layer": 1, "head": 11, "raw_score": 0.002892835298553109, "log_norm_score": 0.48991368478171354, "in_circuit": true, "rank": 75, "x": 1.8, "y": 3.96}, {"id": "MLP 1", "type": "mlp", "layer": 1, "head": null, "raw_score": 0.01786554977297783, "log_norm_score": 0.6429761687570376, "in_circuit": true, "rank": 23, "x": 1.8, "y": 4.824}, {"id": "A2.0", "type": "attn_head", "layer": 2, "head": 0, "raw_score": 0.00019715388771146536, "log_norm_score": 0.2640987716413898, "in_circuit": false, "rank": 147, "x": 3.6, "y": -3.96}, {"id": "A2.1", "type": "attn_head", "layer": 2, "head": 1, "raw_score": 0.00028570136055350304, "log_norm_score": 0.295285897409736, "in_circuit": false, "rank": 140, "x": 3.6, "y": -3.2399999999999998}, {"id": "A2.2", "type": "attn_head", "layer": 2, "head": 2, "raw_score": 0.0016278792172670364, "log_norm_score": 0.44157640095898476, "in_circuit": true, "rank": 86, "x": 3.6, "y": -2.52}, {"id": "A2.3", "type": "attn_head", "layer": 2, "head": 3, "raw_score": 0.0006239014910534024, "log_norm_score": 0.36094903644386167, "in_circuit": false, "rank": 113, "x": 3.6, "y": -1.7999999999999998}, {"id": "A2.4", "type": "attn_head", "layer": 2, "head": 4, "raw_score": 0.000998268136754632, "log_norm_score": 0.4004648018646742, "in_circuit": true, "rank": 100, "x": 3.6, "y": -1.08}, {"id": "A2.5", "type": "attn_head", "layer": 2, "head": 5, "raw_score": 0.0008942075073719025, "log_norm_score": 0.3912099436430848, "in_circuit": true, "rank": 103, "x": 3.6, "y": -0.36}, {"id": "A2.6", "type": "attn_head", "layer": 2, "head": 6, "raw_score": 0.00031434770789928734, "log_norm_score": 0.30331908846596056, "in_circuit": false, "rank": 135, "x": 3.6, "y": 0.36}, {"id": "A2.7", "type": "attn_head", "layer": 2, "head": 7, "raw_score": 0.0008916055085137486, "log_norm_score": 0.39096495453742164, "in_circuit": true, "rank": 104, "x": 3.6, "y": 1.08}, {"id": "A2.8", "type": "attn_head", "layer": 2, "head": 8, "raw_score": 0.00011121403804281726, "log_norm_score": 0.21596586863320083, "in_circuit": false, "rank": 152, "x": 3.6, "y": 1.7999999999999998}, {"id": "A2.9", "type": "attn_head", "layer": 2, "head": 9, "raw_score": 0.004732581786811352, "log_norm_score": 0.5312961898560503, "in_circuit": true, "rank": 55, "x": 3.6, "y": 2.52}, {"id": "A2.10", "type": "attn_head", "layer": 2, "head": 10, "raw_score": 0.0006340429536066949, "log_norm_score": 0.36230461249129753, "in_circuit": true, "rank": 112, "x": 3.6, "y": 3.2399999999999998}, {"id": "A2.11", "type": "attn_head", "layer": 2, "head": 11, "raw_score": 0.0013738746056333184, "log_norm_score": 0.42731436027566566, "in_circuit": true, "rank": 89, "x": 3.6, "y": 3.96}, {"id": "MLP 2", "type": "mlp", "layer": 2, "head": null, "raw_score": 0.017648976296186447, "log_norm_score": 0.6419508002465282, "in_circuit": true, "rank": 24, "x": 3.6, "y": 4.824}, {"id": "A3.0", "type": "attn_head", "layer": 3, "head": 0, "raw_score": 0.0574684701859951, "log_norm_score": 0.7412013514008151, "in_circuit": true, "rank": 3, "x": 5.4, "y": -3.96}, {"id": "A3.1", "type": "attn_head", "layer": 3, "head": 1, "raw_score": 0.0004957211785949767, "log_norm_score": 0.3416145220399133, "in_circuit": false, "rank": 124, "x": 5.4, "y": -3.2399999999999998}, {"id": "A3.2", "type": "attn_head", "layer": 3, "head": 2, "raw_score": 0.0002979905984830111, "log_norm_score": 0.29882652927589154, "in_circuit": false, "rank": 137, "x": 5.4, "y": -2.52}, {"id": "A3.3", "type": "attn_head", "layer": 3, "head": 3, "raw_score": 0.0004896110622212291, "log_norm_score": 0.34057185006046015, "in_circuit": false, "rank": 128, "x": 5.4, "y": -1.7999999999999998}, {"id": "A3.4", "type": "attn_head", "layer": 3, "head": 4, "raw_score": 0.0020250591915100813, "log_norm_score": 0.459930817276316, "in_circuit": true, "rank": 80, "x": 5.4, "y": -1.08}, {"id": "A3.5", "type": "attn_head", "layer": 3, "head": 5, "raw_score": 0.004154636990278959, "log_norm_score": 0.5203463145427977, "in_circuit": true, "rank": 61, "x": 5.4, "y": -0.36}, {"id": "A3.6", "type": "attn_head", "layer": 3, "head": 6, "raw_score": 0.009902292862534523, "log_norm_score": 0.5933653032166653, "in_circuit": true, "rank": 37, "x": 5.4, "y": 0.36}, {"id": "A3.7", "type": "attn_head", "layer": 3, "head": 7, "raw_score": 0.0013421721523627639, "log_norm_score": 0.4253516748372333, "in_circuit": true, "rank": 92, "x": 5.4, "y": 1.08}, {"id": "A3.8", "type": "attn_head", "layer": 3, "head": 8, "raw_score": 0.0005352019798010588, "log_norm_score": 0.34805691868707134, "in_circuit": true, "rank": 121, "x": 5.4, "y": 1.7999999999999998}, {"id": "A3.9", "type": "attn_head", "layer": 3, "head": 9, "raw_score": 0.000452461710665375, "log_norm_score": 0.33393797335975106, "in_circuit": false, "rank": 129, "x": 5.4, "y": 2.52}, {"id": "A3.10", "type": "attn_head", "layer": 3, "head": 10, "raw_score": 8.521569725417066e-06, "log_norm_score": 0.0, "in_circuit": false, "rank": 156, "x": 5.4, "y": 3.2399999999999998}, {"id": "A3.11", "type": "attn_head", "layer": 3, "head": 11, "raw_score": 0.00039305767859332263, "log_norm_score": 0.3221052746063166, "in_circuit": false, "rank": 133, "x": 5.4, "y": 3.96}, {"id": "MLP 3", "type": "mlp", "layer": 3, "head": null, "raw_score": 0.017138248309493065, "log_norm_score": 0.639482054132991, "in_circuit": true, "rank": 25, "x": 5.4, "y": 4.824}, {"id": "A4.0", "type": "attn_head", "layer": 4, "head": 0, "raw_score": 0.0006023397436365485, "log_norm_score": 0.35799219422629813, "in_circuit": false, "rank": 115, "x": 7.2, "y": -3.96}, {"id": "A4.1", "type": "attn_head", "layer": 4, "head": 1, "raw_score": 0.00041414686711505055, "log_norm_score": 0.3264991775546274, "in_circuit": false, "rank": 131, "x": 7.2, "y": -3.2399999999999998}, {"id": "A4.2", "type": "attn_head", "layer": 4, "head": 2, "raw_score": 0.00011273438576608896, "log_norm_score": 0.21710737131818955, "in_circuit": false, "rank": 150, "x": 7.2, "y": -2.52}, {"id": "A4.3", "type": "attn_head", "layer": 4, "head": 3, "raw_score": 0.01900911144912243, "log_norm_score": 0.6481922720950796, "in_circuit": true, "rank": 22, "x": 7.2, "y": -1.7999999999999998}, {"id": "A4.4", "type": "attn_head", "layer": 4, "head": 4, "raw_score": 0.007061803247779608, "log_norm_score": 0.5649438216446494, "in_circuit": true, "rank": 45, "x": 7.2, "y": -1.08}, {"id": "A4.5", "type": "attn_head", "layer": 4, "head": 5, "raw_score": 0.00011220415035495535, "log_norm_score": 0.2167110193533592, "in_circuit": false, "rank": 151, "x": 7.2, "y": -0.36}, {"id": "A4.6", "type": "attn_head", "layer": 4, "head": 6, "raw_score": 0.003419875865802169, "log_norm_score": 0.5039843814185027, "in_circuit": true, "rank": 69, "x": 7.2, "y": 0.36}, {"id": "A4.7", "type": "attn_head", "layer": 4, "head": 7, "raw_score": 0.0069143339060246944, "log_norm_score": 0.5631696074348513, "in_circuit": true, "rank": 47, "x": 7.2, "y": 1.08}, {"id": "A4.8", "type": "attn_head", "layer": 4, "head": 8, "raw_score": 0.00022945529781281948, "log_norm_score": 0.2768543053203461, "in_circuit": false, "rank": 142, "x": 7.2, "y": 1.7999999999999998}, {"id": "A4.9", "type": "attn_head", "layer": 4, "head": 9, "raw_score": 0.0006848056218586862, "log_norm_score": 0.3687796078328479, "in_circuit": true, "rank": 111, "x": 7.2, "y": 2.52}, {"id": "A4.10", "type": "attn_head", "layer": 4, "head": 10, "raw_score": 0.001272643799893558, "log_norm_score": 0.420879708297532, "in_circuit": true, "rank": 93, "x": 7.2, "y": 3.2399999999999998}, {"id": "A4.11", "type": "attn_head", "layer": 4, "head": 11, "raw_score": 0.0038943940307945013, "log_norm_score": 0.5149080273723334, "in_circuit": true, "rank": 64, "x": 7.2, "y": 3.96}, {"id": "MLP 4", "type": "mlp", "layer": 4, "head": null, "raw_score": 0.014935724437236786, "log_norm_score": 0.6279175433391786, "in_circuit": true, "rank": 27, "x": 7.2, "y": 4.824}, {"id": "A5.0", "type": "attn_head", "layer": 5, "head": 0, "raw_score": 0.006715924944728613, "log_norm_score": 0.5607218791601394, "in_circuit": true, "rank": 49, "x": 9.0, "y": -3.96}, {"id": "A5.1", "type": "attn_head", "layer": 5, "head": 1, "raw_score": 0.0002933026698883623, "log_norm_score": 0.29749342997602857, "in_circuit": false, "rank": 139, "x": 9.0, "y": -3.2399999999999998}, {"id": "A5.2", "type": "attn_head", "layer": 5, "head": 2, "raw_score": 0.007283145096153021, "log_norm_score": 0.56753844522436, "in_circuit": true, "rank": 43, "x": 9.0, "y": -2.52}, {"id": "A5.3", "type": "attn_head", "layer": 5, "head": 3, "raw_score": 0.0035846102982759476, "log_norm_score": 0.5079395367159104, "in_circuit": true, "rank": 67, "x": 9.0, "y": -1.7999999999999998}, {"id": "A5.4", "type": "attn_head", "layer": 5, "head": 4, "raw_score": 0.0019113061716780066, "log_norm_score": 0.45507050899912865, "in_circuit": true, "rank": 81, "x": 9.0, "y": -1.08}, {"id": "A5.5", "type": "attn_head", "layer": 5, "head": 5, "raw_score": 0.047414425760507584, "log_norm_score": 0.7250336953947097, "in_circuit": true, "rank": 5, "x": 9.0, "y": -0.36}, {"id": "A5.6", "type": "attn_head", "layer": 5, "head": 6, "raw_score": 0.0028871686663478613, "log_norm_score": 0.489748841073466, "in_circuit": true, "rank": 76, "x": 9.0, "y": 0.36}, {"id": "A5.7", "type": "attn_head", "layer": 5, "head": 7, "raw_score": 0.0005491030169650912, "log_norm_score": 0.35021265127823814, "in_circuit": false, "rank": 120, "x": 9.0, "y": 1.08}, {"id": "A5.8", "type": "attn_head", "layer": 5, "head": 8, "raw_score": 0.0031678981613367796, "log_norm_score": 0.4975499423092208, "in_circuit": true, "rank": 73, "x": 9.0, "y": 1.7999999999999998}, {"id": "A5.9", "type": "attn_head", "layer": 5, "head": 9, "raw_score": 0.032258495688438416, "log_norm_score": 0.6926542273941535, "in_circuit": true, "rank": 13, "x": 9.0, "y": 2.52}, {"id": "A5.10", "type": "attn_head", "layer": 5, "head": 10, "raw_score": 0.012166783213615417, "log_norm_score": 0.6106791211881033, "in_circuit": true, "rank": 32, "x": 9.0, "y": 3.2399999999999998}, {"id": "A5.11", "type": "attn_head", "layer": 5, "head": 11, "raw_score": 0.0043046316131949425, "log_norm_score": 0.5233280131558155, "in_circuit": true, "rank": 57, "x": 9.0, "y": 3.96}, {"id": "MLP 5", "type": "mlp", "layer": 5, "head": null, "raw_score": 0.005523426458239555, "log_norm_score": 0.5442874469645697, "in_circuit": true, "rank": 51, "x": 9.0, "y": 4.824}, {"id": "A6.0", "type": "attn_head", "layer": 6, "head": 0, "raw_score": 0.000394520815461874, "log_norm_score": 0.3224176429050496, "in_circuit": false, "rank": 132, "x": 10.8, "y": -3.96}, {"id": "A6.1", "type": "attn_head", "layer": 6, "head": 1, "raw_score": 0.0007916237227618694, "log_norm_score": 0.38096577154563066, "in_circuit": true, "rank": 109, "x": 10.8, "y": -3.2399999999999998}, {"id": "A6.2", "type": "attn_head", "layer": 6, "head": 2, "raw_score": 0.0033415958750993013, "log_norm_score": 0.5020376578797315, "in_circuit": true, "rank": 70, "x": 10.8, "y": -2.52}, {"id": "A6.3", "type": "attn_head", "layer": 6, "head": 3, "raw_score": 0.003603208577260375, "log_norm_score": 0.5083745995150684, "in_circuit": true, "rank": 66, "x": 10.8, "y": -1.7999999999999998}, {"id": "A6.4", "type": "attn_head", "layer": 6, "head": 4, "raw_score": 0.0007378145237453282, "log_norm_score": 0.3750477135903698, "in_circuit": true, "rank": 110, "x": 10.8, "y": -1.08}, {"id": "A6.5", "type": "attn_head", "layer": 6, "head": 5, "raw_score": 0.0005086138262413442, "log_norm_score": 0.3437730750495438, "in_circuit": false, "rank": 123, "x": 10.8, "y": -0.36}, {"id": "A6.6", "type": "attn_head", "layer": 6, "head": 6, "raw_score": 0.002663835184648633, "log_norm_score": 0.4829803454941059, "in_circuit": true, "rank": 77, "x": 10.8, "y": 0.36}, {"id": "A6.7", "type": "attn_head", "layer": 6, "head": 7, "raw_score": 0.0017666735220700502, "log_norm_score": 0.44845510497682295, "in_circuit": true, "rank": 83, "x": 10.8, "y": 1.08}, {"id": "A6.8", "type": "attn_head", "layer": 6, "head": 8, "raw_score": 0.00020661494636442512, "log_norm_score": 0.2680393665402922, "in_circuit": false, "rank": 144, "x": 10.8, "y": 1.7999999999999998}, {"id": "A6.9", "type": "attn_head", "layer": 6, "head": 9, "raw_score": 0.04306266829371452, "log_norm_score": 0.7169401906953805, "in_circuit": true, "rank": 6, "x": 10.8, "y": 2.52}, {"id": "A6.10", "type": "attn_head", "layer": 6, "head": 10, "raw_score": 0.00016103082452900708, "log_norm_score": 0.2470837785827032, "in_circuit": false, "rank": 149, "x": 10.8, "y": 3.2399999999999998}, {"id": "A6.11", "type": "attn_head", "layer": 6, "head": 11, "raw_score": 0.0005814004689455032, "log_norm_score": 0.35501761264863113, "in_circuit": false, "rank": 118, "x": 10.8, "y": 3.96}, {"id": "MLP 6", "type": "mlp", "layer": 6, "head": null, "raw_score": 0.0202122014015913, "log_norm_score": 0.6533515341540038, "in_circuit": true, "rank": 20, "x": 10.8, "y": 4.824}, {"id": "A7.0", "type": "attn_head", "layer": 7, "head": 0, "raw_score": 0.00024386600125581026, "log_norm_score": 0.2819751160570096, "in_circuit": false, "rank": 141, "x": 12.6, "y": -3.96}, {"id": "A7.1", "type": "attn_head", "layer": 7, "head": 1, "raw_score": 0.013011214323341846, "log_norm_score": 0.6163204485253037, "in_circuit": true, "rank": 31, "x": 12.6, "y": -3.2399999999999998}, {"id": "A7.2", "type": "attn_head", "layer": 7, "head": 2, "raw_score": 0.0008515773224644363, "log_norm_score": 0.38710328890500667, "in_circuit": true, "rank": 106, "x": 12.6, "y": -2.52}, {"id": "A7.3", "type": "attn_head", "layer": 7, "head": 3, "raw_score": 0.03874070942401886, "log_norm_score": 0.7080483981085645, "in_circuit": true, "rank": 9, "x": 12.6, "y": -1.7999999999999998}, {"id": "A7.4", "type": "attn_head", "layer": 7, "head": 4, "raw_score": 0.0005217965808697045, "log_norm_score": 0.3459243453228961, "in_circuit": false, "rank": 122, "x": 12.6, "y": -1.08}, {"id": "A7.5", "type": "attn_head", "layer": 7, "head": 5, "raw_score": 0.006229066755622625, "log_norm_score": 0.5543951252071031, "in_circuit": true, "rank": 50, "x": 12.6, "y": -0.36}, {"id": "A7.6", "type": "attn_head", "layer": 7, "head": 6, "raw_score": 0.0033395495265722275, "log_norm_score": 0.5019861582578107, "in_circuit": true, "rank": 71, "x": 12.6, "y": 0.36}, {"id": "A7.7", "type": "attn_head", "layer": 7, "head": 7, "raw_score": 0.002358760219067335, "log_norm_score": 0.4727547484232422, "in_circuit": true, "rank": 79, "x": 12.6, "y": 1.08}, {"id": "A7.8", "type": "attn_head", "layer": 7, "head": 8, "raw_score": 0.0005890208412893116, "log_norm_score": 0.3561123639137494, "in_circuit": false, "rank": 117, "x": 12.6, "y": 1.7999999999999998}, {"id": "A7.9", "type": "attn_head", "layer": 7, "head": 9, "raw_score": 0.03079044818878174, "log_norm_score": 0.6887384667019926, "in_circuit": true, "rank": 14, "x": 12.6, "y": 2.52}, {"id": "A7.10", "type": "attn_head", "layer": 7, "head": 10, "raw_score": 0.025030354037880898, "log_norm_score": 0.6713261135289594, "in_circuit": true, "rank": 16, "x": 12.6, "y": 3.2399999999999998}, {"id": "A7.11", "type": "attn_head", "layer": 7, "head": 11, "raw_score": 0.001367941964417696, "log_norm_score": 0.42695054099324337, "in_circuit": true, "rank": 90, "x": 12.6, "y": 3.96}, {"id": "MLP 7", "type": "mlp", "layer": 7, "head": null, "raw_score": 0.01691264845430851, "log_norm_score": 0.6383680367577823, "in_circuit": true, "rank": 26, "x": 12.6, "y": 4.824}, {"id": "A8.0", "type": "attn_head", "layer": 8, "head": 0, "raw_score": 0.00019752797379624099, "log_norm_score": 0.2642581391792721, "in_circuit": false, "rank": 146, "x": 14.4, "y": -3.96}, {"id": "A8.1", "type": "attn_head", "layer": 8, "head": 1, "raw_score": 5.808130299556069e-05, "log_norm_score": 0.16135237839126937, "in_circuit": false, "rank": 154, "x": 14.4, "y": -3.2399999999999998}, {"id": "A8.2", "type": "attn_head", "layer": 8, "head": 2, "raw_score": 3.999074033345096e-05, "log_norm_score": 0.1299774907241047, "in_circuit": false, "rank": 155, "x": 14.4, "y": -2.52}, {"id": "A8.3", "type": "attn_head", "layer": 8, "head": 3, "raw_score": 0.00882326066493988, "log_norm_score": 0.5836656442022765, "in_circuit": true, "rank": 40, "x": 14.4, "y": -1.7999999999999998}, {"id": "A8.4", "type": "attn_head", "layer": 8, "head": 4, "raw_score": 0.0013927278341725469, "log_norm_score": 0.42846019253909223, "in_circuit": true, "rank": 88, "x": 14.4, "y": -1.08}, {"id": "A8.5", "type": "attn_head", "layer": 8, "head": 5, "raw_score": 0.0028938387986272573, "log_norm_score": 0.48994284318489656, "in_circuit": true, "rank": 74, "x": 14.4, "y": -0.36}, {"id": "A8.6", "type": "attn_head", "layer": 8, "head": 6, "raw_score": 0.003895658301189542, "log_norm_score": 0.5149353155757804, "in_circuit": true, "rank": 63, "x": 14.4, "y": 0.36}, {"id": "A8.7", "type": "attn_head", "layer": 8, "head": 7, "raw_score": 0.011495189741253853, "log_norm_score": 0.6059055047427764, "in_circuit": true, "rank": 33, "x": 14.4, "y": 1.08}, {"id": "A8.8", "type": "attn_head", "layer": 8, "head": 8, "raw_score": 0.0018504783511161804, "log_norm_score": 0.4523514317652075, "in_circuit": true, "rank": 82, "x": 14.4, "y": 1.7999999999999998}, {"id": "A8.9", "type": "attn_head", "layer": 8, "head": 9, "raw_score": 0.0003052098327316344, "log_norm_score": 0.300838981482158, "in_circuit": false, "rank": 136, "x": 14.4, "y": 2.52}, {"id": "A8.10", "type": "attn_head", "layer": 8, "head": 10, "raw_score": 0.06807607412338257, "log_norm_score": 0.7554420563819698, "in_circuit": true, "rank": 2, "x": 14.4, "y": 3.2399999999999998}, {"id": "A8.11", "type": "attn_head", "layer": 8, "head": 11, "raw_score": 9.620579658076167e-05, "log_norm_score": 0.20377837182988892, "in_circuit": false, "rank": 153, "x": 14.4, "y": 3.96}, {"id": "MLP 8", "type": "mlp", "layer": 8, "head": null, "raw_score": 0.011132447980344296, "log_norm_score": 0.6032098088641018, "in_circuit": true, "rank": 34, "x": 14.4, "y": 4.824}, {"id": "A9.0", "type": "attn_head", "layer": 9, "head": 0, "raw_score": 0.013595521450042725, "log_norm_score": 0.620013579974401, "in_circuit": true, "rank": 29, "x": 16.2, "y": -3.96}, {"id": "A9.1", "type": "attn_head", "layer": 9, "head": 1, "raw_score": 0.000337075354764238, "log_norm_score": 0.3091878031920254, "in_circuit": false, "rank": 134, "x": 16.2, "y": -3.2399999999999998}, {"id": "A9.2", "type": "attn_head", "layer": 9, "head": 2, "raw_score": 0.004210892599076033, "log_norm_score": 0.5214770324840378, "in_circuit": true, "rank": 60, "x": 16.2, "y": -2.52}, {"id": "A9.3", "type": "attn_head", "layer": 9, "head": 3, "raw_score": 0.019079264253377914, "log_norm_score": 0.6485019629793104, "in_circuit": true, "rank": 21, "x": 16.2, "y": -1.7999999999999998}, {"id": "A9.4", "type": "attn_head", "layer": 9, "head": 4, "raw_score": 0.009632157161831856, "log_norm_score": 0.591039977319113, "in_circuit": true, "rank": 39, "x": 16.2, "y": -1.08}, {"id": "A9.5", "type": "attn_head", "layer": 9, "head": 5, "raw_score": 0.0014190764632076025, "log_norm_score": 0.43003584703268405, "in_circuit": true, "rank": 87, "x": 16.2, "y": -0.36}, {"id": "A9.6", "type": "attn_head", "layer": 9, "head": 6, "raw_score": 0.00536216190084815, "log_norm_score": 0.5417963298617795, "in_circuit": true, "rank": 52, "x": 16.2, "y": 0.36}, {"id": "A9.7", "type": "attn_head", "layer": 9, "head": 7, "raw_score": 0.004272512625902891, "log_norm_score": 0.5226983670707614, "in_circuit": true, "rank": 58, "x": 16.2, "y": 1.08}, {"id": "A9.8", "type": "attn_head", "layer": 9, "head": 8, "raw_score": 0.001195693970657885, "log_norm_score": 0.41563623367922164, "in_circuit": true, "rank": 95, "x": 16.2, "y": 1.7999999999999998}, {"id": "A9.9", "type": "attn_head", "layer": 9, "head": 9, "raw_score": 0.027635497972369194, "log_norm_score": 0.6796501226651678, "in_circuit": true, "rank": 15, "x": 16.2, "y": 2.52}, {"id": "A9.10", "type": "attn_head", "layer": 9, "head": 10, "raw_score": 0.010497720912098885, "log_norm_score": 0.5982743542795643, "in_circuit": true, "rank": 36, "x": 16.2, "y": 3.2399999999999998}, {"id": "A9.11", "type": "attn_head", "layer": 9, "head": 11, "raw_score": 0.0004927145782858133, "log_norm_score": 0.34110307115210625, "in_circuit": false, "rank": 125, "x": 16.2, "y": 3.96}, {"id": "MLP 9", "type": "mlp", "layer": 9, "head": null, "raw_score": 0.004221645649522543, "log_norm_score": 0.5216914444141021, "in_circuit": false, "rank": 59, "x": 16.2, "y": 4.824}, {"id": "A10.0", "type": "attn_head", "layer": 10, "head": 0, "raw_score": 0.02326628565788269, "log_norm_score": 0.6651818887702571, "in_circuit": true, "rank": 17, "x": 18.0, "y": -3.96}, {"id": "A10.1", "type": "attn_head", "layer": 10, "head": 1, "raw_score": 0.006725821644067764, "log_norm_score": 0.5608456761539801, "in_circuit": true, "rank": 48, "x": 18.0, "y": -3.2399999999999998}, {"id": "A10.2", "type": "attn_head", "layer": 10, "head": 2, "raw_score": 0.013286881148815155, "log_norm_score": 0.6180830391762544, "in_circuit": true, "rank": 30, "x": 18.0, "y": -2.52}, {"id": "A10.3", "type": "attn_head", "layer": 10, "head": 3, "raw_score": 0.001021827687509358, "log_norm_score": 0.40242585821316773, "in_circuit": true, "rank": 99, "x": 18.0, "y": -1.7999999999999998}, {"id": "A10.4", "type": "attn_head", "layer": 10, "head": 4, "raw_score": 0.0024604161735624075, "log_norm_score": 0.4763020635750224, "in_circuit": true, "rank": 78, "x": 18.0, "y": -1.08}, {"id": "A10.5", "type": "attn_head", "layer": 10, "head": 5, "raw_score": 0.006921565625816584, "log_norm_score": 0.5632574913866569, "in_circuit": true, "rank": 46, "x": 18.0, "y": -0.36}, {"id": "A10.6", "type": "attn_head", "layer": 10, "head": 6, "raw_score": 0.021102188155055046, "log_norm_score": 0.6569741705106271, "in_circuit": true, "rank": 18, "x": 18.0, "y": 0.36}, {"id": "A10.7", "type": "attn_head", "layer": 10, "head": 7, "raw_score": 0.04097176715731621, "log_norm_score": 0.7127557134997188, "in_circuit": true, "rank": 8, "x": 18.0, "y": 1.08}, {"id": "A10.8", "type": "attn_head", "layer": 10, "head": 8, "raw_score": 0.00019222477567382157, "log_norm_score": 0.26197016659741196, "in_circuit": false, "rank": 148, "x": 18.0, "y": 1.7999999999999998}, {"id": "A10.9", "type": "attn_head", "layer": 10, "head": 9, "raw_score": 0.0036902246065437794, "log_norm_score": 0.5103807486172801, "in_circuit": true, "rank": 65, "x": 18.0, "y": 2.52}, {"id": "A10.10", "type": "attn_head", "layer": 10, "head": 10, "raw_score": 0.0008403450483456254, "log_norm_score": 0.3859870195849031, "in_circuit": true, "rank": 107, "x": 18.0, "y": 3.2399999999999998}, {"id": "A10.11", "type": "attn_head", "layer": 10, "head": 11, "raw_score": 0.00978250615298748, "log_norm_score": 0.5923421083362955, "in_circuit": true, "rank": 38, "x": 18.0, "y": 3.96}, {"id": "MLP 10", "type": "mlp", "layer": 10, "head": null, "raw_score": 0.0050782449543476105, "log_norm_score": 0.5372227493356216, "in_circuit": false, "rank": 53, "x": 18.0, "y": 4.824}, {"id": "A11.0", "type": "attn_head", "layer": 11, "head": 0, "raw_score": 0.003988928627222776, "log_norm_score": 0.5169244317808136, "in_circuit": true, "rank": 62, "x": 19.8, "y": -3.96}, {"id": "A11.1", "type": "attn_head", "layer": 11, "head": 1, "raw_score": 0.007201673928648233, "log_norm_score": 0.566592707324123, "in_circuit": true, "rank": 44, "x": 19.8, "y": -3.2399999999999998}, {"id": "A11.2", "type": "attn_head", "layer": 11, "head": 2, "raw_score": 0.010583635419607162, "log_norm_score": 0.598959599014831, "in_circuit": true, "rank": 35, "x": 19.8, "y": -2.52}, {"id": "A11.3", "type": "attn_head", "layer": 11, "head": 3, "raw_score": 0.03771418705582619, "log_norm_score": 0.7057907068114855, "in_circuit": true, "rank": 10, "x": 19.8, "y": -1.7999999999999998}, {"id": "A11.4", "type": "attn_head", "layer": 11, "head": 4, "raw_score": 0.0005958722322247922, "log_norm_score": 0.3570846179966207, "in_circuit": false, "rank": 116, "x": 19.8, "y": -1.08}, {"id": "A11.5", "type": "attn_head", "layer": 11, "head": 5, "raw_score": 0.0004924085224047303, "log_norm_score": 0.3410508332668273, "in_circuit": false, "rank": 126, "x": 19.8, "y": -0.36}, {"id": "A11.6", "type": "attn_head", "layer": 11, "head": 6, "raw_score": 0.0013506978284567595, "log_norm_score": 0.4258840162372208, "in_circuit": true, "rank": 91, "x": 19.8, "y": 0.36}, {"id": "A11.7", "type": "attn_head", "layer": 11, "head": 7, "raw_score": 0.0008768619154579937, "log_norm_score": 0.3895631363821247, "in_circuit": true, "rank": 105, "x": 19.8, "y": 1.08}, {"id": "A11.8", "type": "attn_head", "layer": 11, "head": 8, "raw_score": 0.0034496088046580553, "log_norm_score": 0.5047121473785546, "in_circuit": true, "rank": 68, "x": 19.8, "y": 1.7999999999999998}, {"id": "A11.9", "type": "attn_head", "layer": 11, "head": 9, "raw_score": 0.004345180932432413, "log_norm_score": 0.5241162475850053, "in_circuit": true, "rank": 56, "x": 19.8, "y": 2.52}, {"id": "A11.10", "type": "attn_head", "layer": 11, "head": 10, "raw_score": 0.041249047964811325, "log_norm_score": 0.7133227552362608, "in_circuit": true, "rank": 7, "x": 19.8, "y": 3.2399999999999998}, {"id": "A11.11", "type": "attn_head", "layer": 11, "head": 11, "raw_score": 0.03287910670042038, "log_norm_score": 0.6942562778786825, "in_circuit": true, "rank": 12, "x": 19.8, "y": 3.96}, {"id": "MLP 11", "type": "mlp", "layer": 11, "head": null, "raw_score": 0.004917472135275602, "log_norm_score": 0.5345180968378797, "in_circuit": false, "rank": 54, "x": 19.8, "y": 4.824}], "edges": [{"source": "A0.0", "target": "A1.0", "normalized_weight": 0.15252659001213192, "raw_weight": 1.8427489452989537e-06}, {"source": "A0.0", "target": "A1.1", "normalized_weight": 0.1560223135515279, "raw_weight": 1.9156121115184387e-06}, {"source": "A0.0", "target": "A1.6", "normalized_weight": 0.17023755361758716, "raw_weight": 2.2428104061862327e-06}, {"source": "A0.0", "target": "A1.7", "normalized_weight": 0.1474885700825502, "raw_weight": 1.7425868103227435e-06}, {"source": "A0.0", "target": "A1.8", "normalized_weight": 0.15130690700286392, "raw_weight": 1.8179841187440833e-06}, {"source": "A0.0", "target": "A1.11", "normalized_weight": 0.24443440640602793, "raw_weight": 5.108012139496472e-06}, {"source": "A0.0", "target": "MLP 1", "normalized_weight": 0.408556303927085, "raw_weight": 3.154602170569228e-05}, {"source": "A0.1", "target": "A1.0", "normalized_weight": 0.4241095371261177, "raw_weight": 3.748656588456467e-05}, {"source": "A0.1", "target": "A1.1", "normalized_weight": 0.4276052606655137, "raw_weight": 3.8968802457274576e-05}, {"source": "A0.1", "target": "A1.6", "normalized_weight": 0.441820500731573, "raw_weight": 4.5624912863237443e-05}, {"source": "A0.1", "target": "A1.7", "normalized_weight": 0.419071517196536, "raw_weight": 3.5448993440687776e-05}, {"source": "A0.1", "target": "A1.8", "normalized_weight": 0.4228898541168497, "raw_weight": 3.6982781413740645e-05}, {"source": "A0.1", "target": "A1.11", "normalized_weight": 0.5160173535200135, "raw_weight": 0.00010391097175493219}, {"source": "A0.1", "target": "MLP 1", "normalized_weight": 0.6801392510410706, "raw_weight": 0.000641732572460918}, {"source": "A0.2", "target": "A1.0", "normalized_weight": 0.08046617944049352, "raw_weight": 8.285134912274839e-07}, {"source": "A0.2", "target": "A1.1", "normalized_weight": 0.08396190297988951, "raw_weight": 8.612733071429397e-07}, {"source": "A0.2", "target": "A1.6", "normalized_weight": 0.09817714304594875, "raw_weight": 1.0083840691002142e-06}, {"source": "A0.2", "target": "A1.7", "normalized_weight": 0.07542815951091181, "raw_weight": 7.8347985799728e-07}, {"source": "A0.2", "target": "A1.8", "normalized_weight": 0.07924649643122551, "raw_weight": 8.173790429018114e-07}, {"source": "A0.2", "target": "A1.11", "normalized_weight": 0.17237399583438953, "raw_weight": 2.2965998606174837e-06}, {"source": "A0.2", "target": "MLP 1", "normalized_weight": 0.33649589335544655, "raw_weight": 1.4183323585341108e-05}, {"source": "A0.3", "target": "A1.0", "normalized_weight": 0.3394968263131218, "raw_weight": 1.4663432815289514e-05}, {"source": "A0.3", "target": "A1.1", "normalized_weight": 0.34299254985251765, "raw_weight": 1.5243231894971178e-05}, {"source": "A0.3", "target": "A1.6", "normalized_weight": 0.35720778991857705, "raw_weight": 1.784686937004792e-05}, {"source": "A0.3", "target": "A1.7", "normalized_weight": 0.3344588063835401, "raw_weight": 1.3866405775547351e-05}, {"source": "A0.3", "target": "A1.8", "normalized_weight": 0.3382771433038538, "raw_weight": 1.4466369959116924e-05}, {"source": "A0.3", "target": "A1.11", "normalized_weight": 0.4314046427070176, "raw_weight": 4.064633601786618e-05}, {"source": "A0.3", "target": "MLP 1", "normalized_weight": 0.5955265402280747, "raw_weight": 0.0002510233263468449}, {"source": "A0.4", "target": "A1.0", "normalized_weight": 0.37567244538165534, "raw_weight": 2.190380221553552e-05}, {"source": "A0.4", "target": "A1.1", "normalized_weight": 0.3791681689210513, "raw_weight": 2.276988893111379e-05}, {"source": "A0.4", "target": "A1.6", "normalized_weight": 0.3933834089871107, "raw_weight": 2.665912557940891e-05}, {"source": "A0.4", "target": "A1.7", "normalized_weight": 0.37063442545207365, "raw_weight": 2.0713226798519746e-05}, {"source": "A0.4", "target": "A1.8", "normalized_weight": 0.3744527623723875, "raw_weight": 2.160943554983005e-05}, {"source": "A0.4", "target": "A1.11", "normalized_weight": 0.46758026177555134, "raw_weight": 6.071629448141337e-05}, {"source": "A0.4", "target": "MLP 1", "normalized_weight": 0.6317021592966083, "raw_weight": 0.0003749712199761293}, {"source": "A0.5", "target": "A1.0", "normalized_weight": 0.2904881007543662, "raw_weight": 8.513841029303415e-06}, {"source": "A0.5", "target": "A1.1", "normalized_weight": 0.29398382429376224, "raw_weight": 8.850482336664883e-06}, {"source": "A0.5", "target": "A1.6", "normalized_weight": 0.3081990643598215, "raw_weight": 1.0362198988554672e-05}, {"source": "A0.5", "target": "A1.7", "normalized_weight": 0.2854500808247845, "raw_weight": 8.051073436073433e-06}, {"source": "A0.5", "target": "A1.8", "normalized_weight": 0.2892684177450982, "raw_weight": 8.399422949214794e-06}, {"source": "A0.5", "target": "A1.11", "normalized_weight": 0.3823959171482621, "raw_weight": 2.3599961048611368e-05}, {"source": "A0.5", "target": "MLP 1", "normalized_weight": 0.5465178146693191, "raw_weight": 0.00014574845618248178}, {"source": "A0.6", "target": "A1.0", "normalized_weight": 0.20655666416537627, "raw_weight": 3.3555809426362524e-06}, {"source": "A0.6", "target": "A1.1", "normalized_weight": 0.21005238770477225, "raw_weight": 3.488262202668978e-06}, {"source": "A0.6", "target": "A1.6", "normalized_weight": 0.22426762777083148, "raw_weight": 4.084078775974469e-06}, {"source": "A0.6", "target": "A1.7", "normalized_weight": 0.20151864423579455, "raw_weight": 3.173189221747e-06}, {"source": "A0.6", "target": "A1.8", "normalized_weight": 0.20533698115610824, "raw_weight": 3.310485065497257e-06}, {"source": "A0.6", "target": "A1.11", "normalized_weight": 0.29846448055927227, "raw_weight": 9.301510243039793e-06}, {"source": "A0.6", "target": "MLP 1", "normalized_weight": 0.46258637808032926, "raw_weight": 5.7444194729650185e-05}, {"source": "A0.7", "target": "A1.0", "normalized_weight": 0.09703895320544619, "raw_weight": 9.95732083071681e-07}, {"source": "A0.7", "target": "A1.1", "normalized_weight": 0.10053467674484216, "raw_weight": 1.0351038013212095e-06}, {"source": "A0.7", "target": "A1.6", "normalized_weight": 0.11474991681090141, "raw_weight": 1.211905877566169e-06}, {"source": "A0.7", "target": "A1.7", "normalized_weight": 0.09200093327586448, "raw_weight": 9.416093271969852e-07}, {"source": "A0.7", "target": "A1.8", "normalized_weight": 0.09581927019617818, "raw_weight": 9.82350372885224e-07}, {"source": "A0.7", "target": "A1.11", "normalized_weight": 0.18894676959934217, "raw_weight": 2.760121817457401e-06}, {"source": "A0.7", "target": "MLP 1", "normalized_weight": 0.3530686671203992, "raw_weight": 1.7045938886991194e-05}, {"source": "A0.8", "target": "A1.0", "normalized_weight": 0.15153304935082032, "raw_weight": 1.8225505162746672e-06}, {"source": "A0.8", "target": "A1.1", "normalized_weight": 0.1550287728902163, "raw_weight": 1.8946150270424025e-06}, {"source": "A0.8", "target": "A1.6", "normalized_weight": 0.16924401295627553, "raw_weight": 2.2182268909331907e-06}, {"source": "A0.8", "target": "A1.7", "normalized_weight": 0.1464950294212386, "raw_weight": 1.7234862616035302e-06}, {"source": "A0.8", "target": "A1.8", "normalized_weight": 0.1503133663415523, "raw_weight": 1.7980571377609113e-06}, {"source": "A0.8", "target": "A1.11", "normalized_weight": 0.24344086574471632, "raw_weight": 5.052023058119967e-06}, {"source": "A0.8", "target": "MLP 1", "normalized_weight": 0.40756276326577334, "raw_weight": 3.120024477170106e-05}, {"source": "A0.9", "target": "A1.0", "normalized_weight": 0.2802837257041343, "raw_weight": 7.602628278860577e-06}, {"source": "A0.9", "target": "A1.1", "normalized_weight": 0.28377944924353027, "raw_weight": 7.903239802422028e-06}, {"source": "A0.9", "target": "A1.6", "normalized_weight": 0.2979946893095895, "raw_weight": 9.2531616212256e-06}, {"source": "A0.9", "target": "A1.7", "normalized_weight": 0.27524570577455254, "raw_weight": 7.189389415376845e-06}, {"source": "A0.9", "target": "A1.8", "normalized_weight": 0.2790640426948663, "raw_weight": 7.500456047983739e-06}, {"source": "A0.9", "target": "A1.11", "normalized_weight": 0.3721915420980301, "raw_weight": 2.107412278789763e-05}, {"source": "A0.9", "target": "MLP 1", "normalized_weight": 0.5363134396190872, "raw_weight": 0.0001301494038659385}, {"source": "A0.10", "target": "A1.0", "normalized_weight": 0.45150379266545126, "raw_weight": 5.0798793498157274e-05}, {"source": "A0.10", "target": "A1.1", "normalized_weight": 0.4549995162048471, "raw_weight": 5.2807401856798906e-05}, {"source": "A0.10", "target": "A1.6", "normalized_weight": 0.46921475627090653, "raw_weight": 6.182722989478591e-05}, {"source": "A0.10", "target": "A1.7", "normalized_weight": 0.44646577273586957, "raw_weight": 4.80376384184209e-05}, {"source": "A0.10", "target": "A1.8", "normalized_weight": 0.45028410965618326, "raw_weight": 5.011610510840788e-05}, {"source": "A0.10", "target": "A1.11", "normalized_weight": 0.5434116090593472, "raw_weight": 0.00014081183143386123}, {"source": "A0.10", "target": "MLP 1", "normalized_weight": 0.7075335065804041, "raw_weight": 0.0008696246151186221}, {"source": "MLP 0", "target": "A1.0", "normalized_weight": 0.743970286085047, "raw_weight": 0.0013027883807121832}, {"source": "MLP 0", "target": "A1.1", "normalized_weight": 0.747466009624443, "raw_weight": 0.0013543012504250163}, {"source": "MLP 0", "target": "A1.6", "normalized_weight": 0.7616812496905023, "raw_weight": 0.001585624208210179}, {"source": "MLP 0", "target": "A1.7", "normalized_weight": 0.7389322661554653, "raw_weight": 0.001231975660418827}, {"source": "MLP 0", "target": "A1.8", "normalized_weight": 0.7427506030757791, "raw_weight": 0.0012852801203664943}, {"source": "MLP 0", "target": "A1.11", "normalized_weight": 0.835878102478943, "raw_weight": 0.003611267221641623}, {"source": "MLP 0", "target": "MLP 1", "normalized_weight": 1.0, "raw_weight": 0.022302436064725484}, {"source": "A1.0", "target": "A2.2", "normalized_weight": 0.1451982139558331, "raw_weight": 1.6988699611791142e-06}, {"source": "A1.0", "target": "A2.4", "normalized_weight": 0.10111612748864249, "raw_weight": 1.041801954804666e-06}, {"source": "A1.0", "target": "A2.5", "normalized_weight": 0.09119256651428582, "raw_weight": 9.332033096935699e-07}, {"source": "A1.0", "target": "A2.7", "normalized_weight": 0.0909298759068351, "raw_weight": 9.304878393735045e-07}, {"source": "A1.0", "target": "A2.9", "normalized_weight": 0.2414006380674721, "raw_weight": 4.938966571448218e-06}, {"source": "A1.0", "target": "A2.10", "normalized_weight": 0.06019870261050486, "raw_weight": 6.616931505447191e-07}, {"source": "A1.0", "target": "A2.11", "normalized_weight": 0.1299056803533718, "raw_weight": 1.433788375193915e-06}, {"source": "A1.0", "target": "MLP 2", "normalized_weight": 0.3600505133018653, "raw_weight": 1.8418636565365604e-05}, {"source": "A1.1", "target": "A2.2", "normalized_weight": 0.14869393749522908, "raw_weight": 1.7660440842100743e-06}, {"source": "A1.1", "target": "A2.4", "normalized_weight": 0.1046118510280383, "raw_weight": 1.0829952976061197e-06}, {"source": "A1.1", "target": "A2.5", "normalized_weight": 0.0946882900536818, "raw_weight": 9.701026106234342e-07}, {"source": "A1.1", "target": "A2.7", "normalized_weight": 0.09442559944623093, "raw_weight": 9.672797693205772e-07}, {"source": "A1.1", "target": "A2.9", "normalized_weight": 0.2448963616068681, "raw_weight": 5.134255649304415e-06}, {"source": "A1.1", "target": "A2.10", "normalized_weight": 0.06369442614990084, "raw_weight": 6.878568111656796e-07}, {"source": "A1.1", "target": "A2.11", "normalized_weight": 0.13340140389276778, "raw_weight": 1.4904810467441197e-06}, {"source": "A1.1", "target": "MLP 2", "normalized_weight": 0.3635462368412612, "raw_weight": 1.9146918180190133e-05}, {"source": "A1.6", "target": "A2.2", "normalized_weight": 0.16290917756128848, "raw_weight": 2.067695242702512e-06}, {"source": "A1.6", "target": "A2.4", "normalized_weight": 0.11882709109409771, "raw_weight": 1.267977535074371e-06}, {"source": "A1.6", "target": "A2.5", "normalized_weight": 0.10890353011974105, "raw_weight": 1.1358020849273204e-06}, {"source": "A1.6", "target": "A2.7", "normalized_weight": 0.10864083951229032, "raw_weight": 1.1324970850210285e-06}, {"source": "A1.6", "target": "A2.9", "normalized_weight": 0.25911160167292735, "raw_weight": 6.011217996086237e-06}, {"source": "A1.6", "target": "A2.10", "normalized_weight": 0.07790966621596025, "raw_weight": 8.053469722665277e-07}, {"source": "A1.6", "target": "A2.11", "normalized_weight": 0.14761664395882704, "raw_weight": 1.7450643487586259e-06}, {"source": "A1.6", "target": "MLP 2", "normalized_weight": 0.3777614769073206, "raw_weight": 2.241732920914112e-05}, {"source": "A1.7", "target": "A2.2", "normalized_weight": 0.14016019402625154, "raw_weight": 1.6065283305990215e-06}, {"source": "A1.7", "target": "A2.4", "normalized_weight": 0.09607810755906077, "raw_weight": 9.851750831508632e-07}, {"source": "A1.7", "target": "A2.5", "normalized_weight": 0.08615454658470412, "raw_weight": 8.824792888744402e-07}, {"source": "A1.7", "target": "A2.7", "normalized_weight": 0.08589185597725338, "raw_weight": 8.799114172304811e-07}, {"source": "A1.7", "target": "A2.9", "normalized_weight": 0.23636261813789042, "raw_weight": 4.67051034053602e-06}, {"source": "A1.7", "target": "A2.10", "normalized_weight": 0.05516068268092315, "raw_weight": 6.257269931217167e-07}, {"source": "A1.7", "target": "A2.11", "normalized_weight": 0.12486766042379009, "raw_weight": 1.355855184603921e-06}, {"source": "A1.7", "target": "MLP 2", "normalized_weight": 0.35501249337228363, "raw_weight": 1.7417496411985343e-05}, {"source": "A1.8", "target": "A2.2", "normalized_weight": 0.14397853094656526, "raw_weight": 1.6760387339328792e-06}, {"source": "A1.8", "target": "A2.4", "normalized_weight": 0.09989644447937447, "raw_weight": 1.0278011085249376e-06}, {"source": "A1.8", "target": "A2.5", "normalized_weight": 0.08997288350501798, "raw_weight": 9.20661927882472e-07}, {"source": "A1.8", "target": "A2.7", "normalized_weight": 0.08971019289756708, "raw_weight": 9.179829509499963e-07}, {"source": "A1.8", "target": "A2.9", "normalized_weight": 0.2401809550582041, "raw_weight": 4.872591468744049e-06}, {"source": "A1.8", "target": "A2.10", "normalized_weight": 0.05897901960123701, "raw_weight": 6.528006119557866e-07}, {"source": "A1.8", "target": "A2.11", "normalized_weight": 0.1286859973441038, "raw_weight": 1.4145195971443332e-06}, {"source": "A1.8", "target": "MLP 2", "normalized_weight": 0.3588308302925973, "raw_weight": 1.8171107274366893e-05}, {"source": "A1.11", "target": "A2.2", "normalized_weight": 0.2371060303497291, "raw_weight": 4.709186461491089e-06}, {"source": "A1.11", "target": "A2.4", "normalized_weight": 0.19302394388253832, "raw_weight": 2.887825303424642e-06}, {"source": "A1.11", "target": "A2.5", "normalized_weight": 0.1831003829081818, "raw_weight": 2.586795041556629e-06}, {"source": "A1.11", "target": "A2.7", "normalized_weight": 0.18283769230073094, "raw_weight": 2.5792678874129668e-06}, {"source": "A1.11", "target": "A2.9", "normalized_weight": 0.333308454461368, "raw_weight": 1.3690579646177424e-05}, {"source": "A1.11", "target": "A2.10", "normalized_weight": 0.15210651900440086, "raw_weight": 1.8341818369923185e-06}, {"source": "A1.11", "target": "A2.11", "normalized_weight": 0.22181349674726764, "raw_weight": 3.974392954961796e-06}, {"source": "A1.11", "target": "MLP 2", "normalized_weight": 0.45195832969576116, "raw_weight": 5.105558161293527e-05}, {"source": "MLP 1", "target": "A2.2", "normalized_weight": 0.40122792787078615, "raw_weight": 2.908295718048043e-05}, {"source": "MLP 1", "target": "A2.4", "normalized_weight": 0.35714584140359534, "raw_weight": 1.7834609083967716e-05}, {"source": "MLP 1", "target": "A2.5", "normalized_weight": 0.34722228042923886, "raw_weight": 1.5975508730323162e-05}, {"source": "MLP 1", "target": "A2.7", "normalized_weight": 0.346959589821788, "raw_weight": 1.5929022590213584e-05}, {"source": "MLP 1", "target": "A2.9", "normalized_weight": 0.49743035198242497, "raw_weight": 8.455017546696655e-05}, {"source": "MLP 1", "target": "A2.10", "normalized_weight": 0.3162284165254579, "raw_weight": 1.1327525945866281e-05}, {"source": "MLP 1", "target": "A2.11", "normalized_weight": 0.38593539426832485, "raw_weight": 2.4545025148772336e-05}, {"source": "MLP 1", "target": "MLP 2", "normalized_weight": 0.6160802272168182, "raw_weight": 0.00031530866446162487}, {"source": "A2.2", "target": "A3.0", "normalized_weight": 0.5065502964954066, "raw_weight": 9.355172826391173e-05}, {"source": "A2.2", "target": "A3.4", "normalized_weight": 0.2049567735213766, "raw_weight": 3.2965517715948488e-06}, {"source": "A2.2", "target": "A3.5", "normalized_weight": 0.2697375466640086, "raw_weight": 6.763247211763988e-06}, {"source": "A2.2", "target": "A3.6", "normalized_weight": 0.3480324669147194, "raw_weight": 1.611973675421166e-05}, {"source": "A2.2", "target": "A3.7", "normalized_weight": 0.16787914140436416, "raw_weight": 2.1848941528259096e-06}, {"source": "A2.2", "target": "A3.8", "normalized_weight": 0.08499951134532824, "raw_weight": 8.712441799583158e-07}, {"source": "A2.2", "target": "MLP 3", "normalized_weight": 0.3974813486479699, "raw_weight": 2.789899824338568e-05}, {"source": "A2.4", "target": "A3.0", "normalized_weight": 0.46246821002821603, "raw_weight": 5.736894265471245e-05}, {"source": "A2.4", "target": "A3.4", "normalized_weight": 0.1608746870541858, "raw_weight": 2.0215520659266103e-06}, {"source": "A2.4", "target": "A3.5", "normalized_weight": 0.22565546019681781, "raw_weight": 4.147441727177649e-06}, {"source": "A2.4", "target": "A3.6", "normalized_weight": 0.30395038044752876, "raw_weight": 9.88514344548103e-06}, {"source": "A2.4", "target": "A3.7", "normalized_weight": 0.1237970549371734, "raw_weight": 1.3398476937431303e-06}, {"source": "A2.4", "target": "A3.8", "normalized_weight": 0.04091742487813746, "raw_weight": 5.342750831633931e-07}, {"source": "A2.4", "target": "MLP 3", "normalized_weight": 0.3533992621807791, "raw_weight": 1.7108567207155864e-05}, {"source": "A2.5", "target": "A3.0", "normalized_weight": 0.4525446490538594, "raw_weight": 5.138873747749517e-05}, {"source": "A2.5", "target": "A3.4", "normalized_weight": 0.1509511260798293, "raw_weight": 1.8108231319207899e-06}, {"source": "A2.5", "target": "A3.5", "normalized_weight": 0.21573189922246117, "raw_weight": 3.715107587112451e-06}, {"source": "A2.5", "target": "A3.6", "normalized_weight": 0.2940268194731721, "raw_weight": 8.854704617873577e-06}, {"source": "A2.5", "target": "A3.7", "normalized_weight": 0.1138734939628169, "raw_weight": 1.2001804148282884e-06}, {"source": "A2.5", "target": "A3.8", "normalized_weight": 0.030993863903780963, "raw_weight": 4.785816282984121e-07}, {"source": "A2.5", "target": "MLP 3", "normalized_weight": 0.34347570120642246, "raw_weight": 1.5325150301552515e-05}, {"source": "A2.7", "target": "A3.0", "normalized_weight": 0.4522819584464085, "raw_weight": 5.1239204583691366e-05}, {"source": "A2.7", "target": "A3.4", "normalized_weight": 0.15068843547237842, "raw_weight": 1.8055539302167867e-06}, {"source": "A2.7", "target": "A3.5", "normalized_weight": 0.21546920861501043, "raw_weight": 3.7042972264077017e-06}, {"source": "A2.7", "target": "A3.6", "normalized_weight": 0.29376412886572123, "raw_weight": 8.828938863152157e-06}, {"source": "A2.7", "target": "A3.7", "normalized_weight": 0.11361080335536601, "raw_weight": 1.1966880844203946e-06}, {"source": "A2.7", "target": "A3.8", "normalized_weight": 0.03073117329633008, "raw_weight": 4.77189033358088e-07}, {"source": "A2.7", "target": "MLP 3", "normalized_weight": 0.34321301059897175, "raw_weight": 1.5280556599020457e-05}, {"source": "A2.9", "target": "A3.0", "normalized_weight": 0.6027527206070457, "raw_weight": 0.0002719742353181516}, {"source": "A2.9", "target": "A3.4", "normalized_weight": 0.30115919763301546, "raw_weight": 9.583758246955532e-06}, {"source": "A2.9", "target": "A3.5", "normalized_weight": 0.36593997077564744, "raw_weight": 1.9662159351006934e-05}, {"source": "A2.9", "target": "A3.6", "normalized_weight": 0.44423489102635844, "raw_weight": 4.686341084890293e-05}, {"source": "A2.9", "target": "A3.7", "normalized_weight": 0.26408156551600304, "raw_weight": 6.351939483037407e-06}, {"source": "A2.9", "target": "A3.8", "normalized_weight": 0.1812019354569671, "raw_weight": 2.5328871418718677e-06}, {"source": "A2.9", "target": "MLP 3", "normalized_weight": 0.4936837727596088, "raw_weight": 8.110816180735732e-05}, {"source": "A2.10", "target": "A3.0", "normalized_weight": 0.42155078515007843, "raw_weight": 3.6437478575986624e-05}, {"source": "A2.10", "target": "A3.4", "normalized_weight": 0.11995726217604834, "raw_weight": 1.2839745110134376e-06}, {"source": "A2.10", "target": "A3.5", "normalized_weight": 0.18473803531868035, "raw_weight": 2.634218308480101e-06}, {"source": "A2.10", "target": "A3.6", "normalized_weight": 0.26303295556939116, "raw_weight": 6.278479014039883e-06}, {"source": "A2.10", "target": "A3.7", "normalized_weight": 0.08287963005903594, "raw_weight": 8.509947957327418e-07}, {"source": "A2.10", "target": "A3.8", "normalized_weight": 0.0, "raw_weight": 3.39341044049214e-07}, {"source": "A2.10", "target": "MLP 3", "normalized_weight": 0.3124818373026417, "raw_weight": 1.086638557779593e-05}, {"source": "A2.11", "target": "A3.0", "normalized_weight": 0.49125776289294537, "raw_weight": 7.895447181313414e-05}, {"source": "A2.11", "target": "A3.4", "normalized_weight": 0.18966423991891512, "raw_weight": 2.7821773981200396e-06}, {"source": "A2.11", "target": "A3.5", "normalized_weight": 0.25444501306154715, "raw_weight": 5.707950256569102e-06}, {"source": "A2.11", "target": "A3.6", "normalized_weight": 0.3327399333122581, "raw_weight": 1.3604508701380242e-05}, {"source": "A2.11", "target": "A3.7", "normalized_weight": 0.15258660780190272, "raw_weight": 1.8439762365194144e-06}, {"source": "A2.11", "target": "A3.8", "normalized_weight": 0.06970697774286679, "raw_weight": 7.353004089333509e-07}, {"source": "A2.11", "target": "MLP 3", "normalized_weight": 0.38218881504550845, "raw_weight": 2.354580413745067e-05}, {"source": "MLP 2", "target": "A3.0", "normalized_weight": 0.7214025958414387, "raw_weight": 0.001014259668090725}, {"source": "MLP 2", "target": "A3.4", "normalized_weight": 0.41980907286740865, "raw_weight": 3.5740221669335916e-05}, {"source": "MLP 2", "target": "A3.5", "normalized_weight": 0.4845898460100407, "raw_weight": 7.332508976069275e-05}, {"source": "MLP 2", "target": "A3.6", "normalized_weight": 0.5628847662607517, "raw_weight": 0.00017476533200876804}, {"source": "MLP 2", "target": "A3.7", "normalized_weight": 0.3827314407503963, "raw_weight": 2.3687964502451964e-05}, {"source": "MLP 2", "target": "A3.8", "normalized_weight": 0.29985181069136035, "raw_weight": 9.445767055180944e-06}, {"source": "MLP 2", "target": "MLP 3", "normalized_weight": 0.612333647994002, "raw_weight": 0.00030247253817240055}, {"source": "A3.0", "target": "A4.3", "normalized_weight": 0.7280950404987048, "raw_weight": 0.0010924245545761505}, {"source": "A3.0", "target": "A4.4", "normalized_weight": 0.6388315364789023, "raw_weight": 0.00040583102940438577}, {"source": "A3.0", "target": "A4.6", "normalized_weight": 0.5734675181911186, "raw_weight": 0.00019653503423365613}, {"source": "A3.0", "target": "A4.7", "normalized_weight": 0.6369291277686933, "raw_weight": 0.0003973561919343952}, {"source": "A3.0", "target": "A4.9", "normalized_weight": 0.42849362636299493, "raw_weight": 3.9354731462987744e-05}, {"source": "A3.0", "target": "A4.10", "normalized_weight": 0.4843581800225329, "raw_weight": 7.313689227157446e-05}, {"source": "A3.0", "target": "A4.11", "normalized_weight": 0.5851804438880515, "raw_weight": 0.0002238048672512311}, {"source": "A3.0", "target": "MLP 4", "normalized_weight": 0.7063553766129439, "raw_weight": 0.0008583332345275807}, {"source": "A3.4", "target": "A4.3", "normalized_weight": 0.42650151752467474, "raw_weight": 3.8494575862484896e-05}, {"source": "A3.4", "target": "A4.4", "normalized_weight": 0.3372380135048722, "raw_weight": 1.4300569575551839e-05}, {"source": "A3.4", "target": "A4.6", "normalized_weight": 0.27187399521708855, "raw_weight": 6.925451055866179e-06}, {"source": "A3.4", "target": "A4.7", "normalized_weight": 0.3353356047946632, "raw_weight": 1.400193542956511e-05}, {"source": "A3.4", "target": "A4.9", "normalized_weight": 0.12690010338896485, "raw_weight": 1.3867719189427095e-06}, {"source": "A3.4", "target": "A4.10", "normalized_weight": 0.1827646570485028, "raw_weight": 2.5771790244927663e-06}, {"source": "A3.4", "target": "A4.11", "normalized_weight": 0.28358692091402127, "raw_weight": 7.8863784274224e-06}, {"source": "A3.4", "target": "MLP 4", "normalized_weight": 0.4047618536389138, "raw_weight": 3.024572605348809e-05}, {"source": "A3.5", "target": "A4.3", "normalized_weight": 0.4912822906673067, "raw_weight": 7.897595757885931e-05}, {"source": "A3.5", "target": "A4.4", "normalized_weight": 0.4020187866475042, "raw_weight": 2.933922899129725e-05}, {"source": "A3.5", "target": "A4.6", "normalized_weight": 0.3366547683597206, "raw_weight": 1.4208342774223973e-05}, {"source": "A3.5", "target": "A4.7", "normalized_weight": 0.400116377937295, "raw_weight": 2.8726547409110197e-05}, {"source": "A3.5", "target": "A4.9", "normalized_weight": 0.19168087653159685, "raw_weight": 2.845118767725083e-06}, {"source": "A3.5", "target": "A4.10", "normalized_weight": 0.2475454301911348, "raw_weight": 5.28737300648695e-06}, {"source": "A3.5", "target": "A4.11", "normalized_weight": 0.34836769405665324, "raw_weight": 1.617979349506041e-05}, {"source": "A3.5", "target": "MLP 4", "normalized_weight": 0.4695426267815457, "raw_weight": 6.205251322355734e-05}, {"source": "A3.6", "target": "A4.3", "normalized_weight": 0.5695772109180175, "raw_weight": 0.0001882337886257683}, {"source": "A3.6", "target": "A4.4", "normalized_weight": 0.4803137068982152, "raw_weight": 6.992804389711112e-05}, {"source": "A3.6", "target": "A4.6", "normalized_weight": 0.41494968861043136, "raw_weight": 3.386461237668689e-05}, {"source": "A3.6", "target": "A4.7", "normalized_weight": 0.478411298188006, "raw_weight": 6.846775928680878e-05}, {"source": "A3.6", "target": "A4.9", "normalized_weight": 0.2699757967823078, "raw_weight": 6.781145821554784e-06}, {"source": "A3.6", "target": "A4.10", "normalized_weight": 0.3258403504418458, "raw_weight": 1.2602091616234793e-05}, {"source": "A3.6", "target": "A4.11", "normalized_weight": 0.42666261430736424, "raw_weight": 3.856343021503344e-05}, {"source": "A3.6", "target": "MLP 4", "normalized_weight": 0.5478375470322566, "raw_weight": 0.00014789791749163228}, {"source": "A3.7", "target": "A4.3", "normalized_weight": 0.3894238854076623, "raw_weight": 2.5513500028172308e-05}, {"source": "A3.7", "target": "A4.4", "normalized_weight": 0.3001603813878598, "raw_weight": 9.478155664634713e-06}, {"source": "A3.7", "target": "A4.6", "normalized_weight": 0.23479636310007615, "raw_weight": 4.590062151617168e-06}, {"source": "A3.7", "target": "A4.7", "normalized_weight": 0.29825797267765075, "raw_weight": 9.280226420804e-06}, {"source": "A3.7", "target": "A4.9", "normalized_weight": 0.08982247127195245, "raw_weight": 9.191270354401939e-07}, {"source": "A3.7", "target": "A4.10", "normalized_weight": 0.1456870249314904, "raw_weight": 1.7081070680942634e-06}, {"source": "A3.7", "target": "A4.11", "normalized_weight": 0.24650928879700884, "raw_weight": 5.226947218460156e-06}, {"source": "A3.7", "target": "MLP 4", "normalized_weight": 0.3676842215219014, "raw_weight": 2.0046313415023227e-05}, {"source": "A3.8", "target": "A4.3", "normalized_weight": 0.3065442553486264, "raw_weight": 1.0173714081829297e-05}, {"source": "A3.8", "target": "A4.4", "normalized_weight": 0.21728075132882385, "raw_weight": 3.779491079177193e-06}, {"source": "A3.8", "target": "A4.6", "normalized_weight": 0.15191673304104023, "raw_weight": 1.8303243340511807e-06}, {"source": "A3.8", "target": "A4.7", "normalized_weight": 0.21537834261861483, "raw_weight": 3.7005651955100043e-06}, {"source": "A3.8", "target": "A4.9", "normalized_weight": 0.006942841212916508, "raw_weight": 3.6650932459766407e-07}, {"source": "A3.8", "target": "A4.10", "normalized_weight": 0.06280739487245447, "raw_weight": 6.811214812845747e-07}, {"source": "A3.8", "target": "A4.11", "normalized_weight": 0.16362965873797292, "raw_weight": 2.0842873954066425e-06}, {"source": "A3.8", "target": "MLP 4", "normalized_weight": 0.28480459146286546, "raw_weight": 7.993629288572182e-06}, {"source": "MLP 3", "target": "A4.3", "normalized_weight": 0.6190260926512681, "raw_weight": 0.00032578287215788773}, {"source": "MLP 3", "target": "A4.4", "normalized_weight": 0.5297625886314655, "raw_weight": 0.0001210269375732315}, {"source": "MLP 3", "target": "A4.6", "normalized_weight": 0.46439857034368187, "raw_weight": 5.861068177576015e-05}, {"source": "MLP 3", "target": "A4.7", "normalized_weight": 0.5278601799212564, "raw_weight": 0.0001184995713761983}, {"source": "MLP 3", "target": "A4.9", "normalized_weight": 0.31942467851555817, "raw_weight": 1.1736368791150976e-05}, {"source": "MLP 3", "target": "A4.10", "normalized_weight": 0.37528923217509613, "raw_weight": 2.18108854521126e-05}, {"source": "MLP 3", "target": "A4.11", "normalized_weight": 0.4761114960406146, "raw_weight": 6.674309191476374e-05}, {"source": "MLP 3", "target": "MLP 4", "normalized_weight": 0.597286428765507, "raw_weight": 0.0002559721540875276}, {"source": "A4.3", "target": "A5.0", "normalized_weight": 0.5345751610453314, "raw_weight": 0.0001276637657582876}, {"source": "A4.3", "target": "A5.2", "normalized_weight": 0.5418842529140997, "raw_weight": 0.00013844611683290226}, {"source": "A4.3", "target": "A5.3", "normalized_weight": 0.47797907053010324, "raw_weight": 6.814025666159948e-05}, {"source": "A4.3", "target": "A5.4", "normalized_weight": 0.42129003136378185, "raw_weight": 3.6332232030822755e-05}, {"source": "A4.3", "target": "A5.5", "normalized_weight": 0.7107592027854118, "raw_weight": 0.0009013061035776301}, {"source": "A4.3", "target": "A5.6", "normalized_weight": 0.4584740199878208, "raw_weight": 5.4882510951020664e-05}, {"source": "A4.3", "target": "A5.8", "normalized_weight": 0.46683878386929767, "raw_weight": 6.021892920832087e-05}, {"source": "A4.3", "target": "A5.9", "normalized_weight": 0.676040180913074, "raw_weight": 0.0006132053397225612}, {"source": "A4.3", "target": "A5.10", "normalized_weight": 0.5881420256590661, "raw_weight": 0.0002312797380849274}, {"source": "A4.3", "target": "A5.11", "normalized_weight": 0.49447942964934016, "raw_weight": 8.182722208263833e-05}, {"source": "A4.3", "target": "MLP 5", "normalized_weight": 0.516953271431591, "raw_weight": 0.00010499542912570728}, {"source": "A4.4", "target": "A5.0", "normalized_weight": 0.44531165702552883, "raw_weight": 4.74265405865286e-05}, {"source": "A4.4", "target": "A5.2", "normalized_weight": 0.4526207488942972, "raw_weight": 5.1432137694063526e-05}, {"source": "A4.4", "target": "A5.3", "normalized_weight": 0.3887155665103007, "raw_weight": 2.5313812646389315e-05}, {"source": "A4.4", "target": "A5.4", "normalized_weight": 0.3320265273439793, "raw_weight": 1.3497268130656956e-05}, {"source": "A4.4", "target": "A5.5", "normalized_weight": 0.6214956987656093, "raw_weight": 0.00033483134582715755}, {"source": "A4.4", "target": "A5.6", "normalized_weight": 0.36921051596801824, "raw_weight": 2.0388617064902846e-05}, {"source": "A4.4", "target": "A5.8", "normalized_weight": 0.3775752798494951, "raw_weight": 2.2371073524363118e-05}, {"source": "A4.4", "target": "A5.9", "normalized_weight": 0.5867766768932716, "raw_weight": 0.00022780314962109888}, {"source": "A4.4", "target": "A5.10", "normalized_weight": 0.4988785216392636, "raw_weight": 8.591942921293977e-05}, {"source": "A4.4", "target": "A5.11", "normalized_weight": 0.4052159256295376, "raw_weight": 3.0398461506554817e-05}, {"source": "A4.4", "target": "MLP 5", "normalized_weight": 0.42768976741178844, "raw_weight": 3.900535090166791e-05}, {"source": "A4.6", "target": "A5.0", "normalized_weight": 0.37994763873774506, "raw_weight": 2.2967629635016148e-05}, {"source": "A4.6", "target": "A5.2", "normalized_weight": 0.38725673060651356, "raw_weight": 2.4907452141469132e-05}, {"source": "A4.6", "target": "A5.3", "normalized_weight": 0.32335154822251705, "raw_weight": 1.2258922247379827e-05}, {"source": "A4.6", "target": "A5.4", "normalized_weight": 0.26666250905619565, "raw_weight": 6.536429848680352e-06}, {"source": "A4.6", "target": "A5.5", "normalized_weight": 0.5561316804778257, "raw_weight": 0.00016215145034922853}, {"source": "A4.6", "target": "A5.6", "normalized_weight": 0.3038464976802344, "raw_weight": 9.873758442543285e-06}, {"source": "A4.6", "target": "A5.8", "normalized_weight": 0.31221126156171153, "raw_weight": 1.0833818467274718e-05}, {"source": "A4.6", "target": "A5.9", "normalized_weight": 0.5214126586054878, "raw_weight": 0.00011032005087197386}, {"source": "A4.6", "target": "A5.10", "normalized_weight": 0.43351450335147995, "raw_weight": 4.160888827669032e-05}, {"source": "A4.6", "target": "A5.11", "normalized_weight": 0.339851907341754, "raw_weight": 1.472130576513444e-05}, {"source": "A4.6", "target": "MLP 5", "normalized_weight": 0.3623257491240048, "raw_weight": 1.8889432841066606e-05}, {"source": "A4.7", "target": "A5.0", "normalized_weight": 0.4434092483153197, "raw_weight": 4.643614755565407e-05}, {"source": "A4.7", "target": "A5.2", "normalized_weight": 0.4507183401840882, "raw_weight": 5.0358097080828315e-05}, {"source": "A4.7", "target": "A5.3", "normalized_weight": 0.3868131578000917, "raw_weight": 2.4785192525254678e-05}, {"source": "A4.7", "target": "A5.4", "normalized_weight": 0.3301241186337703, "raw_weight": 1.3215409067627497e-05}, {"source": "A4.7", "target": "A5.5", "normalized_weight": 0.6195932900554002, "raw_weight": 0.0003278391716705683}, {"source": "A4.7", "target": "A5.6", "normalized_weight": 0.36730810725780905, "raw_weight": 1.9962848202141116e-05}, {"source": "A4.7", "target": "A5.8", "normalized_weight": 0.3756728711392861, "raw_weight": 2.1903905667764183e-05}, {"source": "A4.7", "target": "A5.9", "normalized_weight": 0.5848742681830624, "raw_weight": 0.00022304601049592115}, {"source": "A4.7", "target": "A5.10", "normalized_weight": 0.4969761129290546, "raw_weight": 8.412520170115317e-05}, {"source": "A4.7", "target": "A5.11", "normalized_weight": 0.4033135169193286, "raw_weight": 2.9763660316059568e-05}, {"source": "A4.7", "target": "MLP 5", "normalized_weight": 0.4257873587015794, "raw_weight": 3.819081483763965e-05}, {"source": "A4.9", "target": "A5.0", "normalized_weight": 0.2349737469096215, "raw_weight": 4.5991031581311406e-06}, {"source": "A4.9", "target": "A5.2", "normalized_weight": 0.24228283877838985, "raw_weight": 4.98753870665811e-06}, {"source": "A4.9", "target": "A5.3", "normalized_weight": 0.17837765639439337, "raw_weight": 2.454761284431911e-06}, {"source": "A4.9", "target": "A5.4", "normalized_weight": 0.12168861722807195, "raw_weight": 1.3088732114583022e-06}, {"source": "A4.9", "target": "A5.5", "normalized_weight": 0.4111577886497019, "raw_weight": 3.2469665317996907e-05}, {"source": "A4.9", "target": "A5.6", "normalized_weight": 0.15887260585211088, "raw_weight": 1.977149333969261e-06}, {"source": "A4.9", "target": "A5.8", "normalized_weight": 0.1672373697335878, "raw_weight": 2.169394470359222e-06}, {"source": "A4.9", "target": "A5.9", "normalized_weight": 0.37643876677736426, "raw_weight": 2.2090799200146817e-05}, {"source": "A4.9", "target": "A5.10", "normalized_weight": 0.28854061152335625, "raw_weight": 8.33188154461973e-06}, {"source": "A4.9", "target": "A5.11", "normalized_weight": 0.1948780155136303, "raw_weight": 2.947835928746522e-06}, {"source": "A4.9", "target": "MLP 5", "normalized_weight": 0.21735185729588108, "raw_weight": 3.7824734905254594e-06}, {"source": "A4.10", "target": "A5.0", "normalized_weight": 0.2908383005691595, "raw_weight": 8.546980241459356e-06}, {"source": "A4.10", "target": "A5.2", "normalized_weight": 0.2981473924379278, "raw_weight": 9.268849450344314e-06}, {"source": "A4.10", "target": "A5.3", "normalized_weight": 0.23424221005393134, "raw_weight": 4.561932071135482e-06}, {"source": "A4.10", "target": "A5.4", "normalized_weight": 0.1775531708876099, "raw_weight": 2.4324119490843076e-06}, {"source": "A4.10", "target": "A5.5", "normalized_weight": 0.4670223423092399, "raw_weight": 6.0341674969623376e-05}, {"source": "A4.10", "target": "A5.6", "normalized_weight": 0.21473715951164885, "raw_weight": 3.6743373024745584e-06}, {"source": "A4.10", "target": "A5.8", "normalized_weight": 0.22310192339312576, "raw_weight": 4.031605953719455e-06}, {"source": "A4.10", "target": "A5.9", "normalized_weight": 0.4323033204369022, "raw_weight": 4.105357453178422e-05}, {"source": "A4.10", "target": "A5.10", "normalized_weight": 0.3444051651828942, "raw_weight": 1.548398122145668e-05}, {"source": "A4.10", "target": "A5.11", "normalized_weight": 0.2507425691731683, "raw_weight": 5.478262733358348e-06}, {"source": "A4.10", "target": "MLP 5", "normalized_weight": 0.27321641095541904, "raw_weight": 7.029354436246605e-06}, {"source": "A4.11", "target": "A5.0", "normalized_weight": 0.3916605644346779, "raw_weight": 2.6154458016015e-05}, {"source": "A4.11", "target": "A5.2", "normalized_weight": 0.3989696563034464, "raw_weight": 2.836343678786857e-05}, {"source": "A4.11", "target": "A5.3", "normalized_weight": 0.33506447391944993, "raw_weight": 1.3959884948330347e-05}, {"source": "A4.11", "target": "A5.4", "normalized_weight": 0.2783754347531285, "raw_weight": 7.443379346003519e-06}, {"source": "A4.11", "target": "A5.5", "normalized_weight": 0.5678446061747585, "raw_weight": 0.00018465045665526977}, {"source": "A4.11", "target": "A5.6", "normalized_weight": 0.3155594233771673, "raw_weight": 1.1243772420122032e-05}, {"source": "A4.11", "target": "A5.8", "normalized_weight": 0.32392418725864436, "raw_weight": 1.233704368967483e-05}, {"source": "A4.11", "target": "A5.9", "normalized_weight": 0.5331255843024206, "raw_weight": 0.00012562729305146472}, {"source": "A4.11", "target": "A5.10", "normalized_weight": 0.4452274290484128, "raw_weight": 4.738224792107462e-05}, {"source": "A4.11", "target": "A5.11", "normalized_weight": 0.35156483303868685, "raw_weight": 1.676393165919569e-05}, {"source": "A4.11", "target": "MLP 5", "normalized_weight": 0.3740386748209376, "raw_weight": 2.1510399028500538e-05}, {"source": "MLP 4", "target": "A5.0", "normalized_weight": 0.5128354971595703, "raw_weight": 0.00010030720431563125}, {"source": "MLP 4", "target": "A5.2", "normalized_weight": 0.5201445890283388, "raw_weight": 0.00010877904819255393}, {"source": "MLP 4", "target": "A5.3", "normalized_weight": 0.4562394066443423, "raw_weight": 5.3538751629930714e-05}, {"source": "MLP 4", "target": "A5.4", "normalized_weight": 0.3995503674780209, "raw_weight": 2.854674229537269e-05}, {"source": "MLP 4", "target": "A5.5", "normalized_weight": 0.689019538899651, "raw_weight": 0.0007081687975087625}, {"source": "MLP 4", "target": "A5.6", "normalized_weight": 0.4367343561020597, "raw_weight": 4.312195560439609e-05}, {"source": "MLP 4", "target": "A5.8", "normalized_weight": 0.4450991199835368, "raw_weight": 4.731485398295522e-05}, {"source": "MLP 4", "target": "A5.9", "normalized_weight": 0.6543005170273131, "raw_weight": 0.00048180400236230714}, {"source": "MLP 4", "target": "A5.10", "normalized_weight": 0.5664023617733053, "raw_weight": 0.0001817197213661581}, {"source": "MLP 4", "target": "A5.11", "normalized_weight": 0.4727397657635793, "raw_weight": 6.429279157849771e-05}, {"source": "MLP 4", "target": "MLP 5", "normalized_weight": 0.49521360754583005, "raw_weight": 8.249637552960876e-05}, {"source": "A5.0", "target": "A6.1", "normalized_weight": 0.2480404126274376, "raw_weight": 5.316485506535367e-06}, {"source": "A5.0", "target": "A6.2", "normalized_weight": 0.3778602561679999, "raw_weight": 2.2441907092781636e-05}, {"source": "A5.0", "target": "A6.3", "normalized_weight": 0.3846550687089967, "raw_weight": 2.4198878365083048e-05}, {"source": "A5.0", "target": "A6.4", "normalized_weight": 0.2416947498887251, "raw_weight": 4.955106964604311e-06}, {"source": "A5.0", "target": "A6.6", "normalized_weight": 0.3574259721478565, "raw_weight": 1.7890117165227505e-05}, {"source": "A5.0", "target": "A6.7", "normalized_weight": 0.3204061365950708, "raw_weight": 1.1864846776061806e-05}, {"source": "A5.0", "target": "A6.9", "normalized_weight": 0.608290408297712, "raw_weight": 0.0002892056481803313}, {"source": "A5.0", "target": "MLP 6", "normalized_weight": 0.5401072016664383, "raw_weight": 0.00013574362758082565}, {"source": "A5.2", "target": "A6.1", "normalized_weight": 0.2553495044962061, "raw_weight": 5.765510434431508e-06}, {"source": "A5.2", "target": "A6.2", "normalized_weight": 0.3851693480367682, "raw_weight": 2.433732761105464e-05}, {"source": "A5.2", "target": "A6.3", "normalized_weight": 0.3919641605777652, "raw_weight": 2.6242690879890404e-05}, {"source": "A5.2", "target": "A6.4", "normalized_weight": 0.2490038417574936, "raw_weight": 5.3736102304862636e-06}, {"source": "A5.2", "target": "A6.6", "normalized_weight": 0.3647350640166248, "raw_weight": 1.9401098162033568e-05}, {"source": "A5.2", "target": "A6.7", "normalized_weight": 0.32771522846383927, "raw_weight": 1.2866939598767872e-05}, {"source": "A5.2", "target": "A6.9", "normalized_weight": 0.6155995001664805, "raw_weight": 0.0003136316614106311}, {"source": "A5.2", "target": "MLP 6", "normalized_weight": 0.5474162935352067, "raw_weight": 0.0001472083955204569}, {"source": "A5.3", "target": "A6.1", "normalized_weight": 0.1914443221122096, "raw_weight": 2.837662548971741e-06}, {"source": "A5.3", "target": "A6.2", "normalized_weight": 0.32126416565277177, "raw_weight": 1.1978318986557383e-05}, {"source": "A5.3", "target": "A6.3", "normalized_weight": 0.3280589781937685, "raw_weight": 1.2916098572883766e-05}, {"source": "A5.3", "target": "A6.4", "normalized_weight": 0.18509865937349712, "raw_weight": 2.644777540035067e-06}, {"source": "A5.3", "target": "A6.6", "normalized_weight": 0.3008298816326283, "raw_weight": 9.5488110358013e-06}, {"source": "A5.3", "target": "A6.7", "normalized_weight": 0.2638100460798428, "raw_weight": 6.332836100903742e-06}, {"source": "A5.3", "target": "A6.9", "normalized_weight": 0.5516943177824838, "raw_weight": 0.0001543628842368902}, {"source": "A5.3", "target": "MLP 6", "normalized_weight": 0.4835111111512102, "raw_weight": 7.245286529497172e-05}, {"source": "A5.4", "target": "A6.1", "normalized_weight": 0.1347552829458882, "raw_weight": 1.5130353069614804e-06}, {"source": "A5.4", "target": "A6.2", "normalized_weight": 0.2645751264864503, "raw_weight": 6.386812819331064e-06}, {"source": "A5.4", "target": "A6.3", "normalized_weight": 0.2713699390274471, "raw_weight": 6.8868347915608844e-06}, {"source": "A5.4", "target": "A6.4", "normalized_weight": 0.1284096202071757, "raw_weight": 1.410189452788115e-06}, {"source": "A5.4", "target": "A6.6", "normalized_weight": 0.2441408424663069, "raw_weight": 5.091404628751955e-06}, {"source": "A5.4", "target": "A6.7", "normalized_weight": 0.2071210069135214, "raw_weight": 3.376654006072608e-06}, {"source": "A5.4", "target": "A6.9", "normalized_weight": 0.4950052786161624, "raw_weight": 8.230594367869938e-05}, {"source": "A5.4", "target": "MLP 6", "normalized_weight": 0.42682207198488875, "raw_weight": 3.863170528206031e-05}, {"source": "A5.5", "target": "A6.1", "normalized_weight": 0.4242244543675182, "raw_weight": 3.7534384233149296e-05}, {"source": "A5.5", "target": "A6.2", "normalized_weight": 0.5540442979080803, "raw_weight": 0.0001584398495415142}, {"source": "A5.5", "target": "A6.3", "normalized_weight": 0.5608391104490771, "raw_weight": 0.0001708440655861362}, {"source": "A5.5", "target": "A6.4", "normalized_weight": 0.4178787916288057, "raw_weight": 3.498305196114712e-05}, {"source": "A5.5", "target": "A6.6", "normalized_weight": 0.5336100138879369, "raw_weight": 0.00012630421560075062}, {"source": "A5.5", "target": "A6.7", "normalized_weight": 0.4965901783351514, "raw_weight": 8.376581055524485e-05}, {"source": "A5.5", "target": "A6.9", "normalized_weight": 0.7844744500377925, "raw_weight": 0.002041791688861691}, {"source": "A5.5", "target": "MLP 6", "normalized_weight": 0.7162912434065188, "raw_weight": 0.0009583499228121781}, {"source": "A5.6", "target": "A6.1", "normalized_weight": 0.17193927156992697, "raw_weight": 2.2855512078957156e-06}, {"source": "A5.6", "target": "A6.2", "normalized_weight": 0.30175911511048925, "raw_weight": 9.647750906183964e-06}, {"source": "A5.6", "target": "A6.3", "normalized_weight": 0.30855392765148604, "raw_weight": 1.0403070902582012e-05}, {"source": "A5.6", "target": "A6.4", "normalized_weight": 0.1655936088312145, "raw_weight": 2.1301949745338816e-06}, {"source": "A5.6", "target": "A6.6", "normalized_weight": 0.28132483109034584, "raw_weight": 7.690941477432503e-06}, {"source": "A5.6", "target": "A6.7", "normalized_weight": 0.24430499553756016, "raw_weight": 5.100684436587066e-06}, {"source": "A5.6", "target": "A6.9", "normalized_weight": 0.5321892672402013, "raw_weight": 0.0001243291865869441}, {"source": "A5.6", "target": "MLP 6", "normalized_weight": 0.4640060606089277, "raw_weight": 5.835603456458673e-05}, {"source": "A5.8", "target": "A6.1", "normalized_weight": 0.1803040354514039, "raw_weight": 2.5077833358079027e-06}, {"source": "A5.8", "target": "A6.2", "normalized_weight": 0.3101238789919662, "raw_weight": 1.0585835428657644e-05}, {"source": "A5.8", "target": "A6.3", "normalized_weight": 0.3169186915329629, "raw_weight": 1.1414597826816056e-05}, {"source": "A5.8", "target": "A6.4", "normalized_weight": 0.17395837271269154, "raw_weight": 2.337321273180397e-06}, {"source": "A5.8", "target": "A6.6", "normalized_weight": 0.2896895949718228, "raw_weight": 8.438758583552625e-06}, {"source": "A5.8", "target": "A6.7", "normalized_weight": 0.25266975941903724, "raw_weight": 5.596641802248085e-06}, {"source": "A5.8", "target": "A6.9", "normalized_weight": 0.5405540311216782, "raw_weight": 0.00013641814770991387}, {"source": "A5.8", "target": "MLP 6", "normalized_weight": 0.47237082449040463, "raw_weight": 6.403019565666976e-05}, {"source": "A5.9", "target": "A6.1", "normalized_weight": 0.3895054324951803, "raw_weight": 2.5536590447579333e-05}, {"source": "A5.9", "target": "A6.2", "normalized_weight": 0.5193252760357426, "raw_weight": 0.0001077948561293944}, {"source": "A5.9", "target": "A6.3", "normalized_weight": 0.5261200885767394, "raw_weight": 0.00011623408835409813}, {"source": "A5.9", "target": "A6.4", "normalized_weight": 0.38315976975646787, "raw_weight": 2.3800786633105912e-05}, {"source": "A5.9", "target": "A6.6", "normalized_weight": 0.4988909920155992, "raw_weight": 8.593131581869848e-05}, {"source": "A5.9", "target": "A6.7", "normalized_weight": 0.4618711564628135, "raw_weight": 5.6990230194575026e-05}, {"source": "A5.9", "target": "A6.9", "normalized_weight": 0.7497554281654547, "raw_weight": 0.0013891368994854436}, {"source": "A5.9", "target": "MLP 6", "normalized_weight": 0.681572221534181, "raw_weight": 0.0006520152117670819}, {"source": "A5.10", "target": "A6.1", "normalized_weight": 0.3016072772411725, "raw_weight": 9.631514221598858e-06}, {"source": "A5.10", "target": "A6.2", "normalized_weight": 0.4314271207817346, "raw_weight": 4.06564725998447e-05}, {"source": "A5.10", "target": "A6.3", "normalized_weight": 0.4382219333227314, "raw_weight": 4.383945763296662e-05}, {"source": "A5.10", "target": "A6.4", "normalized_weight": 0.29526161450246, "raw_weight": 8.976829362266313e-06}, {"source": "A5.10", "target": "A6.6", "normalized_weight": 0.4109928367615912, "raw_weight": 3.2410305208421114e-05}, {"source": "A5.10", "target": "A6.7", "normalized_weight": 0.37397300120880567, "raw_weight": 2.1494733752260714e-05}, {"source": "A5.10", "target": "A6.9", "normalized_weight": 0.6618572729114468, "raw_weight": 0.0005239341497294547}, {"source": "A5.10", "target": "MLP 6", "normalized_weight": 0.593674066280173, "raw_weight": 0.00024591747272309505}, {"source": "A5.11", "target": "A6.1", "normalized_weight": 0.20794468123144655, "raw_weight": 3.407648502755812e-06}, {"source": "A5.11", "target": "A6.2", "normalized_weight": 0.3377645247720087, "raw_weight": 1.4384339242474271e-05}, {"source": "A5.11", "target": "A6.3", "normalized_weight": 0.3445593373130054, "raw_weight": 1.551048555061018e-05}, {"source": "A5.11", "target": "A6.4", "normalized_weight": 0.20159901849273404, "raw_weight": 3.1760197235885103e-06}, {"source": "A5.11", "target": "A6.6", "normalized_weight": 0.3173302407518653, "raw_weight": 1.1466829148179493e-05}, {"source": "A5.11", "target": "A6.7", "normalized_weight": 0.28031040519907974, "raw_weight": 7.604878693297191e-06}, {"source": "A5.11", "target": "A6.9", "normalized_weight": 0.5681946769017208, "raw_weight": 0.00018536892328565105}, {"source": "A5.11", "target": "MLP 6", "normalized_weight": 0.5000114702704471, "raw_weight": 8.700608112555304e-05}, {"source": "MLP 5", "target": "A6.1", "normalized_weight": 0.23041852301369717, "raw_weight": 4.372475415273004e-06}, {"source": "MLP 5", "target": "A6.2", "normalized_weight": 0.36023836655425945, "raw_weight": 1.845705906926764e-05}, {"source": "MLP 5", "target": "A6.3", "normalized_weight": 0.36703317909525623, "raw_weight": 1.990205759019566e-05}, {"source": "MLP 5", "target": "A6.4", "normalized_weight": 0.22407286027498483, "raw_weight": 4.075264261728362e-06}, {"source": "MLP 5", "target": "A6.6", "normalized_weight": 0.33980408253411604, "raw_weight": 1.4713497739277711e-05}, {"source": "MLP 5", "target": "A6.7", "normalized_weight": 0.3027842469813305, "raw_weight": 9.758091274872979e-06}, {"source": "MLP 5", "target": "A6.9", "normalized_weight": 0.5906685186839715, "raw_weight": 0.0002378534814158964}, {"source": "MLP 5", "target": "MLP 6", "normalized_weight": 0.5224853120526979, "raw_weight": 0.00011164060800081602}, {"source": "A6.1", "target": "A7.1", "normalized_weight": 0.3076562144011626, "raw_weight": 1.029998592029643e-05}, {"source": "A6.1", "target": "A7.2", "normalized_weight": 0.06187714297739695, "raw_weight": 6.74128810228882e-07}, {"source": "A6.1", "target": "A7.3", "normalized_weight": 0.40601189732440346, "raw_weight": 3.066806461667765e-05}, {"source": "A6.1", "target": "A7.5", "normalized_weight": 0.24125652387198945, "raw_weight": 4.931077014418183e-06}, {"source": "A6.1", "target": "A7.6", "normalized_weight": 0.18506078681454746, "raw_weight": 2.6436666285727453e-06}, {"source": "A6.1", "target": "A7.7", "normalized_weight": 0.15371728366038143, "raw_weight": 1.8672505457206865e-06}, {"source": "A6.1", "target": "A7.9", "normalized_weight": 0.38530674148779137, "raw_weight": 2.437444922070986e-05}, {"source": "A6.1", "target": "A7.10", "normalized_weight": 0.36663627195898296, "raw_weight": 1.9814622045514867e-05}, {"source": "A6.1", "target": "A7.11", "normalized_weight": 0.1046035280057204, "raw_weight": 1.0828953103945212e-06}, {"source": "A6.1", "target": "MLP 7", "normalized_weight": 0.33129683437869206, "raw_weight": 1.338845373116248e-05}, {"source": "A6.2", "target": "A7.1", "normalized_weight": 0.43747605794172484, "raw_weight": 4.347822011291206e-05}, {"source": "A6.2", "target": "A7.2", "normalized_weight": 0.19169698651795908, "raw_weight": 2.845627268075268e-06}, {"source": "A6.2", "target": "A7.3", "normalized_weight": 0.5358317408649657, "raw_weight": 0.00012945579480972205}, {"source": "A6.2", "target": "A7.5", "normalized_weight": 0.37107636741255157, "raw_weight": 2.0815023776306753e-05}, {"source": "A6.2", "target": "A7.6", "normalized_weight": 0.31488063035510977, "raw_weight": 1.115942492268358e-05}, {"source": "A6.2", "target": "A7.7", "normalized_weight": 0.2835371272009436, "raw_weight": 7.882023418383731e-06}, {"source": "A6.2", "target": "A7.9", "normalized_weight": 0.5151265850283536, "raw_weight": 0.00010288923466009181}, {"source": "A6.2", "target": "A7.10", "normalized_weight": 0.49645611549954527, "raw_weight": 8.364132780525795e-05}, {"source": "A6.2", "target": "A7.11", "normalized_weight": 0.2344233715462827, "raw_weight": 4.571109225673408e-06}, {"source": "A6.2", "target": "MLP 7", "normalized_weight": 0.4611166779192542, "raw_weight": 5.651523631192189e-05}, {"source": "A6.3", "target": "A7.1", "normalized_weight": 0.4442708704827216, "raw_weight": 4.688211905043839e-05}, {"source": "A6.3", "target": "A7.2", "normalized_weight": 0.198491799058956, "raw_weight": 3.068410712504281e-06}, {"source": "A6.3", "target": "A7.3", "normalized_weight": 0.5426265534059626, "raw_weight": 0.0001395908564857766}, {"source": "A6.3", "target": "A7.5", "normalized_weight": 0.3778711799535485, "raw_weight": 2.24446267621869e-05}, {"source": "A6.3", "target": "A7.6", "normalized_weight": 0.3216754428961065, "raw_weight": 1.2033093498330875e-05}, {"source": "A6.3", "target": "A7.7", "normalized_weight": 0.2903319397419403, "raw_weight": 8.499105053043983e-06}, {"source": "A6.3", "target": "A7.9", "normalized_weight": 0.5219213975693504, "raw_weight": 0.00011094440701150954}, {"source": "A6.3", "target": "A7.10", "normalized_weight": 0.5032509280405421, "raw_weight": 9.018958636115631e-05}, {"source": "A6.3", "target": "A7.11", "normalized_weight": 0.24121818408727946, "raw_weight": 4.928980219384249e-06}, {"source": "A6.3", "target": "MLP 7", "normalized_weight": 0.467911490460251, "raw_weight": 6.0939799974753846e-05}, {"source": "A6.4", "target": "A7.1", "normalized_weight": 0.3013105516624501, "raw_weight": 9.599862899324857e-06}, {"source": "A6.4", "target": "A7.2", "normalized_weight": 0.055531480238684455, "raw_weight": 6.283061166064198e-07}, {"source": "A6.4", "target": "A7.3", "normalized_weight": 0.399666234585691, "raw_weight": 2.8583458073238623e-05}, {"source": "A6.4", "target": "A7.5", "normalized_weight": 0.23491086113327697, "raw_weight": 4.595895921677564e-06}, {"source": "A6.4", "target": "A7.6", "normalized_weight": 0.17871512407583495, "raw_weight": 2.4639681434718242e-06}, {"source": "A6.4", "target": "A7.7", "normalized_weight": 0.14737162092166894, "raw_weight": 1.7403275476605919e-06}, {"source": "A6.4", "target": "A7.9", "normalized_weight": 0.37896107874907886, "raw_weight": 2.27176398663112e-05}, {"source": "A6.4", "target": "A7.10", "normalized_weight": 0.3602906092202706, "raw_weight": 1.8467758743636047e-05}, {"source": "A6.4", "target": "A7.11", "normalized_weight": 0.0982578652670079, "raw_weight": 1.009287448988091e-06}, {"source": "A6.4", "target": "MLP 7", "normalized_weight": 0.3249511716399796, "raw_weight": 1.2478397664587794e-05}, {"source": "A6.6", "target": "A7.1", "normalized_weight": 0.4170417739215814, "raw_weight": 3.4659730509522266e-05}, {"source": "A6.6", "target": "A7.2", "normalized_weight": 0.17126270249781567, "raw_weight": 2.26846163402964e-06}, {"source": "A6.6", "target": "A7.3", "normalized_weight": 0.5153974568448222, "raw_weight": 0.00010319886484195032}, {"source": "A6.6", "target": "A7.5", "normalized_weight": 0.35064208339240815, "raw_weight": 1.6593207191152658e-05}, {"source": "A6.6", "target": "A7.6", "normalized_weight": 0.2944463463349663, "raw_weight": 8.896009529759785e-06}, {"source": "A6.6", "target": "A7.7", "normalized_weight": 0.26310284318080013, "raw_weight": 6.283348463701085e-06}, {"source": "A6.6", "target": "A7.9", "normalized_weight": 0.49469230100821027, "raw_weight": 8.202067923637757e-05}, {"source": "A6.6", "target": "A7.10", "normalized_weight": 0.47602183147940186, "raw_weight": 6.667673777031912e-05}, {"source": "A6.6", "target": "A7.11", "normalized_weight": 0.21398908752613927, "raw_weight": 3.643971935373227e-06}, {"source": "A6.6", "target": "MLP 7", "normalized_weight": 0.4406823938991108, "raw_weight": 4.505250801818033e-05}, {"source": "A6.7", "target": "A7.1", "normalized_weight": 0.3800219383687958, "raw_weight": 2.2986567835026625e-05}, {"source": "A6.7", "target": "A7.2", "normalized_weight": 0.13424286694503013, "raw_weight": 1.5044591075932286e-06}, {"source": "A6.7", "target": "A7.3", "normalized_weight": 0.47837762129203665, "raw_weight": 6.844218556562379e-05}, {"source": "A6.7", "target": "A7.5", "normalized_weight": 0.31362224783962267, "raw_weight": 1.1004727304365284e-05}, {"source": "A6.7", "target": "A7.6", "normalized_weight": 0.2574265107821808, "raw_weight": 5.899893724236726e-06}, {"source": "A6.7", "target": "A7.7", "normalized_weight": 0.22608300762801462, "raw_weight": 4.167159223938412e-06}, {"source": "A6.7", "target": "A7.9", "normalized_weight": 0.45767246545542456, "raw_weight": 5.439666954779043e-05}, {"source": "A6.7", "target": "A7.10", "normalized_weight": 0.4390019959266163, "raw_weight": 4.422046372676335e-05}, {"source": "A6.7", "target": "A7.11", "normalized_weight": 0.17696925197335375, "raw_weight": 2.4167068482652343e-06}, {"source": "A6.7", "target": "MLP 7", "normalized_weight": 0.40366255834632525, "raw_weight": 2.9879128212305806e-05}, {"source": "A6.9", "target": "A7.1", "normalized_weight": 0.6679062100714369, "raw_weight": 0.0005602976065044972}, {"source": "A6.9", "target": "A7.2", "normalized_weight": 0.42212713864767126, "raw_weight": 3.667119176373559e-05}, {"source": "A6.9", "target": "A7.3", "normalized_weight": 0.7662618929946776, "raw_weight": 0.0016682783193897044}, {"source": "A6.9", "target": "A7.5", "normalized_weight": 0.6015065195422638, "raw_weight": 0.0002682402354767816}, {"source": "A6.9", "target": "A7.6", "normalized_weight": 0.5453107824848218, "raw_weight": 0.0001438099135132112}, {"source": "A6.9", "target": "A7.7", "normalized_weight": 0.5139672793306556, "raw_weight": 0.00010157450889810606}, {"source": "A6.9", "target": "A7.9", "normalized_weight": 0.7455567371580657, "raw_weight": 0.0013259188569683111}, {"source": "A6.9", "target": "A7.10", "normalized_weight": 0.7268862676292573, "raw_weight": 0.001077873833207503}, {"source": "A6.9", "target": "A7.11", "normalized_weight": 0.46485352367599475, "raw_weight": 5.890723105877148e-05}, {"source": "A6.9", "target": "MLP 7", "normalized_weight": 0.6915468300489663, "raw_weight": 0.000728303770356091}, {"source": "MLP 6", "target": "A7.1", "normalized_weight": 0.5997230034401633, "raw_weight": 0.0002629852843826549}, {"source": "MLP 6", "target": "A7.2", "normalized_weight": 0.3539439320163975, "raw_weight": 1.7212252350679046e-05}, {"source": "MLP 6", "target": "A7.3", "normalized_weight": 0.6980786863634041, "raw_weight": 0.0007830350213187953}, {"source": "MLP 6", "target": "A7.5", "normalized_weight": 0.5333233129109902, "raw_weight": 0.0001259031518086014}, {"source": "MLP 6", "target": "A7.6", "normalized_weight": 0.4771275758535482, "raw_weight": 6.749964762166674e-05}, {"source": "MLP 6", "target": "A7.7", "normalized_weight": 0.44578407269938203, "raw_weight": 4.7675736605850595e-05}, {"source": "MLP 6", "target": "A7.9", "normalized_weight": 0.6773735305267921, "raw_weight": 0.0006223427400369186}, {"source": "MLP 6", "target": "A7.10", "normalized_weight": 0.6587030609979837, "raw_weight": 0.0005059185569667828}, {"source": "MLP 6", "target": "A7.11", "normalized_weight": 0.3966703170447211, "raw_weight": 2.7649118490498913e-05}, {"source": "MLP 6", "target": "MLP 7", "normalized_weight": 0.6233636234176927, "raw_weight": 0.0003418418567927954}, {"source": "A7.1", "target": "A8.3", "normalized_weight": 0.5250020124286437, "raw_weight": 0.00011480133554224448}, {"source": "A7.1", "target": "A8.4", "normalized_weight": 0.35858230871678537, "raw_weight": 1.812108034450271e-05}, {"source": "A7.1", "target": "A8.5", "normalized_weight": 0.4245073415957788, "raw_weight": 3.765235682614133e-05}, {"source": "A7.1", "target": "A8.6", "normalized_weight": 0.4513056261002677, "raw_weight": 5.068724508728293e-05}, {"source": "A7.1", "target": "A8.7", "normalized_weight": 0.5488487972038011, "raw_weight": 0.00014956637741093438}, {"source": "A7.1", "target": "A8.8", "normalized_weight": 0.38419979129044896, "raw_weight": 2.407697042707685e-05}, {"source": "A7.1", "target": "A8.10", "normalized_weight": 0.7091899988253332, "raw_weight": 0.0008857523907110365}, {"source": "A7.1", "target": "MLP 8", "normalized_weight": 0.5459583258664935, "raw_weight": 0.0001448466666157137}, {"source": "A7.2", "target": "A8.3", "normalized_weight": 0.2792229410048781, "raw_weight": 7.513688692455285e-06}, {"source": "A7.2", "target": "A8.4", "normalized_weight": 0.1128032372930196, "raw_weight": 1.186015439946351e-06}, {"source": "A7.2", "target": "A8.5", "normalized_weight": 0.17872827017201318, "raw_weight": 2.464327495778701e-06}, {"source": "A7.2", "target": "A8.6", "normalized_weight": 0.2055265546765019, "raw_weight": 3.3174542653633445e-06}, {"source": "A7.2", "target": "A8.7", "normalized_weight": 0.30306972578003544, "raw_weight": 9.789042901077612e-06}, {"source": "A7.2", "target": "A8.8", "normalized_weight": 0.1384207198666833, "raw_weight": 1.575825399521922e-06}, {"source": "A7.2", "target": "A8.10", "normalized_weight": 0.46341092740156753, "raw_weight": 5.7972040925880625e-05}, {"source": "A7.2", "target": "MLP 8", "normalized_weight": 0.30017925444272786, "raw_weight": 9.480140243576217e-06}, {"source": "A7.3", "target": "A8.3", "normalized_weight": 0.6233576953518847, "raw_weight": 0.00034181937759281134}, {"source": "A7.3", "target": "A8.4", "normalized_weight": 0.4569379916400263, "raw_weight": 5.395526433042176e-05}, {"source": "A7.3", "target": "A8.5", "normalized_weight": 0.5228630245190197, "raw_weight": 0.0001121093680175704}, {"source": "A7.3", "target": "A8.6", "normalized_weight": 0.5496613090235084, "raw_weight": 0.00015092056626165098}, {"source": "A7.3", "target": "A8.7", "normalized_weight": 0.6472044801270419, "raw_weight": 0.00044533180553987806}, {"source": "A7.3", "target": "A8.8", "normalized_weight": 0.48255547421368983, "raw_weight": 7.168884409602949e-05}, {"source": "A7.3", "target": "A8.10", "normalized_weight": 0.8075456817485739, "raw_weight": 0.0026373154063419335}, {"source": "A7.3", "target": "MLP 8", "normalized_weight": 0.6443140087897344, "raw_weight": 0.00043127893238452397}, {"source": "A7.5", "target": "A8.3", "normalized_weight": 0.45860232189947064, "raw_weight": 5.496067968416979e-05}, {"source": "A7.5", "target": "A8.4", "normalized_weight": 0.29218261818761226, "raw_weight": 8.675394651474512e-06}, {"source": "A7.5", "target": "A8.5", "normalized_weight": 0.3581076510666057, "raw_weight": 1.8025915056659966e-05}, {"source": "A7.5", "target": "A8.6", "normalized_weight": 0.3849059355710944, "raw_weight": 2.4266315615205088e-05}, {"source": "A7.5", "target": "A8.7", "normalized_weight": 0.4824491066746279, "raw_weight": 7.160430426681862e-05}, {"source": "A7.5", "target": "A8.8", "normalized_weight": 0.31780010076127585, "raw_weight": 1.1526753178937171e-05}, {"source": "A7.5", "target": "A8.10", "normalized_weight": 0.64279030829616, "raw_weight": 0.000424050410175264}, {"source": "A7.5", "target": "MLP 8", "normalized_weight": 0.47955863533732035, "raw_weight": 6.934476162306089e-05}, {"source": "A7.6", "target": "A8.3", "normalized_weight": 0.4024065848420286, "raw_weight": 2.9465715976423335e-05}, {"source": "A7.6", "target": "A8.4", "normalized_weight": 0.23598688113017025, "raw_weight": 4.651083579254893e-06}, {"source": "A7.6", "target": "A8.5", "normalized_weight": 0.3019119140091637, "raw_weight": 9.664117989932e-06}, {"source": "A7.6", "target": "A8.6", "normalized_weight": 0.3287101985136526, "raw_weight": 1.3009743835424702e-05}, {"source": "A7.6", "target": "A8.7", "normalized_weight": 0.42625336961718596, "raw_weight": 3.838875545826223e-05}, {"source": "A7.6", "target": "A8.8", "normalized_weight": 0.26160436370383383, "raw_weight": 6.1797641014021965e-06}, {"source": "A7.6", "target": "A8.10", "normalized_weight": 0.586594571238718, "raw_weight": 0.00022734342110963812}, {"source": "A7.6", "target": "MLP 8", "normalized_weight": 0.42336289827987833, "raw_weight": 3.717736138234874e-05}, {"source": "A7.7", "target": "A8.3", "normalized_weight": 0.3710630816878626, "raw_weight": 2.0811956258921793e-05}, {"source": "A7.7", "target": "A8.4", "normalized_weight": 0.20464337797600407, "raw_weight": 3.285111011234012e-06}, {"source": "A7.7", "target": "A8.5", "normalized_weight": 0.27056841085499767, "raw_weight": 6.8258718385955834e-06}, {"source": "A7.7", "target": "A8.6", "normalized_weight": 0.2973666953594864, "raw_weight": 9.188923827925326e-06}, {"source": "A7.7", "target": "A8.7", "normalized_weight": 0.3949098664630198, "raw_weight": 2.711439627230052e-05}, {"source": "A7.7", "target": "A8.8", "normalized_weight": 0.2302608605496678, "raw_weight": 4.364834720858163e-06}, {"source": "A7.7", "target": "A8.10", "normalized_weight": 0.5552510680845518, "raw_weight": 0.000160575135512514}, {"source": "A7.7", "target": "MLP 8", "normalized_weight": 0.3920193951257123, "raw_weight": 2.6258775436872623e-05}, {"source": "A7.9", "target": "A8.3", "normalized_weight": 0.6026525395152725, "raw_weight": 0.0002716721503599473}, {"source": "A7.9", "target": "A8.4", "normalized_weight": 0.4362328358034142, "raw_weight": 4.288271421916401e-05}, {"source": "A7.9", "target": "A8.5", "normalized_weight": 0.5021578686824076, "raw_weight": 8.910259359581896e-05}, {"source": "A7.9", "target": "A8.6", "normalized_weight": 0.5289561531868965, "raw_weight": 0.00011994906508397407}, {"source": "A7.9", "target": "A8.7", "normalized_weight": 0.6264993242904299, "raw_weight": 0.0003539420441482921}, {"source": "A7.9", "target": "A8.8", "normalized_weight": 0.46185031837707774, "raw_weight": 5.6977057794505015e-05}, {"source": "A7.9", "target": "A8.10", "normalized_weight": 0.786840525911962, "raw_weight": 0.002096092833191676}, {"source": "A7.9", "target": "MLP 8", "normalized_weight": 0.6236088529531223, "raw_weight": 0.00034277306275309893}, {"source": "A7.10", "target": "A8.3", "normalized_weight": 0.5839820699864643, "raw_weight": 0.00022084933821195363}, {"source": "A7.10", "target": "A8.4", "normalized_weight": 0.4175623662746058, "raw_weight": 3.4860470767749925e-05}, {"source": "A7.10", "target": "A8.5", "normalized_weight": 0.48348739915359923, "raw_weight": 7.243380965819618e-05}, {"source": "A7.10", "target": "A8.6", "normalized_weight": 0.5102856836580881, "raw_weight": 9.750970648938389e-05}, {"source": "A7.10", "target": "A8.7", "normalized_weight": 0.6078288547616215, "raw_weight": 0.00028772866895620045}, {"source": "A7.10", "target": "A8.8", "normalized_weight": 0.4431798488482695, "raw_weight": 4.631812826787207e-05}, {"source": "A7.10", "target": "A8.10", "normalized_weight": 0.7681700563831536, "raw_weight": 0.0017039682368172882}, {"source": "A7.10", "target": "MLP 8", "normalized_weight": 0.6049383834243138, "raw_weight": 0.0002786491142563099}, {"source": "A7.11", "target": "A8.3", "normalized_weight": 0.3219493260332016, "raw_weight": 1.2069708526567247e-05}, {"source": "A7.11", "target": "A8.4", "normalized_weight": 0.1555296223213432, "raw_weight": 1.905170849377197e-06}, {"source": "A7.11", "target": "A8.5", "normalized_weight": 0.22145465520033664, "raw_weight": 3.958603530902316e-06}, {"source": "A7.11", "target": "A8.6", "normalized_weight": 0.2482529397048255, "raw_weight": 5.329034469229326e-06}, {"source": "A7.11", "target": "A8.7", "normalized_weight": 0.34579611080835887, "raw_weight": 1.5724752436004942e-05}, {"source": "A7.11", "target": "A8.8", "normalized_weight": 0.18114710489500693, "raw_weight": 2.531346990738287e-06}, {"source": "A7.11", "target": "A8.10", "normalized_weight": 0.506137312429891, "raw_weight": 9.312411856618463e-05}, {"source": "A7.11", "target": "MLP 8", "normalized_weight": 0.3429056394710513, "raw_weight": 1.5228542759009988e-05}, {"source": "MLP 7", "target": "A8.3", "normalized_weight": 0.5486426324061733, "raw_weight": 0.00014922470584685654}, {"source": "MLP 7", "target": "A8.4", "normalized_weight": 0.38222292869431473, "raw_weight": 2.3554716251890763e-05}, {"source": "MLP 7", "target": "A8.5", "normalized_weight": 0.44814796157330833, "raw_weight": 4.894247828462128e-05}, {"source": "MLP 7", "target": "A8.6", "normalized_weight": 0.474946246077797, "raw_weight": 6.588589934612742e-05}, {"source": "MLP 7", "target": "A8.7", "normalized_weight": 0.5724894171813304, "raw_weight": 0.0001944141030094}, {"source": "MLP 7", "target": "A8.8", "normalized_weight": 0.40784041126797843, "raw_weight": 3.129648982473643e-05}, {"source": "MLP 7", "target": "A8.10", "normalized_weight": 0.7328306188028625, "raw_weight": 0.0011513467097982177}, {"source": "MLP 7", "target": "MLP 8", "normalized_weight": 0.569598945844023, "raw_weight": 0.00018827917912743984}, {"source": "A8.3", "target": "A9.0", "normalized_weight": 0.5289619882860738, "raw_weight": 0.00011995682962950838}, {"source": "A8.3", "target": "A9.2", "normalized_weight": 0.4233057573843243, "raw_weight": 3.715380303371402e-05}, {"source": "A8.3", "target": "A9.3", "normalized_weight": 0.5595087777712499, "raw_weight": 0.0001683413218028229}, {"source": "A8.3", "target": "A9.4", "normalized_weight": 0.4978949199731512, "raw_weight": 8.498703340450997e-05}, {"source": "A8.3", "target": "A9.5", "normalized_weight": 0.32525755851757593, "raw_weight": 1.2520881538361645e-05}, {"source": "A8.3", "target": "A9.6", "normalized_weight": 0.4450932101638521, "raw_weight": 4.731175217879274e-05}, {"source": "A8.3", "target": "A9.7", "normalized_weight": 0.42461533857414413, "raw_weight": 3.769749259258798e-05}, {"source": "A8.3", "target": "A9.8", "normalized_weight": 0.30981751203616115, "raw_weight": 1.0549919578611497e-05}, {"source": "A8.3", "target": "A9.9", "normalized_weight": 0.5929075240816517, "raw_weight": 0.00024383520221563093}, {"source": "A8.3", "target": "A9.10", "normalized_weight": 0.5056520113471765, "raw_weight": 9.262412799523889e-05}, {"source": "A8.4", "target": "A9.0", "normalized_weight": 0.3625422845742152, "raw_weight": 1.8934861143564408e-05}, {"source": "A8.4", "target": "A9.2", "normalized_weight": 0.25688605367246575, "raw_weight": 5.86462732944437e-06}, {"source": "A8.4", "target": "A9.3", "normalized_weight": 0.3930890740593913, "raw_weight": 2.6572222381212717e-05}, {"source": "A8.4", "target": "A9.4", "normalized_weight": 0.33147521626129267, "raw_weight": 1.3414973382407666e-05}, {"source": "A8.4", "target": "A9.5", "normalized_weight": 0.15883785480571755, "raw_weight": 1.976387289128362e-06}, {"source": "A8.4", "target": "A9.6", "normalized_weight": 0.2786735064519936, "raw_weight": 7.468032130650791e-06}, {"source": "A8.4", "target": "A9.7", "normalized_weight": 0.25819563486228575, "raw_weight": 5.9504472559485946e-06}, {"source": "A8.4", "target": "A9.8", "normalized_weight": 0.14339780832430277, "raw_weight": 1.665276274087529e-06}, {"source": "A8.4", "target": "A9.9", "normalized_weight": 0.4264878203697932, "raw_weight": 3.848872723733756e-05}, {"source": "A8.4", "target": "A9.10", "normalized_weight": 0.33923230763531814, "raw_weight": 1.4620468109655333e-05}, {"source": "A8.5", "target": "A9.0", "normalized_weight": 0.4284673174532088, "raw_weight": 3.9343247459702746e-05}, {"source": "A8.5", "target": "A9.2", "normalized_weight": 0.32281108655145935, "raw_weight": 1.2185644380058596e-05}, {"source": "A8.5", "target": "A9.3", "normalized_weight": 0.45901410693838485, "raw_weight": 5.521231514568712e-05}, {"source": "A8.5", "target": "A9.4", "normalized_weight": 0.39740024914028627, "raw_weight": 2.787391010938443e-05}, {"source": "A8.5", "target": "A9.5", "normalized_weight": 0.22476288768471098, "raw_weight": 4.106578527448906e-06}, {"source": "A8.5", "target": "A9.6", "normalized_weight": 0.34459853933098716, "raw_weight": 1.5517232153195262e-05}, {"source": "A8.5", "target": "A9.7", "normalized_weight": 0.3241206677412792, "raw_weight": 1.2363962804462611e-05}, {"source": "A8.5", "target": "A9.8", "normalized_weight": 0.2093228412032962, "raw_weight": 3.4601456035744692e-06}, {"source": "A8.5", "target": "A9.9", "normalized_weight": 0.4924128532487868, "raw_weight": 7.997267625182687e-05}, {"source": "A8.5", "target": "A9.10", "normalized_weight": 0.40515734051431157, "raw_weight": 3.0378712072592472e-05}, {"source": "A8.6", "target": "A9.0", "normalized_weight": 0.45526560195769755, "raw_weight": 5.296350599585942e-05}, {"source": "A8.6", "target": "A9.2", "normalized_weight": 0.349609371055948, "raw_weight": 1.6404198709008152e-05}, {"source": "A8.6", "target": "A9.3", "normalized_weight": 0.4858123914428736, "raw_weight": 7.432629416926056e-05}, {"source": "A8.6", "target": "A9.4", "normalized_weight": 0.42419853364477494, "raw_weight": 3.7523593005852566e-05}, {"source": "A8.6", "target": "A9.5", "normalized_weight": 0.2515611721891998, "raw_weight": 5.528237003917392e-06}, {"source": "A8.6", "target": "A9.6", "normalized_weight": 0.3713968238354759, "raw_weight": 2.088915052136139e-05}, {"source": "A8.6", "target": "A9.7", "normalized_weight": 0.3509189522457679, "raw_weight": 1.6644249278035725e-05}, {"source": "A8.6", "target": "A9.8", "normalized_weight": 0.2361211257077851, "raw_weight": 4.6580151424756744e-06}, {"source": "A8.6", "target": "A9.9", "normalized_weight": 0.5192111377532755, "raw_weight": 0.0001076584570835668}, {"source": "A8.6", "target": "A9.10", "normalized_weight": 0.4319556250188003, "raw_weight": 4.089553361478907e-05}, {"source": "A8.7", "target": "A9.0", "normalized_weight": 0.5528087730612309, "raw_weight": 0.00015628309869952783}, {"source": "A8.7", "target": "A9.2", "normalized_weight": 0.4471525421594814, "raw_weight": 4.8405009406420584e-05}, {"source": "A8.7", "target": "A9.3", "normalized_weight": 0.5833555625464071, "raw_weight": 0.00021931976271610115}, {"source": "A8.7", "target": "A9.4", "normalized_weight": 0.5217417047483084, "raw_weight": 0.00011072347419283438}, {"source": "A8.7", "target": "A9.5", "normalized_weight": 0.3491043432927332, "raw_weight": 1.6312553201918833e-05}, {"source": "A8.7", "target": "A9.6", "normalized_weight": 0.4689399949390093, "raw_weight": 6.163906847357192e-05}, {"source": "A8.7", "target": "A9.7", "normalized_weight": 0.44846212334930147, "raw_weight": 4.9113343306656475e-05}, {"source": "A8.7", "target": "A9.8", "normalized_weight": 0.3336642968113185, "raw_weight": 1.3744729065185606e-05}, {"source": "A8.7", "target": "A9.9", "normalized_weight": 0.6167543088568089, "raw_weight": 0.00031767529278642}, {"source": "A8.7", "target": "A9.10", "normalized_weight": 0.5294987961223339, "raw_weight": 0.00012067329373530514}, {"source": "A8.8", "target": "A9.0", "normalized_weight": 0.3881597671478789, "raw_weight": 2.5158218115439723e-05}, {"source": "A8.8", "target": "A9.2", "normalized_weight": 0.28250353624612945, "raw_weight": 7.792165593465544e-06}, {"source": "A8.8", "target": "A9.3", "normalized_weight": 0.418706556633055, "raw_weight": 3.5305765456100646e-05}, {"source": "A8.8", "target": "A9.4", "normalized_weight": 0.35709269883495637, "raw_weight": 1.782409830251852e-05}, {"source": "A8.8", "target": "A9.5", "normalized_weight": 0.1844553373793811, "raw_weight": 2.6259702737441853e-06}, {"source": "A8.8", "target": "A9.6", "normalized_weight": 0.3042909890256573, "raw_weight": 9.922564512699489e-06}, {"source": "A8.8", "target": "A9.7", "normalized_weight": 0.28381311743594934, "raw_weight": 7.906192119103844e-06}, {"source": "A8.8", "target": "A9.8", "normalized_weight": 0.1690152908979665, "raw_weight": 2.2126058072625618e-06}, {"source": "A8.8", "target": "A9.9", "normalized_weight": 0.4521053029434569, "raw_weight": 5.1138890720184293e-05}, {"source": "A8.8", "target": "A9.10", "normalized_weight": 0.36484979020898173, "raw_weight": 1.942580528389859e-05}, {"source": "A8.10", "target": "A9.0", "normalized_weight": 0.713149974682763, "raw_weight": 0.0009255297259791462}, {"source": "A8.10", "target": "A9.2", "normalized_weight": 0.6074937437810135, "raw_weight": 0.0002866610367003031}, {"source": "A8.10", "target": "A9.3", "normalized_weight": 0.7436967641679391, "raw_weight": 0.0012988414075325583}, {"source": "A8.10", "target": "A9.4", "normalized_weight": 0.6820829063698406, "raw_weight": 0.0006557194449169357}, {"source": "A8.10", "target": "A9.5", "normalized_weight": 0.5094455449142653, "raw_weight": 9.660515449606832e-05}, {"source": "A8.10", "target": "A9.6", "normalized_weight": 0.6292811965605415, "raw_weight": 0.00036503493102371665}, {"source": "A8.10", "target": "A9.7", "normalized_weight": 0.6088033249708336, "raw_weight": 0.0002908558862140531}, {"source": "A8.10", "target": "A9.8", "normalized_weight": 0.4940054984328506, "raw_weight": 8.13981513753878e-05}, {"source": "A8.10", "target": "A9.9", "normalized_weight": 0.7770955104783411, "raw_weight": 0.001881316208403594}, {"source": "A8.10", "target": "A9.10", "normalized_weight": 0.6898399977438658, "raw_weight": 0.0007146436269386269}, {"source": "MLP 8", "target": "A9.0", "normalized_weight": 0.5499183017239235, "raw_weight": 0.00015135143530825568}, {"source": "MLP 8", "target": "A9.2", "normalized_weight": 0.444262070822174, "raw_weight": 4.687754281003072e-05}, {"source": "MLP 8", "target": "A9.3", "normalized_weight": 0.5804650912090995, "raw_weight": 0.00021239891680397208}, {"source": "MLP 8", "target": "A9.4", "normalized_weight": 0.5188512334110009, "raw_weight": 0.00010722948854259388}, {"source": "MLP 8", "target": "A9.5", "normalized_weight": 0.34621387195542563, "raw_weight": 1.57977949067896e-05}, {"source": "MLP 8", "target": "A9.6", "normalized_weight": 0.4660495236017019, "raw_weight": 5.969398842337612e-05}, {"source": "MLP 8", "target": "A9.7", "normalized_weight": 0.44557165201199384, "raw_weight": 4.756352455322814e-05}, {"source": "MLP 8", "target": "A9.8", "normalized_weight": 0.3307738254740109, "raw_weight": 1.3311000928760224e-05}, {"source": "MLP 8", "target": "A9.9", "normalized_weight": 0.6138638375195015, "raw_weight": 0.0003076507435883103}, {"source": "MLP 8", "target": "A9.10", "normalized_weight": 0.5266083247850263, "raw_weight": 0.0001168653319661133}, {"source": "A9.0", "target": "A10.0", "normalized_weight": 0.6163681272028075, "raw_weight": 0.0003163172857245655}, {"source": "A9.0", "target": "A10.1", "normalized_weight": 0.504493180775671, "raw_weight": 9.144105243108491e-05}, {"source": "A9.0", "target": "A10.2", "normalized_weight": 0.5658661859977192, "raw_weight": 0.00018064207766288476}, {"source": "A9.0", "target": "A10.3", "normalized_weight": 0.3346268591917475, "raw_weight": 1.389228024378103e-05}, {"source": "A9.0", "target": "A10.4", "normalized_weight": 0.41384093367127545, "raw_weight": 3.3450640863699754e-05}, {"source": "A9.0", "target": "A10.5", "normalized_weight": 0.5070792598864798, "raw_weight": 9.410229393366776e-05}, {"source": "A9.0", "target": "A10.6", "normalized_weight": 0.6075673664931756, "raw_weight": 0.0002868952517048884}, {"source": "A9.0", "target": "A10.7", "normalized_weight": 0.6673793625110768, "raw_weight": 0.0005570325392334485}, {"source": "A9.0", "target": "A10.9", "normalized_weight": 0.45038194822229694, "raw_weight": 5.0170527793741426e-05}, {"source": "A9.0", "target": "A10.10", "normalized_weight": 0.31700024476186406, "raw_weight": 1.142492913022014e-05}, {"source": "A9.0", "target": "A10.11", "normalized_weight": 0.5382653637472883, "raw_weight": 0.00013299827223811622}, {"source": "A9.2", "target": "A10.0", "normalized_weight": 0.5107118963010581, "raw_weight": 9.797183008476706e-05}, {"source": "A9.2", "target": "A10.1", "normalized_weight": 0.39883694987392143, "raw_weight": 2.8321712583710343e-05}, {"source": "A9.2", "target": "A10.2", "normalized_weight": 0.46020995509596974, "raw_weight": 5.594962949434859e-05}, {"source": "A9.2", "target": "A10.3", "normalized_weight": 0.22897062828999803, "raw_weight": 4.302806646864132e-06}, {"source": "A9.2", "target": "A10.4", "normalized_weight": 0.308184702769526, "raw_weight": 1.0360548255900913e-05}, {"source": "A9.2", "target": "A10.5", "normalized_weight": 0.4014230289847303, "raw_weight": 2.914596946777012e-05}, {"source": "A9.2", "target": "A10.6", "normalized_weight": 0.5019111355914261, "raw_weight": 8.885904792643121e-05}, {"source": "A9.2", "target": "A10.7", "normalized_weight": 0.5617231316093273, "raw_weight": 0.00017252771109380928}, {"source": "A9.2", "target": "A10.9", "normalized_weight": 0.34472571732054746, "raw_weight": 1.5539139484623465e-05}, {"source": "A9.2", "target": "A10.10", "normalized_weight": 0.2113440138601146, "raw_weight": 3.538602744748785e-06}, {"source": "A9.2", "target": "A10.11", "normalized_weight": 0.4326091328455388, "raw_weight": 4.119308276003073e-05}, {"source": "A9.3", "target": "A10.0", "normalized_weight": 0.6469149166879837, "raw_weight": 0.00044390361226132047}, {"source": "A9.3", "target": "A10.1", "normalized_weight": 0.535039970260847, "raw_weight": 0.00012832372846825757}, {"source": "A9.3", "target": "A10.2", "normalized_weight": 0.5964129754828953, "raw_weight": 0.00025350391654146986}, {"source": "A9.3", "target": "A10.3", "normalized_weight": 0.3651736486769236, "raw_weight": 1.949572047140911e-05}, {"source": "A9.3", "target": "A10.4", "normalized_weight": 0.44438772315645164, "raw_weight": 4.694293034868211e-05}, {"source": "A9.3", "target": "A10.5", "normalized_weight": 0.537626049371656, "raw_weight": 0.00013205837962205168}, {"source": "A9.3", "target": "A10.6", "normalized_weight": 0.6381141559783516, "raw_weight": 0.0004026142241347966}, {"source": "A9.3", "target": "A10.7", "normalized_weight": 0.6979261519962529, "raw_weight": 0.0007817111725223064}, {"source": "A9.3", "target": "A10.9", "normalized_weight": 0.480928737707473, "raw_weight": 7.040677042256631e-05}, {"source": "A9.3", "target": "A10.10", "normalized_weight": 0.3475470342470403, "raw_weight": 1.6033165241403826e-05}, {"source": "A9.3", "target": "A10.11", "normalized_weight": 0.5688121532324644, "raw_weight": 0.00018664301995314353}, {"source": "A9.4", "target": "A10.0", "normalized_weight": 0.585301058889885, "raw_weight": 0.00022410452002880055}, {"source": "A9.4", "target": "A10.1", "normalized_weight": 0.47342611246274835, "raw_weight": 6.478417111811102e-05}, {"source": "A9.4", "target": "A10.2", "normalized_weight": 0.5347991176847967, "raw_weight": 0.00012798132741596857}, {"source": "A9.4", "target": "A10.3", "normalized_weight": 0.30355979087882495, "raw_weight": 9.842404878401345e-06}, {"source": "A9.4", "target": "A10.4", "normalized_weight": 0.3827738653583529, "raw_weight": 2.3699115267266074e-05}, {"source": "A9.4", "target": "A10.5", "normalized_weight": 0.47601219157355723, "raw_weight": 6.66696079137984e-05}, {"source": "A9.4", "target": "A10.6", "normalized_weight": 0.5765002981802531, "raw_weight": 0.00020325959276803682}, {"source": "A9.4", "target": "A10.7", "normalized_weight": 0.6363122941981543, "raw_weight": 0.0003946465004572505}, {"source": "A9.4", "target": "A10.9", "normalized_weight": 0.4193148799093744, "raw_weight": 3.5544823372688807e-05}, {"source": "A9.4", "target": "A10.10", "normalized_weight": 0.2859331764489417, "raw_weight": 8.094335575832253e-06}, {"source": "A9.4", "target": "A10.11", "normalized_weight": 0.5071982954343657, "raw_weight": 9.422663670216255e-05}, {"source": "A9.5", "target": "A10.0", "normalized_weight": 0.4126636974343099, "raw_weight": 3.3016638363365935e-05}, {"source": "A9.5", "target": "A10.1", "normalized_weight": 0.30078875100717306, "raw_weight": 9.544455190828825e-06}, {"source": "A9.5", "target": "A10.2", "normalized_weight": 0.36216175622922153, "raw_weight": 1.8855100307720377e-05}, {"source": "A9.5", "target": "A10.3", "normalized_weight": 0.13092242942324966, "raw_weight": 1.450051620798383e-06}, {"source": "A9.5", "target": "A10.4", "normalized_weight": 0.21013650390277774, "raw_weight": 3.491518681597724e-06}, {"source": "A9.5", "target": "A10.5", "normalized_weight": 0.3033748301179821, "raw_weight": 9.822230868143113e-06}, {"source": "A9.5", "target": "A10.6", "normalized_weight": 0.4038629367246777, "raw_weight": 2.9945618533016877e-05}, {"source": "A9.5", "target": "A10.7", "normalized_weight": 0.463674932742579, "raw_weight": 5.814207042896969e-05}, {"source": "A9.5", "target": "A10.9", "normalized_weight": 0.2466775184537991, "raw_weight": 5.236710883095813e-06}, {"source": "A9.5", "target": "A10.10", "normalized_weight": 0.11329581499336638, "raw_weight": 1.1925138790803318e-06}, {"source": "A9.5", "target": "A10.11", "normalized_weight": 0.3345609339787906, "raw_weight": 1.3882124232888083e-05}, {"source": "A9.6", "target": "A10.0", "normalized_weight": 0.5324993490805859, "raw_weight": 0.0001247575905289483}, {"source": "A9.6", "target": "A10.1", "normalized_weight": 0.4206244026534493, "raw_weight": 3.6064944571720034e-05}, {"source": "A9.6", "target": "A10.2", "normalized_weight": 0.4819974078754976, "raw_weight": 7.124640787727413e-05}, {"source": "A9.6", "target": "A10.3", "normalized_weight": 0.2507580810695259, "raw_weight": 5.479205495194448e-06}, {"source": "A9.6", "target": "A10.4", "normalized_weight": 0.3299721555490538, "raw_weight": 1.3193149866106931e-05}, {"source": "A9.6", "target": "A10.5", "normalized_weight": 0.4232104817642582, "raw_weight": 3.711455549297387e-05}, {"source": "A9.6", "target": "A10.6", "normalized_weight": 0.523698588370954, "raw_weight": 0.00011315334934956529}, {"source": "A9.6", "target": "A10.7", "normalized_weight": 0.5835105843888552, "raw_weight": 0.0002196972488613825}, {"source": "A9.6", "target": "A10.9", "normalized_weight": 0.36651317010007534, "raw_weight": 1.978758179078141e-05}, {"source": "A9.6", "target": "A10.10", "normalized_weight": 0.23313146663964246, "raw_weight": 4.506066201805309e-06}, {"source": "A9.6", "target": "A10.11", "normalized_weight": 0.45439658562506663, "raw_weight": 5.245538178836207e-05}, {"source": "A9.7", "target": "A10.0", "normalized_weight": 0.512021477490878, "raw_weight": 9.940549923116715e-05}, {"source": "A9.7", "target": "A10.1", "normalized_weight": 0.4001465310637413, "raw_weight": 2.8736157893850464e-05}, {"source": "A9.7", "target": "A10.2", "normalized_weight": 0.46151953628578957, "raw_weight": 5.676836746718386e-05}, {"source": "A9.7", "target": "A10.3", "normalized_weight": 0.2302802094798179, "raw_weight": 4.365771696380886e-06}, {"source": "A9.7", "target": "A10.4", "normalized_weight": 0.309494283959346, "raw_weight": 1.0512159166521065e-05}, {"source": "A9.7", "target": "A10.5", "normalized_weight": 0.4027326101745503, "raw_weight": 2.95724765273168e-05}, {"source": "A9.7", "target": "A10.6", "normalized_weight": 0.5032207167812459, "raw_weight": 9.015936532665112e-05}, {"source": "A9.7", "target": "A10.7", "normalized_weight": 0.5630327127991472, "raw_weight": 0.0001750523924851869}, {"source": "A9.7", "target": "A10.9", "normalized_weight": 0.3460352985103673, "raw_weight": 1.5766531223875826e-05}, {"source": "A9.7", "target": "A10.10", "normalized_weight": 0.21265359504993459, "raw_weight": 3.59038482917166e-06}, {"source": "A9.7", "target": "A10.11", "normalized_weight": 0.4339187140353588, "raw_weight": 4.179588105161173e-05}, {"source": "A9.8", "target": "A10.0", "normalized_weight": 0.39722365095289514, "raw_weight": 2.7819357480734358e-05}, {"source": "A9.8", "target": "A10.1", "normalized_weight": 0.2853487045257585, "raw_weight": 8.04202438753213e-06}, {"source": "A9.8", "target": "A10.2", "normalized_weight": 0.34672170974780675, "raw_weight": 1.5887043678486194e-05}, {"source": "A9.8", "target": "A10.3", "normalized_weight": 0.11548238294183508, "raw_weight": 1.2217932050062288e-06}, {"source": "A9.8", "target": "A10.4", "normalized_weight": 0.194696457421363, "raw_weight": 2.941904784037715e-06}, {"source": "A9.8", "target": "A10.5", "normalized_weight": 0.2879347836365673, "raw_weight": 8.27607428630176e-06}, {"source": "A9.8", "target": "A10.6", "normalized_weight": 0.38842289024326315, "raw_weight": 2.5231759144687558e-05}, {"source": "A9.8", "target": "A10.7", "normalized_weight": 0.44823488626116437, "raw_weight": 4.8989694957201745e-05}, {"source": "A9.8", "target": "A10.9", "normalized_weight": 0.2312374719723845, "raw_weight": 4.412379312417763e-06}, {"source": "A9.8", "target": "A10.10", "normalized_weight": 0.09785576851195163, "raw_weight": 1.0047955075790732e-06}, {"source": "A9.8", "target": "A10.11", "normalized_weight": 0.3191208874973758, "raw_weight": 1.1696883625050792e-05}, {"source": "A9.9", "target": "A10.0", "normalized_weight": 0.6803136629983856, "raw_weight": 0.0006429753901229796}, {"source": "A9.9", "target": "A10.1", "normalized_weight": 0.5684387165712489, "raw_weight": 0.00018587143040715154}, {"source": "A9.9", "target": "A10.2", "normalized_weight": 0.6298117217932971, "raw_weight": 0.0003671895770471917}, {"source": "A9.9", "target": "A10.3", "normalized_weight": 0.3985723949873255, "raw_weight": 2.8238716986275563e-05}, {"source": "A9.9", "target": "A10.4", "normalized_weight": 0.4777864694668534, "raw_weight": 6.799482617566828e-05}, {"source": "A9.9", "target": "A10.5", "normalized_weight": 0.5710247956820578, "raw_weight": 0.0001912809128178745}, {"source": "A9.9", "target": "A10.6", "normalized_weight": 0.6715129022887536, "raw_weight": 0.000583169477971577}, {"source": "A9.9", "target": "A10.7", "normalized_weight": 0.7313248983066548, "raw_weight": 0.0011322751882003948}, {"source": "A9.9", "target": "A10.9", "normalized_weight": 0.5143274840178749, "raw_weight": 0.00010198119463172752}, {"source": "A9.9", "target": "A10.10", "normalized_weight": 0.3809457805574422, "raw_weight": 2.3223353879646023e-05}, {"source": "A9.9", "target": "A10.11", "normalized_weight": 0.6022108995428662, "raw_weight": 0.00027034442895557467}, {"source": "A9.10", "target": "A10.0", "normalized_weight": 0.5930581502639104, "raw_weight": 0.0002442429734976215}, {"source": "A9.10", "target": "A10.1", "normalized_weight": 0.4811832038367737, "raw_weight": 7.060579852397747e-05}, {"source": "A9.10", "target": "A10.2", "normalized_weight": 0.542556209058822, "raw_weight": 0.0001394819700924893}, {"source": "A9.10", "target": "A10.3", "normalized_weight": 0.3113168822528503, "raw_weight": 1.0726861883728631e-05}, {"source": "A9.10", "target": "A10.4", "normalized_weight": 0.39053095673237836, "raw_weight": 2.5828762317672404e-05}, {"source": "A9.10", "target": "A10.5", "normalized_weight": 0.4837692829475827, "raw_weight": 7.266066421459955e-05}, {"source": "A9.10", "target": "A10.6", "normalized_weight": 0.5842573895542783, "raw_weight": 0.00022152488188636674}, {"source": "A9.10", "target": "A10.7", "normalized_weight": 0.6440693855721796, "raw_weight": 0.0004301101768930046}, {"source": "A9.10", "target": "A10.9", "normalized_weight": 0.42707197128339974, "raw_weight": 3.873894802245651e-05}, {"source": "A9.10", "target": "A10.10", "normalized_weight": 0.29369026782296703, "raw_weight": 8.82170778739662e-06}, {"source": "A9.10", "target": "A10.11", "normalized_weight": 0.5149553868083913, "raw_weight": 0.00010269401941495268}, {"source": "A10.0", "target": "A11.0", "normalized_weight": 0.5058303508912156, "raw_weight": 9.280755290987097e-05}, {"source": "A10.0", "target": "A11.1", "normalized_weight": 0.559087369966385, "raw_weight": 0.00016755620283885608}, {"source": "A10.0", "target": "A11.2", "normalized_weight": 0.5937929068371568, "raw_weight": 0.0002462418849714654}, {"source": "A10.0", "target": "A11.3", "normalized_weight": 0.7083430152013341, "raw_weight": 0.0008774690493956738}, {"source": "A10.0", "target": "A11.6", "normalized_weight": 0.4082118792575733, "raw_weight": 3.14257215143568e-05}, {"source": "A10.0", "target": "A11.7", "normalized_weight": 0.369266661810209, "raw_weight": 2.0401319807563864e-05}, {"source": "A10.0", "target": "A11.8", "normalized_weight": 0.49273567715334077, "raw_weight": 8.025958385712156e-05}, {"source": "A10.0", "target": "A11.9", "normalized_weight": 0.5135418058849562, "raw_weight": 0.00010109622080915759}, {"source": "A10.0", "target": "A11.10", "normalized_weight": 0.71641928606529, "raw_weight": 0.0009597121330650049}, {"source": "A10.0", "target": "A11.11", "normalized_weight": 0.6959751748651052, "raw_weight": 0.0007649746886679853}, {"source": "A10.1", "target": "A11.0", "normalized_weight": 0.39395540446407895, "raw_weight": 2.6828822497616464e-05}, {"source": "A10.1", "target": "A11.1", "normalized_weight": 0.44721242353924834, "raw_weight": 4.8437174382820816e-05}, {"source": "A10.1", "target": "A11.2", "normalized_weight": 0.48191796041002005, "raw_weight": 7.118364417811607e-05}, {"source": "A10.1", "target": "A11.3", "normalized_weight": 0.5964680687741974, "raw_weight": 0.0002536588955884961}, {"source": "A10.1", "target": "A11.6", "normalized_weight": 0.29633693283043666, "raw_weight": 9.084552689229801e-06}, {"source": "A10.1", "target": "A11.7", "normalized_weight": 0.2573917153830723, "raw_weight": 5.8976168498460924e-06}, {"source": "A10.1", "target": "A11.8", "normalized_weight": 0.3808607307262041, "raw_weight": 2.3201453561935877e-05}, {"source": "A10.1", "target": "A11.9", "normalized_weight": 0.40166685945781955, "raw_weight": 2.9224911962744474e-05}, {"source": "A10.1", "target": "A11.10", "normalized_weight": 0.6045443396381533, "raw_weight": 0.00027743373959891737}, {"source": "A10.1", "target": "A11.11", "normalized_weight": 0.5841002284379685, "raw_weight": 0.00022113900748330084}, {"source": "A10.2", "target": "A11.0", "normalized_weight": 0.45532840968612726, "raw_weight": 5.300042058101542e-05}, {"source": "A10.2", "target": "A11.1", "normalized_weight": 0.5085854287612966, "raw_weight": 9.568778556246979e-05}, {"source": "A10.2", "target": "A11.2", "normalized_weight": 0.5432909656320684, "raw_weight": 0.00014062350594271078}, {"source": "A10.2", "target": "A11.3", "normalized_weight": 0.6578410739962458, "raw_weight": 0.0005011039210349455}, {"source": "A10.2", "target": "A11.6", "normalized_weight": 0.3577099380524849, "raw_weight": 1.7946561514667683e-05}, {"source": "A10.2", "target": "A11.7", "normalized_weight": 0.3187647206051206, "raw_weight": 1.1650760054612765e-05}, {"source": "A10.2", "target": "A11.8", "normalized_weight": 0.4422337359482524, "raw_weight": 4.5834542197397896e-05}, {"source": "A10.2", "target": "A11.9", "normalized_weight": 0.46303986467986785, "raw_weight": 5.773390261932729e-05}, {"source": "A10.2", "target": "A11.10", "normalized_weight": 0.6659173448602016, "raw_weight": 0.0005480711978102237}, {"source": "A10.2", "target": "A11.11", "normalized_weight": 0.6454732336600169, "raw_weight": 0.0004368607830076976}, {"source": "A10.3", "target": "A11.0", "normalized_weight": 0.22408908288015555, "raw_weight": 4.075997714794927e-06}, {"source": "A10.3", "target": "A11.1", "normalized_weight": 0.27734610195532494, "raw_weight": 7.358869816707057e-06}, {"source": "A10.3", "target": "A11.2", "normalized_weight": 0.31205163882609666, "raw_weight": 1.081465170625932e-05}, {"source": "A10.3", "target": "A11.3", "normalized_weight": 0.42660174719027405, "raw_weight": 3.853740054555023e-05}, {"source": "A10.3", "target": "A11.6", "normalized_weight": 0.12647061124651324, "raw_weight": 1.380180438575882e-06}, {"source": "A10.3", "target": "A11.7", "normalized_weight": 0.08752539379914892, "raw_weight": 8.960017833374679e-07}, {"source": "A10.3", "target": "A11.8", "normalized_weight": 0.21099440914228065, "raw_weight": 3.524905787675661e-06}, {"source": "A10.3", "target": "A11.9", "normalized_weight": 0.23180053787389615, "raw_weight": 4.440026183997168e-06}, {"source": "A10.3", "target": "A11.10", "normalized_weight": 0.4346780180542299, "raw_weight": 4.214941929384574e-05}, {"source": "A10.3", "target": "A11.11", "normalized_weight": 0.41423390685404504, "raw_weight": 3.359678156706399e-05}, {"source": "A10.4", "target": "A11.0", "normalized_weight": 0.3033031573596835, "raw_weight": 9.81442450960501e-06}, {"source": "A10.4", "target": "A11.1", "normalized_weight": 0.35656017643485305, "raw_weight": 1.7719115010768837e-05}, {"source": "A10.4", "target": "A11.2", "normalized_weight": 0.3912657133056246, "raw_weight": 2.604014776148942e-05}, {"source": "A10.4", "target": "A11.3", "normalized_weight": 0.505815821669802, "raw_weight": 9.279259580491275e-05}, {"source": "A10.4", "target": "A11.6", "normalized_weight": 0.20568468572604132, "raw_weight": 3.323278782730633e-06}, {"source": "A10.4", "target": "A11.7", "normalized_weight": 0.166739468278677, "raw_weight": 2.1574452387737602e-06}, {"source": "A10.4", "target": "A11.8", "normalized_weight": 0.29020848362180857, "raw_weight": 8.487473295443963e-06}, {"source": "A10.4", "target": "A11.9", "normalized_weight": 0.31101461235342426, "raw_weight": 1.0690953443211692e-05}, {"source": "A10.4", "target": "A11.10", "normalized_weight": 0.5138920925337579, "raw_weight": 0.00010148982475667329}, {"source": "A10.4", "target": "A11.11", "normalized_weight": 0.49344798133357315, "raw_weight": 8.089628589799842e-05}, {"source": "A10.5", "target": "A11.0", "normalized_weight": 0.39654148357488783, "raw_weight": 2.7609631270020902e-05}, {"source": "A10.5", "target": "A11.1", "normalized_weight": 0.4497985026500574, "raw_weight": 4.9846858712871084e-05}, {"source": "A10.5", "target": "A11.2", "normalized_weight": 0.48450403952082893, "raw_weight": 7.325532711652781e-05}, {"source": "A10.5", "target": "A11.3", "normalized_weight": 0.5990541478850063, "raw_weight": 0.0002610412207312233}, {"source": "A10.5", "target": "A11.6", "normalized_weight": 0.29892301194124565, "raw_weight": 9.34894366031141e-06}, {"source": "A10.5", "target": "A11.7", "normalized_weight": 0.25997779449388136, "raw_weight": 6.069257292621737e-06}, {"source": "A10.5", "target": "A11.8", "normalized_weight": 0.38344680983701296, "raw_weight": 2.387669372483543e-05}, {"source": "A10.5", "target": "A11.9", "normalized_weight": 0.4042529385686286, "raw_weight": 3.0075454979877842e-05}, {"source": "A10.5", "target": "A11.10", "normalized_weight": 0.6071304187489622, "raw_weight": 0.0002855079924908976}, {"source": "A10.5", "target": "A11.11", "normalized_weight": 0.5866863075487775, "raw_weight": 0.0002275748947451854}, {"source": "A10.6", "target": "A11.0", "normalized_weight": 0.4970295901815836, "raw_weight": 8.417512242874046e-05}, {"source": "A10.6", "target": "A11.1", "normalized_weight": 0.550286609256753, "raw_weight": 0.0001519710782736895}, {"source": "A10.6", "target": "A11.2", "normalized_weight": 0.5849921461275247, "raw_weight": 0.0002233378659890553}, {"source": "A10.6", "target": "A11.3", "normalized_weight": 0.6995422544917022, "raw_weight": 0.0007958518713669857}, {"source": "A10.6", "target": "A11.6", "normalized_weight": 0.3994111185479413, "raw_weight": 2.8502679716718802e-05}, {"source": "A10.6", "target": "A11.7", "normalized_weight": 0.36046590110057697, "raw_weight": 1.8503705125996555e-05}, {"source": "A10.6", "target": "A11.8", "normalized_weight": 0.48393491644370873, "raw_weight": 7.279429405722881e-05}, {"source": "A10.6", "target": "A11.9", "normalized_weight": 0.5047410451753243, "raw_weight": 9.169282560394631e-05}, {"source": "A10.6", "target": "A11.10", "normalized_weight": 0.707618525355658, "raw_weight": 0.000870445171370339}, {"source": "A10.6", "target": "A11.11", "normalized_weight": 0.6871744141554732, "raw_weight": 0.0006938210959624019}, {"source": "A10.7", "target": "A11.0", "normalized_weight": 0.5568415861994849, "raw_weight": 0.00016343345492172458}, {"source": "A10.7", "target": "A11.1", "normalized_weight": 0.6100986052746542, "raw_weight": 0.0002950653073474901}, {"source": "A10.7", "target": "A11.2", "normalized_weight": 0.6448041421454259, "raw_weight": 0.0004336302460900693}, {"source": "A10.7", "target": "A11.3", "normalized_weight": 0.7593542505096034, "raw_weight": 0.0015452168905787794}, {"source": "A10.7", "target": "A11.6", "normalized_weight": 0.4592231145658425, "raw_weight": 5.534047692742298e-05}, {"source": "A10.7", "target": "A11.7", "normalized_weight": 0.42027789711847824, "raw_weight": 3.592658222926321e-05}, {"source": "A10.7", "target": "A11.8", "normalized_weight": 0.54374691246161, "raw_weight": 0.00014133656872827773}, {"source": "A10.7", "target": "A11.9", "normalized_weight": 0.5645530411932255, "raw_weight": 0.00017802974142003096}, {"source": "A10.7", "target": "A11.10", "normalized_weight": 0.7674305213735593, "raw_weight": 0.0016900463886752176}, {"source": "A10.7", "target": "A11.11", "normalized_weight": 0.7469864101733743, "raw_weight": 0.001347115104070179}, {"source": "A10.9", "target": "A11.0", "normalized_weight": 0.339844171910705, "raw_weight": 1.4720042573924388e-05}, {"source": "A10.9", "target": "A11.1", "normalized_weight": 0.39310119098587437, "raw_weight": 2.657579433980252e-05}, {"source": "A10.9", "target": "A11.2", "normalized_weight": 0.4278067278566461, "raw_weight": 3.905599185212265e-05}, {"source": "A10.9", "target": "A11.3", "normalized_weight": 0.5423568362208235, "raw_weight": 0.0001391738210892047}, {"source": "A10.9", "target": "A11.6", "normalized_weight": 0.24222570027706267, "raw_weight": 4.984378362576382e-06}, {"source": "A10.9", "target": "A11.7", "normalized_weight": 0.20328048282969835, "raw_weight": 3.2358174169641997e-06}, {"source": "A10.9", "target": "A11.8", "normalized_weight": 0.3267494981728301, "raw_weight": 1.272983129389923e-05}, {"source": "A10.9", "target": "A11.9", "normalized_weight": 0.3475556269044456, "raw_weight": 1.6034693596746934e-05}, {"source": "A10.9", "target": "A11.10", "normalized_weight": 0.5504331070847793, "raw_weight": 0.00015221825179625136}, {"source": "A10.9", "target": "A11.11", "normalized_weight": 0.5299889958845945, "raw_weight": 0.00012133128858706974}, {"source": "A10.10", "target": "A11.0", "normalized_weight": 0.2064624684502721, "raw_weight": 3.352076420090773e-06}, {"source": "A10.10", "target": "A11.1", "normalized_weight": 0.25971948752544166, "raw_weight": 6.05189102573933e-06}, {"source": "A10.10", "target": "A11.2", "normalized_weight": 0.2944250243962132, "raw_weight": 8.893905618362254e-06}, {"source": "A10.10", "target": "A11.3", "normalized_weight": 0.4089751327603906, "raw_weight": 3.169293034474422e-05}, {"source": "A10.10", "target": "A11.6", "normalized_weight": 0.10884399681662994, "raw_weight": 1.1350522319548268e-06}, {"source": "A10.10", "target": "A11.7", "normalized_weight": 0.06989877936926563, "raw_weight": 7.368665687379854e-07}, {"source": "A10.10", "target": "A11.8", "normalized_weight": 0.19336779471239723, "raw_weight": 2.8988616777238685e-06}, {"source": "A10.10", "target": "A11.9", "normalized_weight": 0.21417392344401287, "raw_weight": 3.651451280735406e-06}, {"source": "A10.10", "target": "A11.10", "normalized_weight": 0.41705140362434645, "raw_weight": 3.4663433206200394e-05}, {"source": "A10.10", "target": "A11.11", "normalized_weight": 0.39660729242416176, "raw_weight": 2.762979450972574e-05}, {"source": "A10.11", "target": "A11.0", "normalized_weight": 0.4277275874356963, "raw_weight": 3.902171883963471e-05}, {"source": "A10.11", "target": "A11.1", "normalized_weight": 0.4809846065108657, "raw_weight": 7.045041951881086e-05}, {"source": "A10.11", "target": "A11.2", "normalized_weight": 0.5156901433816374, "raw_weight": 0.0001035344786132833}, {"source": "A10.11", "target": "A11.3", "normalized_weight": 0.6302402517458148, "raw_weight": 0.00036893926692854045}, {"source": "A10.11", "target": "A11.6", "normalized_weight": 0.33010911580205415, "raw_weight": 1.3213209817705077e-05}, {"source": "A10.11", "target": "A11.7", "normalized_weight": 0.2911638983546898, "raw_weight": 8.577907083288211e-06}, {"source": "A10.11", "target": "A11.8", "normalized_weight": 0.4146329136978214, "raw_weight": 3.374581935696721e-05}, {"source": "A10.11", "target": "A11.9", "normalized_weight": 0.43543904242943693, "raw_weight": 4.250675920736396e-05}, {"source": "A10.11", "target": "A11.10", "normalized_weight": 0.6383165226097707, "raw_weight": 0.0004035190655206425}, {"source": "A10.11", "target": "A11.11", "normalized_weight": 0.6178724114095859, "raw_weight": 0.00032164006360159425}], "n_layers": 12, "circuit_node_ids": ["A0.0", "A0.1", "A0.10", "A0.2", "A0.3", "A0.4", "A0.5", "A0.6", "A0.7", "A0.8", "A0.9", "A1.0", "A1.1", "A1.11", "A1.6", "A1.7", "A1.8", "A10.0", "A10.1", "A10.10", "A10.11", "A10.2", "A10.3", "A10.4", "A10.5", "A10.6", "A10.7", "A10.9", "A11.0", "A11.1", "A11.10", "A11.11", "A11.2", "A11.3", "A11.6", "A11.7", "A11.8", "A11.9", "A2.10", "A2.11", "A2.2", "A2.4", "A2.5", "A2.7", "A2.9", "A3.0", "A3.4", "A3.5", "A3.6", "A3.7", "A3.8", "A4.10", "A4.11", "A4.3", "A4.4", "A4.6", "A4.7", "A4.9", "A5.0", "A5.10", "A5.11", "A5.2", "A5.3", "A5.4", "A5.5", "A5.6", "A5.8", "A5.9", "A6.1", "A6.2", "A6.3", "A6.4", "A6.6", "A6.7", "A6.9", "A7.1", "A7.10", "A7.11", "A7.2", "A7.3", "A7.5", "A7.6", "A7.7", "A7.9", "A8.10", "A8.3", "A8.4", "A8.5", "A8.6", "A8.7", "A8.8", "A9.0", "A9.10", "A9.2", "A9.3", "A9.4", "A9.5", "A9.6", "A9.7", "A9.8", "A9.9", "MLP 0", "MLP 1", "MLP 2", "MLP 3", "MLP 4", "MLP 5", "MLP 6", "MLP 7", "MLP 8"]};
+const CK_THEME = {"palette": {"attn_head": "#1D4ED8", "mlp": "#F77F00", "residual": "#2DC653", "embed": "#E63946", "unknown": "#6C757D", "circuit_stroke": "#212529", "background_node": "#CED4DA", "background_node_stroke": "#ADB5BD", "edge_low": "#DEE2E6", "edge_high": "#C1121F", "edge_background": "#E9ECEF", "bg": "#FFFFFF", "bg_paper": "#F8F9FA", "grid": "#E9ECEF", "text_primary": "#212529", "text_secondary": "#6C757D", "accent": "#1D4ED8", "accent_gradient_end": "#7B2D8B"}, "font": {"family": "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif", "mono": "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace"}, "node_colors": {"attn_head": "#1D4ED8", "attn_in": "#1D4ED8", "attn_out": "#1E3A8A", "mlp": "#F77F00", "mlp_in": "#F77F00", "mlp_out": "#C96300", "residual": "#2DC653", "embed": "#E63946", "unknown": "#6C757D"}};
+
+// ============================================================
+// Apply CSS variables from theme
+// ============================================================
+(function applyTheme() {
+  const p = CK_THEME.palette;
+  const root = document.documentElement.style;
+  root.setProperty("--bg",        p.bg);
+  root.setProperty("--bg-paper",  p.bg_paper);
+  root.setProperty("--text",      p.text_primary);
+  root.setProperty("--text-muted",p.text_secondary);
+  root.setProperty("--border",    p.grid);
+  root.setProperty("--accent",    p.accent);
+})();
+
+// ============================================================
+// Helpers
+// ============================================================
+function nodeColor(type) {
+  return CK_THEME.node_colors[type] || CK_THEME.palette.unknown;
+}
+
+function fmt(v, decimals=4) {
+  return Number(v).toFixed(decimals);
+}
+
+// ============================================================
+// Legend
+// ============================================================
+(function buildLegend() {
+  const items = document.getElementById("legend-items");
+  const types = [
+    ["attn_head", "Attention head"],
+    ["mlp",       "MLP sublayer"],
+    ["residual",  "Residual stream"],
+    ["embed",     "Embed / Unembed"],
+    ["unknown",   "Other"],
+  ];
+  types.forEach(([type, label]) => {
+    const row = document.createElement("div");
+    row.className = "legend-row";
+    row.innerHTML = `
+      <div class="legend-dot" style="background:${nodeColor(type)}"></div>
+      <span>${label}</span>`;
+    items.appendChild(row);
+  });
+})();
+
+// ============================================================
+// Stats pill (kept in sync with the threshold slider)
+// ============================================================
+function updateStats(visibleEdges) {
+  const m = GRAPH.metadata;
+  const edgeText = visibleEdges === GRAPH.edges.length
+    ? `${GRAPH.edges.length} edges`
+    : `${visibleEdges} / ${GRAPH.edges.length} edges`;
+  document.getElementById("stats-pill").textContent =
+    `${m.n_circuit_nodes} circuit · ${m.n_pruned_nodes} pruned · ${edgeText}`;
+}
+updateStats(GRAPH.edges.length);
+
+// ============================================================
+// D3 setup
+// ============================================================
+const svg   = d3.select("#graph-svg");
+const rootG = d3.select("#root-g");
+const edgesG  = d3.select("#edges-g");
+const edgesHitG = d3.select("#edges-hit-g");
+const nodesBgG = d3.select("#nodes-bg-g");
+const nodesCircuitG = d3.select("#nodes-circuit-g");
+const labelsG = d3.select("#labels-g");
+const layerLabelsG = d3.select("#layer-labels-g");
+
+// ============================================================
+// Size guard — bail out before attempting an interactive layout
+// ============================================================
+const MAX_RENDERABLE_NODES = 600;
+const MAX_RENDERABLE_EDGES = 1500;
+
+function showTooLarge() {
+  document.getElementById("graph-container").style.display = "none";
+  document.getElementById("legend").style.display = "none";
+  document.getElementById("toolarge-detail").textContent =
+    `This circuit has ${GRAPH.nodes.length} nodes and ${GRAPH.edges.length} edges ` +
+    `(limits: ${MAX_RENDERABLE_NODES} nodes / ${MAX_RENDERABLE_EDGES} edges).`;
+  document.getElementById("graph-toolarge").style.display = "flex";
+}
+
+if (GRAPH.nodes.length > MAX_RENDERABLE_NODES || GRAPH.edges.length > MAX_RENDERABLE_EDGES) {
+  showTooLarge();
+} else {
+  initGraph().catch(err => {
+    console.error("Circuit graph failed to initialise:", err);
+  });
+}
+
+async function initGraph() {
+
+// ---- Build lookup maps ----
+const nodeById = new Map(GRAPH.nodes.map(n => [n.id, n]));
+
+// ---- Node size: log_norm_score → radius, FIXED pixel range ----
+// Bounded via d3.scaleSqrt (area, not radius, scales with value) so no
+// single high-score node can ever render larger than this range,
+// regardless of how the underlying scores are distributed.
+const scoreExtent = d3.extent(GRAPH.nodes, d => d.log_norm_score);
+const radiusScale = d3.scaleSqrt()
+  .domain([scoreExtent[0] ?? 0, scoreExtent[1] ?? 1])
+  .range([5, 16])
+  .clamp(true);
+
+function nodeRadius(node) {
+  return node.in_circuit ? radiusScale(node.log_norm_score) : 4;
+}
+
+// ---- Edge stroke-width: normalized_weight → width, FIXED pixel range ----
+const edgeWidthScale = d3.scaleLinear()
+  .domain([0, 1])
+  .range([0.75, 4])
+  .clamp(true);
+
+// ---- Edge colour interpolator ----
+const edgeColorScale = d3.scaleSequential()
+  .domain([0, 1])
+  .interpolator(d3.interpolateRgb(
+    CK_THEME.palette.edge_low,
+    CK_THEME.palette.edge_high,
+  ));
+
+// ---- Arrowhead markers, binned by edge weight ----
+// SVG markers cannot inherit per-edge stroke color in all browsers, so we
+// pre-generate a small bank of markers along the edge color scale and pick
+// the nearest bin per edge. This keeps weak-edge arrowheads as faint as
+// their lines instead of a fixed solid red.
+const N_ARROW_BINS = 8;
+const svgDefs = svg.select("defs");
+for (let i = 0; i < N_ARROW_BINS; i++) {
+  const t = (i + 0.5) / N_ARROW_BINS;
+  svgDefs.append("marker")
+    .attr("id", `arrowhead-${i}`)
+    .attr("markerUnits", "userSpaceOnUse")
+    .attr("markerWidth", 8)
+    .attr("markerHeight", 6)
+    .attr("refX", 7)
+    .attr("refY", 3)
+    .attr("orient", "auto")
+    .append("polygon")
+    .attr("points", "0 0, 8 3, 0 6")
+    .attr("fill", edgeColorScale(t))
+    .attr("opacity", 0.3 + t * 0.6);
+}
+
+function arrowMarker(weight) {
+  const bin = Math.max(0, Math.min(N_ARROW_BINS - 1, Math.floor(weight * N_ARROW_BINS)));
+  return `url(#arrowhead-${bin})`;
+}
+
+// ============================================================
+// Layout: ELK assigns x/y. Each node's real model layer (L0,
+// L1, ...) is locked via partitioning, so ELK never reassigns
+// layers based on graph topology — important because skip
+// connections (e.g. L0 -> L5) would otherwise confuse a
+// longest-path ranker into drawing the wrong layer structure.
+// ELK only solves what's actually unsolved: ordering nodes
+// within each fixed layer to minimize edge crossings, and
+// spline-routing edges around node geometry.
+// ============================================================
+let elkOk = false;
+try {
+  if (typeof ELK !== "undefined") {
+    const elk = new ELK();
+
+    const elkGraph = {
+      id: "root",
+      layoutOptions: {
+        "elk.algorithm": "layered",
+        "elk.direction": "RIGHT",
+        "elk.partitioning.activate": "true",
+        "elk.edgeRouting": "SPLINES",
+        "elk.layered.spacing.nodeNodeBetweenLayers": "90",
+        "elk.spacing.nodeNode": "24",
+        "elk.spacing.edgeNode": "12",
+      },
+      children: GRAPH.nodes.map(n => {
+        const r = nodeRadius(n);
+        return {
+          id: n.id,
+          width: r * 2 + 6,
+          height: r * 2 + 18,  // extra room below for the label
+          layoutOptions: { "elk.partitioning.partition": String(n.layer) },
+        };
+      }),
+      edges: GRAPH.edges.map(e => ({
+        id: e.source + ">" + e.target,
+        sources: [e.source],
+        targets: [e.target],
+      })),
+    };
+
+    const elkResult = await elk.layout(elkGraph);
+
+    // Write ELK's computed positions back onto GRAPH.nodes as node-center
+    // coordinates (ELK returns each node's top-left box corner).
+    const elkById = new Map(elkResult.children.map(c => [c.id, c]));
+    GRAPH.nodes.forEach(n => {
+      const box = elkById.get(n.id);
+      if (box) {
+        n.x = box.x + box.width / 2;
+        n.y = box.y + nodeRadius(n);
+      }
+    });
+    elkOk = true;
+  }
+} catch (err) {
+  console.warn("ELK layout failed, falling back to embedded layout:", err);
+}
+
+if (!elkOk) {
+  // The payload ships the Python-computed layout (x_spacing=1.8, y_spacing
+  // =0.72 data units); scale it up to pixel space so the file still renders
+  // when the ELK CDN is unreachable (e.g. fully offline).
+  const FALLBACK_SCALE = 70;
+  GRAPH.nodes.forEach(n => {
+    n.x = n.x * FALLBACK_SCALE;
+    n.y = n.y * FALLBACK_SCALE;
+  });
+}
+
+// ---- Coordinate transform: pixel-space (from ELK) → screen-space ----
+const xs = GRAPH.nodes.map(n => n.x);
+const ys = GRAPH.nodes.map(n => n.y);
+const xMin = Math.min(...xs), xMax = Math.max(...xs);
+const yMin = Math.min(...ys), yMax = Math.max(...ys);
+
+// We use D3 zoom to handle all coordinate mapping; the base transform
+// maps ELK's pixel-space layout to an initial "fit" view.
+function getInitialTransform(svgW, svgH) {
+  const padding = 80;
+  const dataW = xMax - xMin || 1;
+  const dataH = yMax - yMin || 1;
+  const scaleX = (svgW - padding * 2) / dataW;
+  const scaleY = (svgH - padding * 2) / dataH;
+  // ELK already lays out in real pixel units, so this should land near 1.
+  // Capped defensively, not relied on, in case of a very sparse graph.
+  const scale  = Math.min(scaleX, scaleY, 3);
+  const tx = padding - xMin * scale + (svgW - padding * 2 - dataW * scale) / 2;
+  const ty = padding - yMin * scale + (svgH - padding * 2 - dataH * scale) / 2;
+  return d3.zoomIdentity.translate(tx, ty).scale(scale);
+}
+
+// ---- Zoom behaviour ----
+let currentTransform = d3.zoomIdentity;
+const zoom = d3.zoom()
+  .scaleExtent([0.05, 20])
+  .on("zoom", (event) => {
+    currentTransform = event.transform;
+    rootG.attr("transform", currentTransform);
+  });
+
+svg.call(zoom);
+
+function resetZoom() {
+  const svgEl = document.getElementById("graph-svg");
+  const t = getInitialTransform(svgEl.clientWidth, svgEl.clientHeight);
+  svg.transition().duration(450).call(zoom.transform, t);
+}
+
+document.getElementById("reset-zoom").addEventListener("click", resetZoom);
+
+// ---- Initial fit ----
+setTimeout(resetZoom, 80);
+
+// ---- Draw layer labels ----
+(function drawLayerLabels() {
+  const layerXs = d3.rollup(
+    GRAPH.nodes,
+    group => group[0].x,
+    d => d.layer,
+  );
+  // Place below all nodes (pixel-space offset, post-ELK layout)
+  const labelY = yMax + 24;
+
+  layerXs.forEach((x, layer) => {
+    layerLabelsG.append("text")
+      .attr("class", "layer-label")
+      .attr("x", x)
+      .attr("y", labelY)
+      .text(`L${layer}`);
+  });
+})();
+
+// ---- Draw background (pruned) nodes ----
+const bgNodes = GRAPH.nodes.filter(n => !n.in_circuit);
+nodesBgG.selectAll(".node-bg")
+  .data(bgNodes)
+  .join("circle")
+  .attr("class", "node-bg")
+  .attr("cx", d => d.x)
+  .attr("cy", d => d.y)
+  .attr("r", 3.5)
+  .attr("fill", CK_THEME.palette.background_node)
+  .attr("stroke", CK_THEME.palette.background_node_stroke)
+  .attr("stroke-width", 0.6)
+  .attr("opacity", 0.45)
+  .on("mouseover", (event, d) => showNodeTooltip(event, d))
+  .on("mousemove", moveTooltip)
+  .on("mouseout", hideTooltip);
+
+// ---- Draw circuit nodes ----
+const circuitNodes = GRAPH.nodes.filter(n => n.in_circuit);
+const circleSelection = nodesCircuitG.selectAll(".node-circuit")
+  .data(circuitNodes, d => d.id)
+  .join("circle")
+  .attr("class", "node-circuit")
+  .attr("cx", d => d.x)
+  .attr("cy", d => d.y)
+  .attr("r", d => nodeRadius(d))
+  .attr("fill", d => nodeColor(d.type))
+  .attr("stroke", CK_THEME.palette.circuit_stroke)
+  .attr("stroke-width", 1.2)
+  .attr("opacity", d => 0.55 + d.log_norm_score * 0.45)
+  .style("cursor", "pointer")
+  .on("mouseover", (event, d) => {
+    showNodeTooltip(event, d);
+    highlightNode(d.id);
+  })
+  .on("mousemove", moveTooltip)
+  .on("mouseout", (event, d) => {
+    hideTooltip();
+    clearHighlight();
+  });
+
+// ---- Draw node labels ----
+labelsG.selectAll(".node-label")
+  .data(circuitNodes, d => d.id)
+  .join("text")
+  .attr("class", "node-label")
+  .attr("x", d => d.x)
+  .attr("y", d => d.y - nodeRadius(d) - 2)
+  .attr("text-anchor", "middle")
+  .text(d => d.id);
+
+// ---- Draw edges ----
+let currentThreshold = 0.0;
+
+function redrawEdges(threshold) {
+  currentThreshold = threshold;
+  const visible = GRAPH.edges.filter(e => e.normalized_weight >= threshold);
+
+  const edgeSel = edgesG.selectAll(".edge")
+    .data(visible, d => d.source + ">" + d.target);
+
+  edgeSel.join(
+    enter => enter.append("line")
+      .attr("class", "edge")
+      .call(applyEdgeAttrs),
+    update => update.call(applyEdgeAttrs),
+    exit => exit.remove(),
+  );
+
+  // Invisible wide companion lines that provide a usable hover hit area
+  // (the visible edges are sub-pixel thin and have pointer-events: none).
+  const hitSel = edgesHitG.selectAll(".edge-hit")
+    .data(visible, d => d.source + ">" + d.target);
+
+  hitSel.join(
+    enter => enter.append("line")
+      .attr("class", "edge-hit")
+      .call(applyEdgeEndpoints)
+      .on("mouseover", (event, d) => showEdgeTooltip(event, d))
+      .on("mousemove", moveTooltip)
+      .on("mouseout", hideTooltip),
+    update => update.call(applyEdgeEndpoints),
+    exit => exit.remove(),
+  );
+
+  updateStats(visible.length);
+}
+
+function applyEdgeEndpoints(sel) {
+  sel
+    .attr("x1", d => (nodeById.get(d.source) || {}).x || 0)
+    .attr("y1", d => (nodeById.get(d.source) || {}).y || 0)
+    .attr("x2", d => (nodeById.get(d.target) || {}).x || 0)
+    .attr("y2", d => (nodeById.get(d.target) || {}).y || 0);
+}
+
+function applyEdgeAttrs(sel) {
+  sel
+    .call(applyEdgeEndpoints)
+    .attr("stroke", d => edgeColorScale(d.normalized_weight))
+    .attr("stroke-width", d => edgeWidthScale(d.normalized_weight))
+    .attr("opacity", d => 0.25 + d.normalized_weight * 0.65)
+    .attr("marker-end", d => arrowMarker(d.normalized_weight));
+}
+
+redrawEdges(currentThreshold);
+
+// ============================================================
+// Interactions: threshold slider
+// ============================================================
+const slider = document.getElementById("threshold-slider");
+const thresholdDisplay = document.getElementById("threshold-value");
+
+slider.addEventListener("input", () => {
+  const t = parseFloat(slider.value);
+  thresholdDisplay.textContent = t.toFixed(2);
+  redrawEdges(t);
+});
+
+// ============================================================
+// Interactions: toggle background nodes
+// ============================================================
+document.getElementById("toggle-background").addEventListener("change", function() {
+  const opacity = this.checked ? 0.45 : 0;
+  nodesBgG.selectAll(".node-bg")
+    // Hidden nodes must not keep capturing hover events / tooltips.
+    .style("pointer-events", this.checked ? "auto" : "none")
+    .transition().duration(200)
+    .attr("opacity", opacity);
+});
+
+// ============================================================
+// Interactions: node hover highlight
+// ============================================================
+function highlightNode(nodeId) {
+  // Collect neighbour ids from visible edges
+  const visibleEdges = GRAPH.edges.filter(e => e.normalized_weight >= currentThreshold);
+  const connectedIds = new Set();
+  const connectedEdgeKeys = new Set();
+
+  visibleEdges.forEach(e => {
+    if (e.source === nodeId) {
+      connectedIds.add(e.target);
+      connectedEdgeKeys.add(e.source + ">" + e.target);
+    }
+    if (e.target === nodeId) {
+      connectedIds.add(e.source);
+      connectedEdgeKeys.add(e.source + ">" + e.target);
+    }
+  });
+
+  // Dim non-connected circuit nodes
+  nodesCircuitG.selectAll(".node-circuit")
+    .transition().duration(120)
+    .attr("opacity", d => {
+      if (d.id === nodeId) return 1;
+      if (connectedIds.has(d.id)) return 0.85;
+      return 0.12;
+    });
+
+  // Dim non-connected labels
+  labelsG.selectAll(".node-label")
+    .transition().duration(120)
+    .attr("opacity", d => {
+      if (d.id === nodeId) return 1;
+      if (connectedIds.has(d.id)) return 0.85;
+      return 0.08;
+    });
+
+  // Dim non-connected edges
+  edgesG.selectAll(".edge")
+    .transition().duration(120)
+    .attr("opacity", d => {
+      const key = d.source + ">" + d.target;
+      return connectedEdgeKeys.has(key) ? 1 : 0.04;
+    })
+    .attr("stroke-width", d => {
+      const key = d.source + ">" + d.target;
+      return connectedEdgeKeys.has(key)
+        ? edgeWidthScale(d.normalized_weight) * 2.5
+        : edgeWidthScale(d.normalized_weight);
+    });
+}
+
+function clearHighlight() {
+  nodesCircuitG.selectAll(".node-circuit")
+    .transition().duration(180)
+    .attr("opacity", d => 0.55 + d.log_norm_score * 0.45);
+
+  labelsG.selectAll(".node-label")
+    .transition().duration(180)
+    .attr("opacity", 1);
+
+  edgesG.selectAll(".edge")
+    .transition().duration(180)
+    .attr("opacity", d => 0.25 + d.normalized_weight * 0.65)
+    .attr("stroke-width", d => edgeWidthScale(d.normalized_weight));
+}
+
+// ============================================================
+// Tooltip
+// ============================================================
+const tooltip = document.getElementById("tooltip");
+
+function showNodeTooltip(event, node) {
+  const statusClass  = node.in_circuit ? "tt-status-in" : "tt-status-out";
+  const statusText   = node.in_circuit ? "✓ In circuit" : "✗ Pruned";
+  const headInfo     = node.head !== null ? `<div class="tt-row">
+    <span class="tt-key">Head</span><span>${node.head}</span></div>` : "";
+  const typeColor    = nodeColor(node.type);
+  const typeLabel    = node.type.replace("_", " ");
+
+  tooltip.innerHTML = `
+    <div class="tt-name">${node.id}</div>
+    <div><span class="tt-badge" style="background:${typeColor}">${typeLabel}</span></div>
+    <div class="tt-row">
+      <span class="tt-key">Layer</span><span>${node.layer}</span>
+    </div>
+    ${headInfo}
+    <div class="tt-row">
+      <span class="tt-key">Score</span><span>${fmt(node.raw_score, 6)}</span>
+    </div>
+    <div class="tt-row">
+      <span class="tt-key">Rank</span>
+      <span>#${node.rank} / ${GRAPH.nodes.length}</span>
+    </div>
+    <div class="tt-row">
+      <span class="tt-key">Status</span>
+      <span class="${statusClass}">${statusText}</span>
+    </div>`;
+
+  tooltip.classList.add("visible");
+  moveTooltip(event);
+}
+
+function showEdgeTooltip(event, edge) {
+  tooltip.innerHTML = `
+    <div class="tt-name" style="font-size:11px">
+      ${edge.source} → ${edge.target}
+    </div>
+    <div class="tt-row">
+      <span class="tt-key">Strength</span>
+      <span>${fmt(edge.normalized_weight, 3)}</span>
+    </div>
+    <div class="tt-row">
+      <span class="tt-key">Raw weight</span>
+      <span>${fmt(edge.raw_weight, 8)}</span>
+    </div>`;
+  tooltip.classList.add("visible");
+  moveTooltip(event);
+}
+
+function moveTooltip(event) {
+  const x = event.clientX + 14;
+  const y = event.clientY - 10;
+  const ttW = tooltip.offsetWidth;
+  const ttH = tooltip.offsetHeight;
+  const winW = window.innerWidth;
+  const winH = window.innerHeight;
+  tooltip.style.left = (x + ttW > winW ? x - ttW - 28 : x) + "px";
+  tooltip.style.top  = (y + ttH > winH ? y - ttH      : y) + "px";
+}
+
+function hideTooltip() {
+  tooltip.classList.remove("visible");
+}
+
+} // end initGraph()
+
+</script>
+</body>
+</html>

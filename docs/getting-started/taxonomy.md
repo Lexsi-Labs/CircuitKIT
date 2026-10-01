@@ -1,13 +1,13 @@
 # Taxonomy
 
-> **This file is the single source of truth for the CircuitKit taxonomy.**
+> **This file is the single source of truth for the CircuitKIT taxonomy.**
 > README, this document, and the package docstring all reference this document;
 > they do not redefine it.
 
-CircuitKit is a **discover → evaluate → intervene** toolkit for mechanistic interpretability. Each step has multiple independent alternatives — you pick the combination that matches your use case.
+CircuitKIT is a **discover → evaluate → intervene** toolkit for mechanistic interpretability. Each step has multiple independent alternatives — you pick the combination that matches your use case.
 
 ```text
-CircuitKit — discover · evaluate · intervene
+CircuitKIT — discover · evaluate · intervene
 │
 ├── 1. DISCOVER — find the circuit for a behaviour
 │   │   input: model + task (built-in or custom) + algorithm config
@@ -49,7 +49,7 @@ CircuitKit — discover · evaluate · intervene
 
 ## Step 1: Discover
 
-Every experiment starts with discovery. You give CircuitKit a model and a task; it scores every component by importance and returns the top-K as the circuit.
+Every experiment starts with discovery. You give CircuitKIT a model and a task; it scores every component by importance and returns the top-K as the circuit.
 
 | Decision | Options | Default |
 |---|---|---|
@@ -73,7 +73,7 @@ After discovery, evaluate how faithfully the circuit explains the model's behavi
 
 ## Step 3: Intervene
 
-The step that makes CircuitKit different: once you have a circuit, act on it. Each application produces a real HuggingFace checkpoint you can reload and benchmark.
+The step that makes CircuitKIT different: once you have a circuit, act on it. Each application produces a real HuggingFace checkpoint you can reload and benchmark.
 
 | Application | What it does | Output |
 |---|---|---|
@@ -95,7 +95,7 @@ The step that makes CircuitKit different: once you have a circuit, act on it. Ea
 
 ## How to choose
 
-New to CircuitKit? Start here:
+New to CircuitKIT? Start here:
 
 1. **Discover** with `eap-ig` (default) at node-level, 30% sparsity, on a built-in task (IOI or SVA).
 2. **Evaluate** with Pillars 1+2+5 (fast subset) to confirm basic faithfulness.

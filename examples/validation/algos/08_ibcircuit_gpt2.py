@@ -1,6 +1,6 @@
 """Validation: IBCircuit (information-bottleneck circuit discovery) on GPT-2 IOI.
 
-IBCircuit is the non-EAP-family discovery method in CircuitKit. It trains
+IBCircuit is the non-EAP-family discovery method in CircuitKIT. It trains
 per-component IB noise gates against a KL-vs-original objective rather
 than computing a gradient × activation product. End-to-end real-model
 run. No mocks.

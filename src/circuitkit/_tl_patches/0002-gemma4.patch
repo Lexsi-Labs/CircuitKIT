@@ -1,0 +1,553 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Pratinav Seth <pratinav.seth@lexsi.ai>
+Date: Sat, 26 Sep 2026 22:31:20 +0530
+Subject: [PATCH 2/5] gemma4: google/gemma-4-31B-it support
+
+Per-layer-type attention geometry (d_head_local, n_key_value_heads_local,
+rotary_dim_local) via a per-layer cfg copy in TransformerBlock; unscaled
+v_norm (use_v_norm); convert_gemma4_weights (no +1 RMSNorm fold,
+attention_k_eq_v -> W_V := W_K on global layers); registry + cfg_dict.
+
+diff --git a/transformer_lens/components/abstract_attention.py b/transformer_lens/components/abstract_attention.py
+index 936978f..d54b4f2 100644
+--- a/transformer_lens/components/abstract_attention.py
++++ b/transformer_lens/components/abstract_attention.py
+@@ -33,6 +33,7 @@ class AbstractAttention(ABC, nn.Module):
+     alibi: Union[torch.Tensor, None]
+     q_norm: Optional[RMSNorm]
+     k_norm: Optional[RMSNorm]
++    v_norm: Optional[RMSNorm]
+     mask: torch.Tensor
+     IGNORE: torch.Tensor
+     rotary_sin: torch.Tensor
+@@ -117,6 +118,18 @@ class AbstractAttention(ABC, nn.Module):
+             self.q_norm = None
+             self.k_norm = None
+ 
++        if self.cfg.use_v_norm:
++            # Gemma 4: every layer's value path is RMS-normalized with NO learned
++            # scale (HF's Gemma4RMSNorm(with_scale=False) has no weight parameter
++            # at all). TransformerLens's RMSNorm always allocates a weight, so we
++            # represent "no scale" by allocating one and pinning it to all-ones,
++            # which is mathematically identical to an unscaled RMSNorm --
++            # convert_gemma4_weights() never writes a checkpoint value into it, so
++            # it stays at its torch.ones() init.
++            self.v_norm: Optional[RMSNorm] = RMSNorm(self.cfg, length=self.cfg.d_head)
++        else:
++            self.v_norm = None
++
+         self.attn_type = attn_type
+         if self.attn_type == "local":
+             if not isinstance(self.cfg.window_size, int):
+diff --git a/transformer_lens/components/grouped_query_attention.py b/transformer_lens/components/grouped_query_attention.py
+index 5505429..3ccaffd 100644
+--- a/transformer_lens/components/grouped_query_attention.py
++++ b/transformer_lens/components/grouped_query_attention.py
+@@ -145,6 +145,10 @@ class GroupedQueryAttention(AbstractAttention):
+             q = self._apply_qk_norm(q, self.q_norm)
+             k = self._apply_qk_norm(k, self.k_norm)
+ 
++        if self.cfg.use_v_norm:
++            assert self.v_norm is not None
++            v = self._apply_qk_norm(v, self.v_norm)
++
+         return q, k, v
+ 
+     def calculate_attention_scores(
+diff --git a/transformer_lens/components/transformer_block.py b/transformer_lens/components/transformer_block.py
+index e1ebda8..b38ece5 100644
+--- a/transformer_lens/components/transformer_block.py
++++ b/transformer_lens/components/transformer_block.py
+@@ -3,6 +3,7 @@
+ This module contains all the component :class:`TransformerBlock`.
+ """
+ 
++import dataclasses
+ from typing import Callable, Dict, Optional, Union
+ 
+ import torch
+@@ -82,7 +83,42 @@ class TransformerBlock(nn.Module):
+             if self.cfg.attn_types is None:
+                 raise ValueError("attn_types must be set when using local attention")
+             attn_type = self.cfg.attn_types[block_index]
+-            self.attn = attention(self.cfg, attn_type, block_index)
++
++            # Per-layer-type attention-geometry override (Gemma 4): "local"
++            # (sliding-window) layers there use a different head_dim,
++            # n_key_value_heads, and rotary_dim than "global" layers -- not
++            # just a different RoPE base like Gemma 3's rotary_base_local.
++            # Build a per-layer *effective* cfg (a cheap dataclass copy) only
++            # for local layers when any *_local override is actually set;
++            # every other model leaves these at None and gets the exact same
++            # `self.cfg` object for every layer, unchanged from upstream.
++            attn_cfg = self.cfg
++            if attn_type == "local" and (
++                self.cfg.d_head_local is not None
++                or self.cfg.n_key_value_heads_local is not None
++                or self.cfg.rotary_dim_local is not None
++            ):
++                overrides: Dict[str, object] = {}
++                if self.cfg.d_head_local is not None:
++                    overrides["d_head"] = self.cfg.d_head_local
++                if self.cfg.n_key_value_heads_local is not None:
++                    overrides["n_key_value_heads"] = self.cfg.n_key_value_heads_local
++                if self.cfg.rotary_dim_local is not None:
++                    overrides["rotary_dim"] = self.cfg.rotary_dim_local
++                # dataclasses.replace() re-runs __post_init__, so attn_scale
++                # (when left at the auto-compute sentinel -1.0) and n_params
++                # recompute consistently for this layer's overridden d_head.
++                attn_cfg = dataclasses.replace(self.cfg, **overrides)
++
++            attention_for_layer = (
++                Attention if attn_cfg.n_key_value_heads is None else GroupedQueryAttention
++            )
++            self.attn = attention_for_layer(attn_cfg, attn_type, block_index)
++        # Per-layer-effective cfg (equals self.cfg unless overridden above) --
++        # forward() below must size the split-qkv-input head-repeat by this,
++        # not self.cfg, or a "local" layer's smaller n_key_value_heads_local
++        # mismatches the K/V input it actually receives.
++        self.attn_cfg = attn_cfg if self.cfg.use_local_attn else self.cfg
+         if not self.cfg.attn_only:
+             self.mlp = MLPFactory.create_mlp(self.cfg)
+ 
+@@ -135,9 +171,12 @@ class TransformerBlock(nn.Module):
+             )
+ 
+         if self.cfg.use_split_qkv_input:
++            # Sized by self.attn_cfg (this layer's effective cfg), not
++            # self.cfg: on a "local" layer with n_key_value_heads_local set,
++            # self.attn actually expects the smaller local head count.
+             n_kv_heads = (
+-                self.cfg.n_key_value_heads
+-                if self.cfg.n_key_value_heads is not None
++                self.attn_cfg.n_key_value_heads
++                if self.attn_cfg.n_key_value_heads is not None
+                 and not self.cfg.ungroup_grouped_query_attention
+                 else self.cfg.n_heads
+             )
+diff --git a/transformer_lens/config/hooked_transformer_config.py b/transformer_lens/config/hooked_transformer_config.py
+index 43bc913..e038760 100644
+--- a/transformer_lens/config/hooked_transformer_config.py
++++ b/transformer_lens/config/hooked_transformer_config.py
+@@ -239,6 +239,24 @@ class HookedTransformerConfig(TransformerLensConfig):
+             attention layers. Used by models with hybrid local/global attention (e.g., Gemma 3)
+             which use different RoPE bases for local (10k) and global (1M) attention. Defaults
+             to None, which means the standard rotary_base is used for all layers.
++        d_head_local (int, *optional*): Head dimension for local-attention layers, when it
++            differs from the global-attention head dimension (`d_head`). Gemma 4 is the
++            motivating case: sliding/local layers use head_dim=256 while full/global layers
++            use head_dim=512. Defaults to None, meaning `d_head` applies to every layer
++            (every model except Gemma 4 as of this addition).
++        n_key_value_heads_local (int, *optional*): Number of KV-head groups for
++            local-attention layers, when it differs from `n_key_value_heads` (Gemma 4:
++            16 for sliding/local layers vs. 4 for full/global layers). Defaults to None,
++            meaning `n_key_value_heads` applies to every layer.
++        rotary_dim_local (int, *optional*): Rotary dimension for local-attention layers, when
++            it differs from the global-attention `rotary_dim` (Gemma 4: full rotary over
++            d_head_local=256 on local layers vs. a 0.25 partial-rotary-factor over
++            d_head=512, i.e. rotary_dim=128, on global layers). Defaults to None, meaning
++            `rotary_dim` applies to every layer.
++        use_v_norm (bool): Whether to apply an unscaled RMSNorm to the value projection
++            before attention (Gemma 4: every layer's value path is RMS-normalized with no
++            learned scale, mirroring q_norm/k_norm's mechanism but without a weight -- see
++            `use_qk_norm`). Defaults to False.
+         norm_topk_prob (bool): Whether to normalize the top-k probabilities in the MoE layer.
+         use_logn_attn (bool): Qwen-1's log-n attention: scale queries by
+             log_{train_len}(position) past the training length (eval only).
+@@ -297,6 +315,14 @@ class HookedTransformerConfig(TransformerLensConfig):
+     rotary_base_local: Optional[
+         Union[float, int]
+     ] = None  # For models with different RoPE bases per attention type (e.g., Gemma 3)
++    # Per-layer-type attention-geometry overrides (Gemma 4): additive, default None
++    # everywhere, so every pre-existing model's behavior is unchanged. Applied at
++    # TransformerBlock construction time (see components/transformer_block.py) by
++    # building a per-layer-effective cfg copy for "local"-typed layers only.
++    d_head_local: Optional[int] = None
++    n_key_value_heads_local: Optional[int] = None
++    rotary_dim_local: Optional[int] = None
++    use_v_norm: bool = False
+     rotary_scaling_factor: float = (
+         1.0  # Linear RoPE scaling factor for global attention (e.g., 8.0 for Gemma 3 4B)
+     )
+diff --git a/transformer_lens/loading_from_pretrained.py b/transformer_lens/loading_from_pretrained.py
+index 3b8cac7..3ef9943 100644
+--- a/transformer_lens/loading_from_pretrained.py
++++ b/transformer_lens/loading_from_pretrained.py
+@@ -33,6 +33,7 @@ from transformer_lens.pretrained.weight_conversions import (
+     convert_bert_weights,
+     convert_bloom_weights,
+     convert_coder_weights,
++    convert_gemma4_weights,
+     convert_gemma_weights,
+     convert_gpt2_weights,
+     convert_gpt_oss_weights,
+@@ -180,6 +181,12 @@ def convert_hf_model_config(model_name: str, **kwargs: Any) -> dict[str, Any]:
+             architecture = "Gemma3ForConditionalGeneration"
+     elif "gemma-2-" in official_model_name.lower():
+         architecture = "Gemma2ForCausalLM"
++    elif "gemma-4" in official_model_name.lower():
++        # Gemma 4 is multimodal-only at every released size so far (verified
++        # directly against google/gemma-4-31B-it's config.json:
++        # architectures=["Gemma4ForConditionalGeneration"]); no text-only
++        # variant is known to exist.
++        architecture = "Gemma4ForConditionalGeneration"
+     elif "gemma" in official_model_name.lower():
+         architecture = "GemmaForCausalLM"
+     else:
+@@ -1456,6 +1463,157 @@ def convert_hf_model_config(model_name: str, **kwargs: Any) -> dict[str, Any]:
+                 "local",
+             ],
+         }
++    elif official_model_name.startswith("google/gemma-4-31b") or official_model_name.startswith(
++        "google/gemma-4-31B"
++    ):
++        # Architecture for Gemma 4 31B (multimodal; text-only extraction).
++        # Numbers verified directly against google/gemma-4-31B-it's own
++        # config.json `text_config` (NOT assumed / NOT extrapolated from
++        # Gemma 3) -- see docs/CTHETA_GEMMA4_AUDIT.md for the full trace.
++        #
++        # Unlike Gemma 3, Gemma 4 varies head_dim AND n_key_value_heads (not
++        # just RoPE base) between its two layer types:
++        #   sliding_attention (TL "local"):  head_dim=256, n_kv_heads=16,
++        #       rope_theta=10000, full rotary (rotary_dim=256)
++        #   full_attention    (TL "global"): head_dim=512, n_kv_heads=4,
++        #       rope_theta=1e6, partial_rotary_factor=0.25 -> rotary_dim=128
++        # d_head/n_key_value_heads/rotary_dim below are the "global"
++        # (full_attention) values; the *_local overrides are "local"
++        # (sliding_attention). See hooked_transformer_config.py's docstring
++        # for these new fields and components/transformer_block.py for how
++        # they're applied per layer.
++        #
++        # attn_scale=1.0 (not the usual sqrt(d_head)) is also verified
++        # directly: Gemma4TextAttention hardcodes `self.scaling = 1.0` for
++        # every layer, unconditionally.
++        #
++        # use_v_norm=True: every layer's value path gets an RMSNorm with NO
++        # learned scale (HF's Gemma4RMSNorm(with_scale=False)); see
++        # hooked_transformer_config.py's docstring and
++        # convert_gemma4_weights().
++        #
++        # KNOWN, DOCUMENTED APPROXIMATION (not a silent bug): on
++        # full_attention ("global") layers, HF sets `attention_k_eq_v=True`,
++        # meaning those layers have no independent v_proj at all -- value
++        # states are the raw key projection output run through the unscaled
++        # v_norm instead. TransformerLens has no mechanism for a layer with
++        # no independent V weight, so convert_gemma4_weights() copies W_K's
++        # converted values into this layer's (independent) W_V slot, which is
++        # numerically equivalent for a single forward/backward pass. This is
++        # irrelevant to C-Delta-Theta's actual repair mechanism (fine-tuning
++        # and the weight-arithmetic patch only ever touch down_proj/o_proj,
++        # never Q/K/V), and only affects the fidelity of the EAP-IG circuit-
++        # discovery forward pass that TransformerLens is used for here.
++        #
++        # NOT modeled (verified inapplicable to google/gemma-4-31B-it
++        # specifically, so left unimplemented rather than guessed at):
++        #   - num_kv_shared_layers=0 in this checkpoint's config, so the
++        #     cross-layer KV-sharing mechanism (`is_kv_shared_layer` in HF)
++        #     never triggers for any of its 60 layers -- would need real
++        #     support if ever pointed at a Gemma 4 variant with this nonzero.
++        #   - hidden_size_per_layer_input=0 in this checkpoint's config, so
++        #     the per-layer-input gating mechanism is inert here too, same
++        #     caveat for other Gemma 4 variants.
++        #   - rope_type "proportional" on full_attention layers' RoPE
++        #     (transformers' newer per-layer rope_parameters schema) is NOT
++        #     the same thing as Gemma 3's `rotary_scaling_factor` linear
++        #     scaling, and its exact semantics were not resolved from
++        #     modeling_gemma4.py in the time available -- rotary_scaling_factor
++        #     is deliberately left at TL's default (1.0, unscaled) below
++        #     rather than guessing a value. This is the single biggest open
++        #     correctness question in this port; see docs/CTHETA_GEMMA4_AUDIT.md.
++        cfg_dict = {
++            "d_model": 5376,
++            "d_head": 512,
++            "n_heads": 32,
++            "n_key_value_heads": 4,
++            "d_head_local": 256,
++            "n_key_value_heads_local": 16,
++            "d_mlp": 21504,
++            "n_layers": 60,
++            "n_ctx": 8192,  # Safe default (model supports far more). Override via cfg_kwargs={"n_ctx": ...}
++            "eps": 1e-06,
++            "d_vocab": 262144,
++            "act_fn": "gelu_pytorch_tanh",
++            "initializer_range": 0.02,
++            "normalization_type": "RMS",
++            "rotary_base": 1000000,          # full_attention ("global") layers
++            "rotary_base_local": 10000,       # sliding_attention ("local") layers
++            "rotary_dim": 128,                # global: partial_rotary_factor 0.25 * d_head(512)
++            "rotary_dim_local": 256,          # local: full rotary over d_head_local(256)
++            "positional_embedding_type": "rotary",
++            "use_attn_scale": True,
++            "attn_scale": 1.0,                # verified: Gemma4TextAttention hardcodes scaling=1.0
++            "gated_mlp": True,
++            "final_rms": True,
++            "use_normalization_before_and_after": True,
++            "use_qk_norm": True,
++            "use_v_norm": True,               # unscaled RMSNorm on V, every layer (see above)
++            "window_size": 1024,
++            "use_local_attn": True,
++            "attn_types": [
++                "local",
++                "local",
++                "local",
++                "local",
++                "local",
++                "global",
++                "local",
++                "local",
++                "local",
++                "local",
++                "local",
++                "global",
++                "local",
++                "local",
++                "local",
++                "local",
++                "local",
++                "global",
++                "local",
++                "local",
++                "local",
++                "local",
++                "local",
++                "global",
++                "local",
++                "local",
++                "local",
++                "local",
++                "local",
++                "global",
++                "local",
++                "local",
++                "local",
++                "local",
++                "local",
++                "global",
++                "local",
++                "local",
++                "local",
++                "local",
++                "local",
++                "global",
++                "local",
++                "local",
++                "local",
++                "local",
++                "local",
++                "global",
++                "local",
++                "local",
++                "local",
++                "local",
++                "local",
++                "global",
++                "local",
++                "local",
++                "local",
++                "local",
++                "local",
++                "global"
++            ],
++        }
+     elif official_model_name.startswith("allenai/OLMo-1B") and official_model_name.endswith("hf"):
+         cfg_dict = {
+             "d_model": 2048,
+@@ -2108,6 +2266,17 @@ def get_pretrained_state_dict(
+                     token=huggingface_token if len(huggingface_token) > 0 else None,
+                     **kwargs,
+                 )
++            elif cfg.original_architecture == "Gemma4ForConditionalGeneration":
++                # Multimodal Gemma 4 models - same AutoModel pattern as Gemma 3.
++                # "gemma4" ships natively in transformers (no trust_remote_code
++                # needed) as of the version this checkpoint's config.json
++                # itself declares (transformers_version >= 5.5.0.dev0).
++                hf_model = AutoModel.from_pretrained(
++                    official_model_name,
++                    dtype=dtype,
++                    token=huggingface_token if len(huggingface_token) > 0 else None,
++                    **kwargs,
++                )
+             else:
+                 if "quantization_config" not in kwargs:
+                     mxfp4_dequantize = _mxfp4_dequantize_config(cfg)
+@@ -2200,6 +2369,8 @@ def get_pretrained_state_dict(
+             state_dict = convert_gemma_weights(hf_model, cfg)
+         elif cfg.original_architecture == "Gemma3ForConditionalGeneration":
+             state_dict = convert_gemma_weights(hf_model, cfg)
++        elif cfg.original_architecture == "Gemma4ForConditionalGeneration":
++            state_dict = convert_gemma4_weights(hf_model, cfg)
+         elif cfg.original_architecture == "OlmoForCausalLM":
+             state_dict = convert_olmo_weights(hf_model, cfg)
+         elif cfg.original_architecture == "Olmo2ForCausalLM":
+diff --git a/transformer_lens/pretrained/weight_conversions/__init__.py b/transformer_lens/pretrained/weight_conversions/__init__.py
+index f2df6c9..24f6a05 100644
+--- a/transformer_lens/pretrained/weight_conversions/__init__.py
++++ b/transformer_lens/pretrained/weight_conversions/__init__.py
+@@ -1,7 +1,7 @@
+ from .bert import convert_bert_weights
+ from .bloom import convert_bloom_weights
+ from .coder import convert_coder_weights
+-from .gemma import convert_gemma_weights
++from .gemma import convert_gemma4_weights, convert_gemma_weights
+ from .gpt2 import convert_gpt2_weights
+ from .gptj import convert_gptj_weights
+ from .llama import convert_llama_weights
+diff --git a/transformer_lens/pretrained/weight_conversions/gemma.py b/transformer_lens/pretrained/weight_conversions/gemma.py
+index ecfa25b..1f24a18 100644
+--- a/transformer_lens/pretrained/weight_conversions/gemma.py
++++ b/transformer_lens/pretrained/weight_conversions/gemma.py
+@@ -137,3 +137,134 @@ def convert_gemma_weights(gemma, cfg: HookedTransformerConfig):
+     state_dict["unembed.b_U"] = torch.zeros(cfg.d_vocab, dtype=cfg.dtype, device=unembed_device)
+ 
+     return state_dict
++
++
++def convert_gemma4_weights(gemma4, cfg: HookedTransformerConfig):
++    """Weight conversion for Gemma 4 (verified against modeling_gemma4.py directly,
++    not extrapolated from Gemma 3 -- see loading_from_pretrained.py's gemma-4-31b
++    cfg_dict block and docs/CTHETA_GEMMA4_AUDIT.md in the audit repo this was
++    written for, for the full trace of what was checked and what remains an
++    open/approximated detail).
++
++    Key differences from convert_gemma_weights (Gemma 1-3) that make this its
++    own function rather than a shared path:
++      - Gemma4RMSNorm does NOT add 1 to the weight before scaling (plain
++        `x * weight`, weight init'd to ones) -- Gemma 1-3's GemmaRMSNorm does
++        (`x * (1 + weight)`), which is why that converter pre-adds 1 everywhere.
++        Doing that here would be wrong, not just redundant.
++      - head_dim and n_key_value_heads vary by layer type (attn_types[l]),
++        not just the RoPE base -- this function looks each layer's effective
++        values up per-layer rather than reading a single cfg.d_head/
++        cfg.n_key_value_heads for every layer.
++      - attention_k_eq_v=True on every full_attention ("global") layer means
++        those layers have no v_proj at all in HF; value states reuse the raw
++        key projection. Represented here by copying W_K into TL's independent
++        W_V slot for those layers (see the cfg_dict block's docstring for why
++        this is fine for C-Delta-Theta's actual use of this model).
++    """
++    state_dict = {}
++
++    assert cfg.attn_types is not None  # keep mypy happy; required for use_local_attn
++    assert cfg.d_mlp is not None
++    assert cfg.n_key_value_heads is not None
++
++    language_model = getattr(gemma4, "language_model", None)
++    if language_model is None:
++        language_model = getattr(getattr(gemma4, "model", None), "language_model", None)
++    if language_model is not None:
++        base_model = getattr(language_model, "model", language_model)
++    else:
++        base_model = gemma4.model
++
++    # Gemma4TextScaledWordEmbedding.weight is stored RAW; the sqrt(d_model)
++    # scale is applied in its forward(), not folded into the weight, so we
++    # fold it in here to match every other Gemma converter's convention.
++    state_dict["embed.W_E"] = base_model.embed_tokens.weight * torch.tensor(
++        cfg.d_model**0.5, dtype=cfg.dtype
++    )
++
++    for l in range(cfg.n_layers):
++        is_local = cfg.attn_types[l] == "local"
++        d_head = cfg.d_head_local if (is_local and cfg.d_head_local is not None) else cfg.d_head
++        n_kv = (
++            cfg.n_key_value_heads_local
++            if (is_local and cfg.n_key_value_heads_local is not None)
++            else cfg.n_key_value_heads
++        )
++        assert n_kv is not None
++
++        layer = base_model.layers[l]
++        attn = layer.self_attn
++
++        # Gemma4RMSNorm: plain `x * weight`, no +1 folding (verified, see
++        # docstring above) -- copy straight across.
++        state_dict[f"blocks.{l}.ln1.w"] = layer.input_layernorm.weight.float()
++        if cfg.use_normalization_before_and_after:
++            state_dict[f"blocks.{l}.ln1_post.w"] = layer.post_attention_layernorm.weight.float()
++
++        W_Q = attn.q_proj.weight
++        W_Q = einops.rearrange(W_Q, "(n h) m -> n m h", n=cfg.n_heads)
++        state_dict[f"blocks.{l}.attn.W_Q"] = W_Q
++        state_dict[f"blocks.{l}.attn.b_Q"] = torch.zeros(
++            cfg.n_heads, d_head, dtype=cfg.dtype, device=W_Q.device
++        )
++
++        W_K = attn.k_proj.weight
++        W_K = einops.rearrange(W_K, "(n h) m -> n m h", n=n_kv)
++        state_dict[f"blocks.{l}.attn._W_K"] = W_K
++        state_dict[f"blocks.{l}.attn._b_K"] = torch.zeros(
++            n_kv, d_head, dtype=cfg.dtype, device=W_K.device
++        )
++
++        # attention_k_eq_v: on layers where HF has no v_proj at all (verified:
++        # every full_attention/"global" layer in google/gemma-4-31B-it), reuse
++        # the raw k_proj weights for TL's independent W_V slot.
++        v_proj = getattr(attn, "v_proj", None)
++        W_V = v_proj.weight if v_proj is not None else attn.k_proj.weight
++        W_V = einops.rearrange(W_V, "(n h) m -> n m h", n=n_kv)
++        state_dict[f"blocks.{l}.attn._W_V"] = W_V
++        state_dict[f"blocks.{l}.attn._b_V"] = torch.zeros(
++            n_kv, d_head, dtype=cfg.dtype, device=W_V.device
++        )
++
++        # q_norm/k_norm: ordinary scaled Gemma4RMSNorm, plain copy (no +1).
++        state_dict[f"blocks.{l}.attn.q_norm.w"] = attn.q_norm.weight.float()
++        state_dict[f"blocks.{l}.attn.k_norm.w"] = attn.k_norm.weight.float()
++        # v_norm: HF's is unscaled (Gemma4RMSNorm(with_scale=False) has no
++        # weight parameter to copy at all) -- deliberately not written here,
++        # so TL's v_norm.w keeps its all-ones init, which is mathematically
++        # identical to "no scale".
++
++        W_O = attn.o_proj.weight
++        W_O = einops.rearrange(W_O, "m (n h) -> n h m", n=cfg.n_heads)
++        state_dict[f"blocks.{l}.attn.W_O"] = W_O
++        state_dict[f"blocks.{l}.attn.b_O"] = torch.zeros(
++            cfg.d_model, dtype=cfg.dtype, device=W_O.device
++        )
++
++        # Sandwich norm (pre/post feedforward) -- present unconditionally in
++        # Gemma4TextDecoderLayer, independent of the (here-disabled) MoE path.
++        state_dict[f"blocks.{l}.ln2.w"] = layer.pre_feedforward_layernorm.weight.float()
++        state_dict[f"blocks.{l}.ln2_post.w"] = layer.post_feedforward_layernorm.weight.float()
++
++        state_dict[f"blocks.{l}.mlp.W_in"] = layer.mlp.up_proj.weight.T
++        state_dict[f"blocks.{l}.mlp.W_gate"] = layer.mlp.gate_proj.weight.T
++        state_dict[f"blocks.{l}.mlp.b_in"] = torch.zeros(
++            cfg.d_mlp, dtype=cfg.dtype, device=layer.mlp.up_proj.weight.device
++        )
++        state_dict[f"blocks.{l}.mlp.W_out"] = layer.mlp.down_proj.weight.T
++        state_dict[f"blocks.{l}.mlp.b_out"] = torch.zeros(
++            cfg.d_model, dtype=cfg.dtype, device=layer.mlp.down_proj.weight.device
++        )
++
++    state_dict["ln_final.w"] = base_model.norm.weight.float()
++
++    if hasattr(gemma4, "lm_head"):
++        state_dict["unembed.W_U"] = gemma4.lm_head.weight.T
++        unembed_device = gemma4.lm_head.weight.device
++    else:
++        state_dict["unembed.W_U"] = base_model.embed_tokens.weight.T
++        unembed_device = base_model.embed_tokens.weight.device
++    state_dict["unembed.b_U"] = torch.zeros(cfg.d_vocab, dtype=cfg.dtype, device=unembed_device)
++
++    return state_dict
+diff --git a/transformer_lens/supported_models.py b/transformer_lens/supported_models.py
+index ab6b2f2..1613c34 100644
+--- a/transformer_lens/supported_models.py
++++ b/transformer_lens/supported_models.py
+@@ -106,6 +106,7 @@ OFFICIAL_MODEL_NAMES: list[str] = [
+     "google/gemma-3-270m-it",
+     "google/gemma-3-27b-it",
+     "google/gemma-3-27b-pt",
++    "google/gemma-4-31B-it",
+     "google/gemma-3-4b-it",
+     "google/gemma-3-4b-pt",
+     "google/gemma-7b",
+@@ -440,6 +441,7 @@ MODEL_ALIASES: dict[str, list[str]] = {
+     "google/gemma-3-270m": ["gemma-3-270m"],
+     "google/gemma-3-270m-it": ["gemma-3-270m-it"],
+     "google/gemma-3-27b-it": ["gemma-3-27b-it"],
++    "google/gemma-4-31B-it": ["gemma-4-31b-it", "gemma-4-31B-it"],
+     "google/gemma-3-27b-pt": ["gemma-3-27b-pt"],
+     "google/gemma-3-4b-it": ["gemma-3-4b-it"],
+     "google/gemma-3-4b-pt": ["gemma-3-4b-pt"],

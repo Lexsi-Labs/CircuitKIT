@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import warnings
+from contextlib import ExitStack, contextmanager
 from datetime import datetime
 from functools import partial
 from pathlib import Path
@@ -47,7 +48,7 @@ from .utils.exceptions import (  # noqa: E402 - import after intentional pre-imp
     validate_model_name,
 )
 
-# CircuitKit imports
+# CircuitKIT imports
 from circuitkit.utils.device import get_device, empty_cache
 from .utils.logging import (  # noqa: E402 - import after intentional pre-import setup
     ProgressLogger,
@@ -131,17 +132,115 @@ def _log_gpu_mem(label: str, logger):
     )
 
 
+_QKV_FLAGS = ("use_attn_result", "use_split_qkv_input", "use_hook_mlp_in")
+
+
+@contextmanager
+def _qkv_flags_enabled(model):
+    """Enable the per-head activation flags, restoring their previous values on exit.
+
+    ``use_attn_result`` / ``use_split_qkv_input`` / ``use_hook_mlp_in`` multiply
+    activation memory by ~n_heads for every forward pass while set, so they must
+    not outlive the stage that needs them.
+    """
+    cfg = model.cfg
+    missing = object()
+    saved = {f: getattr(cfg, f, missing) for f in _QKV_FLAGS}
+    try:
+        for f in _QKV_FLAGS:
+            setattr(cfg, f, True)
+        yield
+    finally:
+        for f, v in saved.items():
+            if v is missing:
+                delattr(cfg, f)
+            else:
+                setattr(cfg, f, v)
+
+
+# EAP-family activation-headroom preflight. When triggered, throw at the point
+# of enabling the qkv flags instead of ~n_layers forwards later inside PyTorch's
+# allocator, which reports OOM without hint of the discovery pipeline cause.
+# Skipped on CPU (host RAM handles the blow-up gracefully) and for models under
+# _EAP_QKV_MEM_GUARD_MIN_GB of weights (small models have plenty of headroom).
+_EAP_QKV_MEM_GUARD_ACTIVATION_MULT = 3.0
+_EAP_QKV_MEM_GUARD_MIN_GB = 1.0
+_EAP_QKV_MEM_GUARD_FREE_FRACTION = 0.95
+
+
+def _check_qkv_flag_memory_headroom(model, algo: str) -> None:
+    """Preflight VRAM guard for the EAP-family per-head activation blow-up.
+
+    Enabling ``use_attn_result`` / ``use_split_qkv_input`` / ``use_hook_mlp_in``
+    materialises per-head ``[batch, pos, n_heads, d_model]`` residual-stream
+    copies at every attention block, roughly multiplying per-layer activation
+    memory by ``n_heads``. For multi-billion-parameter checkpoints (tiny-aya
+    ``base`` = 3.35B bf16 ≈ 7 GB weights, Llama-3.2-3B, Gemma-2-9B, …) this
+    is the difference between running and OOMing mid-forward with a bare
+    allocator error that names no CircuitKIT call site.
+
+    Raises ``MemoryError`` with an actionable message when the estimated peak
+    (weights + ``_EAP_QKV_MEM_GUARD_ACTIVATION_MULT`` × weights headroom) does
+    not fit inside ``_EAP_QKV_MEM_GUARD_FREE_FRACTION`` of the current CUDA
+    device's free memory. No-op on CPU, on tiny models, or when parameters
+    cannot be enumerated.
+    """
+    import torch as _torch
+
+    if not _torch.cuda.is_available():
+        return
+    try:
+        first_param = next(model.parameters())
+    except StopIteration:
+        return
+    if first_param.device.type != "cuda":
+        return
+    n_params = sum(p.numel() for p in model.parameters())
+    if n_params == 0:
+        return
+    param_dtype = first_param.dtype
+    if not param_dtype.is_floating_point:
+        return
+    bytes_per_param = _torch.finfo(param_dtype).bits // 8
+    weights_gb = (n_params * bytes_per_param) / (1024**3)
+    if weights_gb < _EAP_QKV_MEM_GUARD_MIN_GB:
+        return
+    # Weights already live on-device; activation headroom is the additional
+    # allocation the qkv flags will demand during the first forward+backward.
+    estimated_gb = weights_gb * (1.0 + _EAP_QKV_MEM_GUARD_ACTIVATION_MULT)
+    device_index = first_param.device.index if first_param.device.index is not None else 0
+    free_bytes = (
+        _torch.cuda.get_device_properties(device_index).total_memory
+        - _torch.cuda.memory_reserved(device_index)
+    )
+    free_gb = free_bytes / (1024**3)
+    if estimated_gb > free_gb * _EAP_QKV_MEM_GUARD_FREE_FRACTION:
+        n_heads = int(getattr(model.cfg, "n_heads", 0)) or "?"
+        raise MemoryError(
+            f"Discovery algorithm {algo!r} enables use_attn_result + "
+            f"use_split_qkv_input + use_hook_mlp_in, which materialise per-head "
+            f"[batch, pos, n_heads={n_heads}, d_model] activations at every "
+            f"attention block and roughly multiply activation memory by n_heads. "
+            f"Estimated peak footprint ~{estimated_gb:.1f} GB but only "
+            f"{free_gb:.1f} GB is free on the current CUDA device (weights "
+            f"~{weights_gb:.1f} GB in {param_dtype}). Options: use a smaller "
+            f"model, reduce the discovery batch size, or switch to 'ibcircuit' "
+            f"(which disables these flags internally)."
+        )
+
+
 # EAPDiscoveryDataset is a torch Dataset — it lives in circuitkit.data, not in
 # this front-door facade. Re-exported here for backward compatibility; new code
 # should import it from circuitkit.data.eap_dataset.
 from .data.eap_dataset import EAPDiscoveryDataset  # noqa: F401,E402
+from .quick import _from_pretrained  # noqa: E402
 
 
 from collections import defaultdict  # noqa: E402 - import after intentional pre-import setup
 
 from tqdm import tqdm  # noqa: E402 - import after intentional pre-import setup
 
-# CircuitKit Core Imports
+# CircuitKIT Core Imports
 from .analysis.scores import (  # noqa: E402 - import after intentional pre-import setup
     calculate_node_scores_from_edges,
 )
@@ -372,9 +471,9 @@ def _eap_accuracy(logits, clean_logits, input_length, labels, mean=True):
 
 # def _convert_eap_scores_to_ck_format(graph: Graph) -> dict[str, float]:
 #     """
-#     Convert EAP node scores to CircuitKit's name-keyed score dict.
+#     Convert EAP node scores to CircuitKIT's name-keyed score dict.
 
-#     Maps graph node names to CircuitKit naming convention:
+#     Maps graph node names to CircuitKIT naming convention:
 #     AttentionNode 'a{L}.h{H}' → 'A{L}.{H}', MLPNode 'm{L}' → 'MLP {L}'.
 #     Scores are absolute values of the raw node scores.
 
@@ -843,7 +942,7 @@ def prepare_custom_task(
     task_name: Optional[str] = None,
 ) -> str:
     """
-    Normalise a config["data"] block into a registered CircuitKit task.
+    Normalise a config["data"] block into a registered CircuitKIT task.
 
     Must be called once before discover_circuit() and evaluate_circuit()
     when config contains a "data" block. Mutates config in-place: sets
@@ -851,7 +950,7 @@ def prepare_custom_task(
     config["data"] so neither downstream function re-processes it.
 
     Args:
-        config:     Full CircuitKit config dict with a "data" block.
+        config:     Full CircuitKIT config dict with a "data" block.
         model:      Loaded HookedTransformer (tokenizer used for alignment).
         task_name:  Explicit registry name. Defaults to "custom:{csv_stem}".
 
@@ -1018,6 +1117,7 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
     # Snapshot of the caller's global RNG state, captured iff we seed below so
     # the ``finally`` can restore it (see the seed block).
     _rng_snapshot = None
+    _flag_scope = ExitStack()
 
     try:
         # Load, merge defaults, and validate the config in one step
@@ -1115,7 +1215,7 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
             logger.debug("discover_circuit: reusing pre-loaded model, skipping reload")
         else:
             with log_execution_time("Model loading", logger):
-                model = HookedTransformer.from_pretrained(
+                model = _from_pretrained(
                     model_cfg["name"], device=device, dtype=dtype
                 )
 
@@ -1155,9 +1255,8 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
             "peap",
             "eap-ifr",
         ):
-            model.cfg.use_attn_result = True
-            model.cfg.use_split_qkv_input = True
-            model.cfg.use_hook_mlp_in = True
+            _check_qkv_flag_memory_headroom(model, algo)
+            _flag_scope.enter_context(_qkv_flags_enabled(model))
 
         # Warn about experimental / research algorithms
         if algo in RESEARCH_ALGORITHMS:
@@ -1731,6 +1830,7 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
         progress.fail(str(e))
         raise
     finally:
+        _flag_scope.close()
         # Restore the caller's global RNG so a seeded discovery run doesn't
         # leak its deterministic RNG state into the surrounding process.
         if _rng_snapshot is not None:
@@ -1793,7 +1893,7 @@ def _save_evaluation_results_to_txt(
             f.write(f"Pruned Artifact: {pruned_artifact_path}\n")
             f.write(f"Evaluation Mode: {evaluation_mode}\n")
             f.write(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write("Generated by: CircuitKit\n\n")
+            f.write("Generated by: CircuitKIT\n\n")
 
             # Write evaluation results
             for i, result in enumerate(evaluation_results, 1):
@@ -1970,6 +2070,7 @@ def evaluate_circuit(
     _bootstrap_builtin_tasks()
     logger = get_logger("circuitkit.evaluate_circuit")
     progress = ProgressLogger(logger)
+    _flag_scope = ExitStack()
 
     try:
         progress.start_operation("Circuit Evaluation", 4)
@@ -2001,7 +2102,7 @@ def evaluate_circuit(
             logger.debug("evaluate_circuit: reusing pre-loaded model, skipping reload")
         else:
             with log_execution_time("Model loading", logger):
-                model = HookedTransformer.from_pretrained(
+                model = _from_pretrained(
                     config["model"]["name"], device=device, dtype=dtype
                 )
         # These flags are required by the graph reconstruction / faithfulness
@@ -2011,9 +2112,7 @@ def evaluate_circuit(
         # a model that may not have them set yet. Setting an already-true
         # flag is a no-op, so it's always safe to (re-)assert these here,
         # whether `model` was just loaded or reused via `_model`.
-        model.cfg.use_split_qkv_input = True
-        model.cfg.use_attn_result = True
-        model.cfg.use_hook_mlp_in = True
+        _flag_scope.enter_context(_qkv_flags_enabled(model))
         if hasattr(model.cfg, "ungroup_grouped_query_attention"):
             model.cfg.ungroup_grouped_query_attention = True
 
@@ -2380,6 +2479,8 @@ def evaluate_circuit(
     except Exception as e:
         progress.fail(str(e))
         raise
+    finally:
+        _flag_scope.close()
 
 
 @debug_function
@@ -2467,7 +2568,7 @@ def benchmark_circuit(
         dtype = getattr(t, precision)
 
         with log_execution_time("Model loading", logger):
-            model = HookedTransformer.from_pretrained(model_name, device=device, dtype=dtype)
+            model = _from_pretrained(model_name, device=device, dtype=dtype)
 
         # Configure model for proper hook support (only needed for hook-based pruning)
         if not use_weight_based_pruning:

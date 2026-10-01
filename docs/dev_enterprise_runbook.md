@@ -1,6 +1,6 @@
 # 3. Development & Operational Runbook
 
-**CircuitKit v1.0.0** — local development setup, Docker-based testing, enterprise CI/CD pipeline, and secure deployment.
+**CircuitKIT v1.0.0** — local development setup, Docker-based testing, enterprise CI/CD pipeline, and secure deployment.
 
 ## Enterprise Requirements
 

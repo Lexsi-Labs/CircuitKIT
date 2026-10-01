@@ -1,5 +1,5 @@
 """
-D3.js HTML template renderer for CircuitKit circuit graphs.
+D3.js HTML template renderer for CircuitKIT circuit graphs.
 
 ``render_d3_circuit_html`` takes the graph payload produced by
 ``CircuitGraphVisualizer._build_export_data()`` and returns a fully

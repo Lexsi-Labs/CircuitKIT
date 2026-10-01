@@ -8,7 +8,7 @@ Robustness tests whether the discovered circuit continues to explain the model's
 
 ## The Measurement
 
-CircuitKit runs the patching evaluation (Pillar 1) on **corrupted variants** of the original dataset:
+CircuitKIT runs the patching evaluation (Pillar 1) on **corrupted variants** of the original dataset:
 
 1. Apply one or more corruption strategies to the clean examples
 2. Re-run Pillar 1 (causal patching) with the corrupted inputs

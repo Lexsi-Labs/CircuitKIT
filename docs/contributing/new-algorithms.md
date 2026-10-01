@@ -1,6 +1,6 @@
 # Adding Discovery Algorithms
 
-This guide shows how to add a new discovery algorithm backend to CircuitKit.
+This guide shows how to add a new discovery algorithm backend to CircuitKIT.
 
 ---
 
@@ -67,7 +67,7 @@ def run_myalgo_discovery(
 
 ### `core.py`
 
-Implement your algorithm logic here. The key invariant: return `Dict[str, float]` where keys are node names in CircuitKit's convention:
+Implement your algorithm logic here. The key invariant: return `Dict[str, float]` where keys are node names in CircuitKIT's convention:
 - Attention heads: `"A{layer}.{head}"` — e.g. `"A0.1"`, `"A11.5"`
 - MLP layers: `"MLP {layer}"` — e.g. `"MLP 5"`
 

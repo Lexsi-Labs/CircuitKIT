@@ -1,0 +1,79 @@
+name: Tests
+
+# Fast test tier — the release gate. A bare `python -m pytest` here runs ONLY
+# the fast tier (see pytest.ini `addopts`, which deselects slow/network/gated
+# and forces HF offline mode). This job is what build/release depends on; it is
+# capped so it can never again burn the 6-hour job ceiling. Heavy tests are run
+# locally with `pytest -m slow`.
+#
+# A handful of fast-tier tests use small, fixed, public artifacts (the gpt2
+# tokenizer, the MiniLM sentence-transformers model, spaCy's en_core_web_sm) —
+# not full model weights, and never a gated checkpoint. Those are "warmed"
+# into the local cache with network access BEFORE offline mode is switched on,
+# so the actual test run stays fully offline and deterministic. If a test
+# needs anything beyond this fixed, cached set, it's a tiering bug: it should
+# be tagged `network`/`slow` in tests/conftest.py, not given a bigger cache.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  fast:
+    name: Fast tests (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    env:
+      TOKENIZERS_PARALLELISM: "false"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install package + dev tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Cache small fixed-tier assets (gpt2 tokenizer, MiniLM, spaCy model)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/huggingface
+            ~/.cache/torch/sentence_transformers
+          key: fast-tier-assets-${{ runner.os }}-py${{ matrix.python-version }}-v1
+
+      - name: Warm small fixed-tier caches (network access, offline afterwards)
+        run: |
+          python -c "from transformers import AutoTokenizer; AutoTokenizer.from_pretrained('gpt2')"
+          python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"
+          python -m spacy download en_core_web_sm
+
+      - name: Run fast test tier
+        # No `-m` here on purpose: the fast marker filter comes from pytest.ini
+        # addopts, so a bare invocation is guaranteed fast. --timeout kills any
+        # single test that stalls (pytest-timeout ships in the [dev] extra).
+        # Offline mode is enabled ONLY for this step — everything needed is
+        # already warmed into the cache above.
+        env:
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+          HF_DATASETS_OFFLINE: "1"
+        run: python -m pytest --timeout=120 --durations=15

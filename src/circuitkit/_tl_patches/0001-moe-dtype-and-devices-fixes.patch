@@ -1,0 +1,61 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Pratinav Seth <pratinav.seth@lexsi.ai>
+Date: Sat, 26 Sep 2026 22:31:20 +0530
+Subject: [PATCH 1/5] moe, devices: honour cfg.dtype in MoE linears; drop no-op
+ dtype loop
+
+MoE/MoEGatedMLP built nn.Linear without dtype=cfg.dtype, so load_state_dict
+copied bf16 weights into fp32 storage (router: 'mat1 and mat2 must have the
+same dtype'). move_to_and_update_config rebuilt state_dict() per key and
+assigned into a throwaway dict: O(n^2) and a no-op. Affects every model.
+
+diff --git a/transformer_lens/components/mlps/moe.py b/transformer_lens/components/mlps/moe.py
+index 63c61a6..d58d65e 100644
+--- a/transformer_lens/components/mlps/moe.py
++++ b/transformer_lens/components/mlps/moe.py
+@@ -33,9 +33,15 @@ class MoEGatedMLP(nn.Module):
+         if self.d_mlp is None:
+             raise ValueError("d_mlp must be set to use an MLP")
+ 
+-        self.W_in = nn.Linear(self.cfg.d_model, self.d_mlp, bias=False)
+-        self.W_out = nn.Linear(self.d_mlp, self.cfg.d_model, bias=False)
+-        self.W_gate = nn.Linear(self.cfg.d_model, self.d_mlp, bias=False)
++        # dtype=cfg.dtype: without it these default to fp32 regardless of the
++        # requested model dtype, load_state_dict then copies the (bf16) converted
++        # weights INTO fp32 storage, and the whole MoE stack silently runs in
++        # fp32 next to a bf16 residual stream -- on sarvam-30b that was 117GB
++        # on GPU instead of ~64GB and "expected mat1 and mat2 to have the same
++        # dtype" at the router.
++        self.W_in = nn.Linear(self.cfg.d_model, self.d_mlp, bias=False, dtype=self.cfg.dtype)
++        self.W_out = nn.Linear(self.d_mlp, self.cfg.d_model, bias=False, dtype=self.cfg.dtype)
++        self.W_gate = nn.Linear(self.cfg.d_model, self.d_mlp, bias=False, dtype=self.cfg.dtype)
+ 
+         # hook on gate output but before act_fn
+         self.hook_gate = HookPoint()  # [batch, pos, d_mlp]
+@@ -69,7 +75,7 @@ class MoE(CanBeUsedAsMLP):
+         ), "experts_per_token must be less than or equal to num_experts"
+ 
+         self.experts = nn.ModuleList([MoEGatedMLP(self.cfg) for _ in range(self.num_experts)])
+-        self.W_gate = nn.Linear(self.cfg.d_model, self.cfg.num_experts, bias=False)
++        self.W_gate = nn.Linear(self.cfg.d_model, self.cfg.num_experts, bias=False, dtype=self.cfg.dtype)
+ 
+         # Hook on the weights of selected experts [batch pos experts_per_token]
+         self.hook_expert_weights = HookPoint()
+diff --git a/transformer_lens/utilities/devices.py b/transformer_lens/utilities/devices.py
+index a069d22..e5165a8 100644
+--- a/transformer_lens/utilities/devices.py
++++ b/transformer_lens/utilities/devices.py
+@@ -183,8 +183,11 @@ def move_to_and_update_config(
+             model.cfg.dtype = device_or_dtype
+         if print_details:
+             print("Changing model dtype to", device_or_dtype)
+-        for k, v in model.state_dict().items():
+-            model.state_dict()[k] = v.to(device_or_dtype)
++        # (Removed upstream loop `for k, v in model.state_dict().items():
++        #  model.state_dict()[k] = v.to(dtype)` -- it rebuilt the full state
++        #  dict on EVERY iteration (O(n^2): ~50M dict ops for sarvam-30b's 7122
++        #  tensors, minutes on one core) and assigned into a throwaway dict, so
++        #  it was a no-op. nn.Module.to() below does the actual cast.)
+ 
+     # Call the base nn.Module.to() method to avoid recursion with custom to() methods
+     # Use the unbound method approach to avoid calling the overridden to() method

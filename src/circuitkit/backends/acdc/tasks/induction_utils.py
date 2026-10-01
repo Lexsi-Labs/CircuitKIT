@@ -11,7 +11,7 @@ from ..utils.task_utils import AllDataThings, shuffle_tensor
 # The following metric functions are copied from the ACDC repository, acdc/acdc_utils.py
 # (https://github.com/ArthurConmy/Automatic-Circuit-Discovery, MIT; see THIRD_PARTY_LICENSES.md)
 # as they are required to construct the AllDataThings object for this task.
-# Note that CircuitKit's own circuit discovery algorithms do not use these directly.
+# Note that CircuitKIT's own circuit discovery algorithms do not use these directly.
 
 
 def kl_divergence(

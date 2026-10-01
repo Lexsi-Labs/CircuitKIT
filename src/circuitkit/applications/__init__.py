@@ -1,5 +1,5 @@
 """
-CircuitKit Applications — model surgery and deployment.
+CircuitKIT Applications — model surgery and deployment.
 
 Public API (v1.0):
   pruning/            — weight removal, structural pruning, selectors
@@ -24,6 +24,7 @@ except ImportError:
 
 # Architecture registry and utilities
 from .arch_registry import (
+    EXPERIMENTAL_FAMILIES,
     MODEL_ARCH_REGISTRY,
     PRODUCTION_FAMILIES,
     READY_FAMILIES,
@@ -53,6 +54,7 @@ __all__ = [
     "SUPPORTED_FAMILIES",
     "PRODUCTION_FAMILIES",
     "READY_FAMILIES",
+    "EXPERIMENTAL_FAMILIES",
     "get_model_family",
     "detect_model_architecture",
     "get_arch_config",

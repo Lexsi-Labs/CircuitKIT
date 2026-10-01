@@ -119,6 +119,95 @@ class MockGPT2Model(nn.Module):
         self.transformer.h = nn.ModuleList([MockGPT2Layer() for _ in range(num_layers)])
 
 
+class MockCohereLayer(nn.Module):
+    """Mock Cohere / Cohere2 layer (tiny-aya, Command R7B, Aya Expanse).
+
+    Structure mirrors the real HF ``CohereAttention``/``Cohere2Attention``/
+    ``CohereMLP`` modules (see ``transformers.models.cohere.modeling_cohere``
+    and ``...cohere2.modeling_cohere2``): ``self_attn.{q,k,v,o}_proj`` with a
+    real ``head_dim`` attribute set directly on the attention submodule (not
+    derived), and a separate ``mlp.{gate,up,down}_proj``.
+    """
+
+    def __init__(self, hidden_size=256, num_heads=4):
+        super().__init__()
+        self.self_attn = nn.Module()
+        self.self_attn.q_proj = nn.Linear(hidden_size, hidden_size)
+        self.self_attn.k_proj = nn.Linear(hidden_size, hidden_size)
+        self.self_attn.v_proj = nn.Linear(hidden_size, hidden_size)
+        self.self_attn.o_proj = nn.Linear(hidden_size, hidden_size)
+        self.self_attn.head_dim = hidden_size // num_heads
+
+        self.mlp = nn.Module()
+        mlp_hidden = hidden_size * 4
+        self.mlp.gate_proj = nn.Linear(hidden_size, mlp_hidden)
+        self.mlp.up_proj = nn.Linear(hidden_size, mlp_hidden)
+        self.mlp.down_proj = nn.Linear(mlp_hidden, hidden_size)
+
+
+class MockCohereModel(nn.Module):
+    """Mock Cohere/Cohere2 model. ``model_type`` is parametrised so both
+    ``cohere`` (Aya Expanse, tiny-aya's HF class family) and ``cohere2``
+    (Command R7B) — which the registry's ``cohere`` family covers — can be
+    exercised."""
+
+    def __init__(self, num_layers=2, model_type="cohere2"):
+        super().__init__()
+        self.config = type(
+            "Config",
+            (),
+            {
+                "model_type": model_type,
+                "num_attention_heads": 4,
+                "hidden_size": 256,
+            },
+        )()
+        self.model = nn.Module()
+        self.model.layers = nn.ModuleList([MockCohereLayer() for _ in range(num_layers)])
+
+
+class MockSmolLM3Layer(nn.Module):
+    """Mock SmolLM3 layer (Llama-family: sequential block, RMSNorm, gated
+    SiLU MLP). Structure mirrors the real HF ``SmolLM3Attention``/
+    ``SmolLM3MLP`` modules (see
+    ``transformers.models.smollm3.modeling_smollm3``): identical projection
+    naming to Llama/Cohere (``self_attn.{q,k,v,o}_proj``,
+    ``mlp.{gate,up,down}_proj``) with a real ``head_dim`` attribute."""
+
+    def __init__(self, hidden_size=256, num_heads=4):
+        super().__init__()
+        self.self_attn = nn.Module()
+        self.self_attn.q_proj = nn.Linear(hidden_size, hidden_size)
+        self.self_attn.k_proj = nn.Linear(hidden_size, hidden_size)
+        self.self_attn.v_proj = nn.Linear(hidden_size, hidden_size)
+        self.self_attn.o_proj = nn.Linear(hidden_size, hidden_size)
+        self.self_attn.head_dim = hidden_size // num_heads
+
+        self.mlp = nn.Module()
+        mlp_hidden = hidden_size * 4
+        self.mlp.gate_proj = nn.Linear(hidden_size, mlp_hidden)
+        self.mlp.up_proj = nn.Linear(hidden_size, mlp_hidden)
+        self.mlp.down_proj = nn.Linear(mlp_hidden, hidden_size)
+
+
+class MockSmolLM3Model(nn.Module):
+    """Mock SmolLM3-3B model."""
+
+    def __init__(self, num_layers=2):
+        super().__init__()
+        self.config = type(
+            "Config",
+            (),
+            {
+                "model_type": "smollm3",
+                "num_attention_heads": 4,
+                "hidden_size": 256,
+            },
+        )()
+        self.model = nn.Module()
+        self.model.layers = nn.ModuleList([MockSmolLM3Layer() for _ in range(num_layers)])
+
+
 # Tests
 
 
@@ -142,6 +231,28 @@ class TestArchitectureDetection:
 
         model = MockGPT2Model()
         assert detect_model_architecture(model) == "gpt2"
+
+    def test_detect_cohere2(self):
+        """Command R7B's HF architecture (Cohere2ForCausalLM, model_type='cohere2')
+        resolves to the shared 'cohere' family."""
+        from circuitkit.applications import detect_model_architecture
+
+        model = MockCohereModel(model_type="cohere2")
+        assert detect_model_architecture(model) == "cohere"
+
+    def test_detect_cohere1(self):
+        """Aya Expanse / tiny-aya's HF architecture (CohereForCausalLM,
+        model_type='cohere') also resolves to the shared 'cohere' family."""
+        from circuitkit.applications import detect_model_architecture
+
+        model = MockCohereModel(model_type="cohere")
+        assert detect_model_architecture(model) == "cohere"
+
+    def test_detect_smollm3(self):
+        from circuitkit.applications import detect_model_architecture
+
+        model = MockSmolLM3Model()
+        assert detect_model_architecture(model) == "smollm3"
 
     def test_unsupported_architecture(self):
         from circuitkit.applications import UnsupportedArchitectureError, detect_model_architecture
@@ -167,6 +278,20 @@ class TestArchitectureValidation:
 
         model = MockGPT2Model()
         arch_cfg = get_arch_config("gpt2")
+        validate_model_paths(model, arch_cfg)  # Should not raise
+
+    def test_validate_cohere_paths(self):
+        from circuitkit.applications import get_arch_config, validate_model_paths
+
+        model = MockCohereModel()
+        arch_cfg = get_arch_config("cohere")
+        validate_model_paths(model, arch_cfg)  # Should not raise
+
+    def test_validate_smollm3_paths(self):
+        from circuitkit.applications import get_arch_config, validate_model_paths
+
+        model = MockSmolLM3Model()
+        arch_cfg = get_arch_config("smollm3")
         validate_model_paths(model, arch_cfg)  # Should not raise
 
     def test_invalid_path(self):
@@ -225,6 +350,77 @@ class TestLayerAccess:
         assert isinstance(gate_proj, nn.Linear)
         assert gate_proj.weight.shape == (1024, 256)
 
+    def test_get_layers_cohere(self):
+        from circuitkit.applications import get_arch_config, get_layers
+
+        model = MockCohereModel(num_layers=3)
+        arch_cfg = get_arch_config("cohere")
+        layers = get_layers(model, arch_cfg)
+        assert len(layers) == 3
+
+    def test_get_attn_proj_cohere(self):
+        from circuitkit.applications import get_arch_config, get_attn_proj, get_layers
+
+        model = MockCohereModel()
+        arch_cfg = get_arch_config("cohere")
+        layers = get_layers(model, arch_cfg)
+        layer = layers[0]
+
+        for proj_name in ("q_proj", "k_proj", "v_proj", "o_proj"):
+            proj = get_attn_proj(layer, arch_cfg, proj_name)
+            assert isinstance(proj, nn.Linear)
+            assert proj.weight.shape == (256, 256)
+
+    def test_get_mlp_proj_cohere(self):
+        from circuitkit.applications import get_arch_config, get_layers, get_mlp_proj
+
+        model = MockCohereModel()
+        arch_cfg = get_arch_config("cohere")
+        layers = get_layers(model, arch_cfg)
+        layer = layers[0]
+
+        for proj_name, expected_shape in (
+            ("gate_proj", (1024, 256)),
+            ("up_proj", (1024, 256)),
+            ("down_proj", (256, 1024)),
+        ):
+            proj = get_mlp_proj(layer, arch_cfg, proj_name)
+            assert isinstance(proj, nn.Linear)
+            assert proj.weight.shape == expected_shape
+
+    def test_get_layers_smollm3(self):
+        from circuitkit.applications import get_arch_config, get_layers
+
+        model = MockSmolLM3Model(num_layers=4)
+        arch_cfg = get_arch_config("smollm3")
+        layers = get_layers(model, arch_cfg)
+        assert len(layers) == 4
+
+    def test_get_attn_proj_smollm3(self):
+        from circuitkit.applications import get_arch_config, get_attn_proj, get_layers
+
+        model = MockSmolLM3Model()
+        arch_cfg = get_arch_config("smollm3")
+        layers = get_layers(model, arch_cfg)
+        layer = layers[0]
+
+        for proj_name in ("q_proj", "k_proj", "v_proj", "o_proj"):
+            proj = get_attn_proj(layer, arch_cfg, proj_name)
+            assert isinstance(proj, nn.Linear)
+            assert proj.weight.shape == (256, 256)
+
+    def test_get_mlp_proj_smollm3(self):
+        from circuitkit.applications import get_arch_config, get_layers, get_mlp_proj
+
+        model = MockSmolLM3Model()
+        arch_cfg = get_arch_config("smollm3")
+        layers = get_layers(model, arch_cfg)
+        layer = layers[0]
+
+        gate_proj = get_mlp_proj(layer, arch_cfg, "gate_proj")
+        assert isinstance(gate_proj, nn.Linear)
+        assert gate_proj.weight.shape == (1024, 256)
+
 
 class TestHeadDimension:
     """Test head dimension detection."""
@@ -234,6 +430,28 @@ class TestHeadDimension:
 
         model = MockQwenModel()
         arch_cfg = get_arch_config("qwen")
+        layers = get_layers(model, arch_cfg)
+        layer = layers[0]
+
+        head_dim = get_head_dim(layer, arch_cfg)
+        assert head_dim == 64  # 256 / 4
+
+    def test_get_head_dim_cohere(self):
+        from circuitkit.applications import get_arch_config, get_head_dim, get_layers
+
+        model = MockCohereModel()
+        arch_cfg = get_arch_config("cohere")
+        layers = get_layers(model, arch_cfg)
+        layer = layers[0]
+
+        head_dim = get_head_dim(layer, arch_cfg)
+        assert head_dim == 64  # 256 / 4
+
+    def test_get_head_dim_smollm3(self):
+        from circuitkit.applications import get_arch_config, get_head_dim, get_layers
+
+        model = MockSmolLM3Model()
+        arch_cfg = get_arch_config("smollm3")
         layers = get_layers(model, arch_cfg)
         layer = layers[0]
 
@@ -251,6 +469,48 @@ class TestRegistryContent:
         assert "qwen" in MODEL_ARCH_REGISTRY
         assert "gemma" in MODEL_ARCH_REGISTRY
         assert "gpt2" in MODEL_ARCH_REGISTRY
+
+    def test_registry_has_cohere_and_smollm3(self):
+        """The 'cohere' family covers tiny-aya/Command R7B/Aya Expanse
+        (model_types 'cohere2' and 'cohere'); 'smollm3' is its own family."""
+        from circuitkit.applications import MODEL_ARCH_REGISTRY, get_model_family
+
+        assert "cohere" in MODEL_ARCH_REGISTRY
+        assert "smollm3" in MODEL_ARCH_REGISTRY
+        assert get_model_family("cohere") == "cohere"
+        assert get_model_family("cohere2") == "cohere"
+        assert get_model_family("smollm3") == "smollm3"
+
+    def test_cohere_and_smollm3_are_experimental(self):
+        from circuitkit.applications.arch_registry import EXPERIMENTAL_FAMILIES
+
+        assert "cohere" in EXPERIMENTAL_FAMILIES
+        assert "smollm3" in EXPERIMENTAL_FAMILIES
+
+    def test_build_patterns_resolves_cohere_and_smollm3_modules(self):
+        """Quantization's ``build_patterns`` (quant_utils.py) turns layer
+        indices into fnmatch patterns; confirm those patterns actually match
+        real submodule names for both new families, not just llama/qwen."""
+        import fnmatch
+
+        from circuitkit.applications import get_arch_config
+        from circuitkit.applications.quantization.quant_utils import build_patterns
+
+        for family, model in (
+            ("cohere", MockCohereModel(num_layers=2)),
+            ("smollm3", MockSmolLM3Model(num_layers=2)),
+        ):
+            arch_cfg = get_arch_config(family)
+            module_names = [name for name, _ in model.named_modules()]
+            for component in ("attn", "mlp"):
+                patterns = build_patterns([0, 1], component, arch_cfg)
+                assert patterns, f"{family}/{component}: no patterns built"
+                for pattern in patterns:
+                    matches = fnmatch.filter(module_names, pattern)
+                    assert matches, (
+                        f"{family}/{component}: pattern {pattern!r} matched no "
+                        f"real submodule of the mock model"
+                    )
 
     def test_production_families_list(self):
         from circuitkit.applications import PRODUCTION_FAMILIES

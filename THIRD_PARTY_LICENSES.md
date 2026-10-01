@@ -1,11 +1,11 @@
 # Third-Party Licenses
 
-CircuitKit is distributed under the Lexsi Labs Source Available License (LSAL)
+CircuitKIT is distributed under the Lexsi Labs Source Available License (LSAL)
 v1.2 (see [LICENSE.md](LICENSE.md)). It
 incorporates or adapts source code from the third-party projects listed below.
 Each remains under its own license, reproduced or linked here as required.
 
-CircuitKit also depends on many packages at runtime (PyTorch, Transformers,
+CircuitKIT also depends on many packages at runtime (PyTorch, Transformers,
 TransformerLens, etc.) that are installed via `pip` and are governed by their
 own licenses; only projects whose **source code is vendored or adapted directly
 into this repository** are listed here.
@@ -17,7 +17,7 @@ into this repository** are listed here.
 - **Upstream:** https://github.com/ArthurConmy/Automatic-Circuit-Discovery
 - **License:** MIT
 - **Copyright:** © 2023 Arthur Conmy, Adrià Garriga-Alonso
-- **Used in CircuitKit:** the ACDC search algorithm, task data, and metric
+- **Used in CircuitKIT:** the ACDC search algorithm, task data, and metric
   utilities are adapted from the ACDC repository:
   - `src/circuitkit/backends/acdc/data.py` ← `acdc/data.py`
   - `src/circuitkit/backends/acdc/tasks/ioi_dataset.py` ← `acdc/ioi/ioi_dataset.py`
@@ -65,10 +65,10 @@ SOFTWARE.
 
 - **Upstream:** https://github.com/horseee/LLM-Pruner
 - **License:** Apache License 2.0
-- **Used in CircuitKit:** `src/circuitkit/applications/pruning/finetune_utils.py`
+- **Used in CircuitKIT:** `src/circuitkit/applications/pruning/finetune_utils.py`
   — the Prompter / tokenization logic for post-pruning LoRA recovery is adapted
   from LLM-Pruner's `post_training.py` to stay compatible with the Alpaca
-  instruction format. Modifications have been made to integrate with CircuitKit's
+  instruction format. Modifications have been made to integrate with CircuitKIT's
   pruning artifacts.
 - A full copy of the Apache License 2.0 is available at
   https://www.apache.org/licenses/LICENSE-2.0. Per Section 4, the above notice
@@ -82,12 +82,12 @@ SOFTWARE.
 - **License:** none published — the upstream repository has no `LICENSE` file at
   the time of vendoring (all rights reserved by default). **Flagged for legal
   review before public release** (see note below).
-- **Used in CircuitKit:** the CD-T backend vendors the reference
+- **Used in CircuitKIT:** the CD-T backend vendors the reference
   implementation under `src/circuitkit/backends/cdt/pyfunctions/`
   (`cdt_core.py`, `cdt_basic.py`, `cdt_ablations.py`, `cdt_from_source_nodes.py`,
   `cdt_source_to_target.py`, `toy_model.py`, `general.py`, and the two files
   attributed separately in sections 4 and 6); `backends/cdt/propagation.py` and
-  `backends/cdt/adapter.py` are CircuitKit's TransformerLens-native port of that
+  `backends/cdt/adapter.py` are CircuitKIT's TransformerLens-native port of that
   method.
 
 ---
@@ -97,7 +97,7 @@ SOFTWARE.
 - **Upstream:** https://github.com/redwoodresearch/Easy-Transformer
 - **License:** MIT — Copyright (c) 2022 neelnanda-io (full text reproduced in the
   file headers below)
-- **Used in CircuitKit:**
+- **Used in CircuitKIT:**
   - `src/circuitkit/backends/cdt/pyfunctions/ioi_dataset.py` — copied verbatim
     from `easy_transformer/ioi_dataset.py`; the MIT license text is retained in
     the file header.
@@ -113,7 +113,7 @@ SOFTWARE.
   "Low-Complexity Probing via Finding Subnetworks")
 - **License:** none published — the upstream repository has no `LICENSE` file at
   the time of vendoring. **Flagged for legal review before public release.**
-- **Used in CircuitKit:** the hard-concrete sampling routine in
+- **Used in CircuitKIT:** the hard-concrete sampling routine in
   `src/circuitkit/backends/acdc/utils/tensor_ops.py` (`sample_hard_concrete` and
   the `left/right/temp` constants) is copied from the Subnetwork Probing
   reference code, as noted in the file header.
@@ -128,7 +128,7 @@ SOFTWARE.
   the time of vendoring. The source file records that we are not aware of any
   formal attribution or license requirement and invites correction.
   **Flagged for legal review before public release.**
-- **Used in CircuitKit:**
+- **Used in CircuitKIT:**
   `src/circuitkit/backends/cdt/pyfunctions/faithfulness_ablations.py` — taken
   from the ARENA 3.0 notebook on the IOI task.
 
@@ -139,7 +139,7 @@ SOFTWARE.
 - **Upstream:** https://github.com/ivanniu/IBCircuit (IBCircuit, Niu et al.)
 - **License:** none published — the upstream repository has no `LICENSE` file at
   the time of vendoring. **Flagged for legal review before public release.**
-- **Used in CircuitKit:** `src/circuitkit/backends/ibcircuit/` reimplements the
+- **Used in CircuitKIT:** `src/circuitkit/backends/ibcircuit/` reimplements the
   Information Bottleneck circuit-discovery method with reference to the upstream
   repository (see `ib_noise.py`).
 
@@ -149,7 +149,7 @@ SOFTWARE.
 > repositories that publish **no license file**. Absent an explicit grant, such
 > code is all-rights-reserved by default. Obtain permission from the upstream
 > authors, or replace these components with independently licensed
-> implementations, before distributing CircuitKit publicly.
+> implementations, before distributing CircuitKIT publicly.
 
 ---
 

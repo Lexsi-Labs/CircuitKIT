@@ -4,7 +4,7 @@ Architecture-agnostic knowledge editing via gradient-based fine-tuning.
 This module provides a small, reliable fallback when ROME-style editing is
 too architecture dependent. It trains the model directly on teacher-forced
 prompt/target pairs using the shared tokenization helpers, so the edit path
-works across transformer families that CircuitKit can score.
+works across transformer families that CircuitKIT can score.
 """
 
 from __future__ import annotations

@@ -1,5 +1,5 @@
 """
-WMDP Dataset Utilities for CircuitKit
+WMDP Dataset Utilities for CircuitKIT
 
 This module provides utilities for loading and formatting WMDP (Weapons of Mass Destruction Proxy)
 dataset for circuit discovery experiments.

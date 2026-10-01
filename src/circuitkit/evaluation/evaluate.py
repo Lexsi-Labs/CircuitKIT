@@ -446,6 +446,11 @@ def evaluate_graph(  # noqa: C901 - complex function, refactor out of scope for 
                 r = r[keep_mask.cpu()]
             results[i].append(r)
 
+        # Free this batch's activation buffer and hook closures before the next
+        # iteration allocates a new one.
+        del fwd_hooks_corrupted, fwd_hooks_clean, input_construction_hooks
+        del activation_difference, clean_logits, logits
+
     results = [torch.cat(rs) for rs in results]
     # unwrap the results if there's only one metric
     if len(results) == 1:

@@ -33,6 +33,13 @@ pip install -e ".[benchmarks]"
 
 ### CUDA out of memory during discovery
 
+For EAP-family algorithms on large models, a preflight guard now raises an
+actionable `MemoryError` before the per-head activation flags are enabled
+(naming the algorithm, `n_heads`, and the `ibcircuit` escape hatch) instead of
+an opaque allocator abort partway through discovery. If you hit it, the
+options below still apply — or switch to `ibcircuit`, which doesn't need
+those flags.
+
 Reduce example count or batch size:
 ```python
 discover_circuit({

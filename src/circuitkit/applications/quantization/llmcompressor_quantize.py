@@ -183,7 +183,7 @@ def _build_calibration_dataset(
     else:
         from datasets import load_dataset
 
-        ds = load_dataset("wikitext", "wikitext-2-raw-v1", split="train")
+        ds = load_dataset("Salesforce/wikitext", "wikitext-2-raw-v1", split="train")
         texts = [t for t in ds["text"] if t and len(t.strip()) > 64][:n_samples]
 
     if not texts:

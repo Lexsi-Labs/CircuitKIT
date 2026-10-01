@@ -55,7 +55,7 @@ print(pipe.report.baseline_comparison)
 
 **Circuit vs. magnitude:** If the magnitude baseline is close to the circuit score, the discovery algorithm may be largely selecting high-weight components — which magnitude selection also does. This suggests the algorithm is not providing much value beyond a simple weight-norm heuristic.
 
-**Typical values from the CircuitKit audit:**
+**Typical values from the CircuitKIT audit:**
 
 | Model | Task | Circuit | Random | Magnitude |
 |-------|------|:-------:|:------:|:---------:|

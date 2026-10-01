@@ -1,5 +1,5 @@
 """
-Artifact utilities for CircuitKit.
+Artifact utilities for CircuitKIT.
 
 Provides helpers to write and read sidecar metadata JSON next to .pt artifacts.
 """

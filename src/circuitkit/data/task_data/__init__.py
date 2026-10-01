@@ -1,7 +1,7 @@
 """
 ACDC Data Generation Integration
 
-This module provides ACDC data generation capabilities for CircuitKit,
+This module provides ACDC data generation capabilities for CircuitKIT,
 including intelligent caching, file management, and task-specific data generation.
 """
 

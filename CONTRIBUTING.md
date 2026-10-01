@@ -1,10 +1,18 @@
-# Contributing to CircuitKit
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/circuitkit-logo-white.png">
+    <img src="docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
 
-Thank you for your interest in contributing to CircuitKit! This document provides guidelines and instructions for contributing.
+# Contributing to CircuitKIT
+
+Thank you for your interest in contributing to CircuitKIT! This document provides guidelines and instructions for contributing.
 
 ## Code of Conduct
 
-CircuitKit is committed to providing a welcoming and inspiring community. We respect all contributors and expect all interactions to be respectful and professional.
+CircuitKIT is committed to providing a welcoming and inspiring community. We respect all contributors and expect all interactions to be respectful and professional.
 
 ## How to Contribute
 
@@ -56,8 +64,8 @@ To contribute documentation:
 1. **Fork the repository** on GitHub
 2. **Clone your fork**:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/CircuitKit.git
-   cd CircuitKit
+   git clone https://github.com/YOUR_USERNAME/CircuitKIT.git
+   cd CircuitKIT
    ```
 
 3. **Create a virtual environment**:
@@ -94,15 +102,31 @@ To contribute documentation:
 
 3. **Test your changes**:
    ```bash
-   # Run all tests
+   # Fast tier (the default) — pure/mocked/offline tests. This is what CI
+   # gates every push and PR on, and what a bare `pytest` runs.
    pytest
-   
-   # Run specific test file
-   pytest tests/unit/test_feature.py
-   
+
+   # Slow tier — real small-model loads, training, discovery/transfer, datasets.
+   pytest -m slow
+
+   # Everything, including gated 3.35B-checkpoint tests (needs an HF token):
+   CIRCUITKIT_RUN_TINY_AYA=1 HF_TOKEN=... pytest -m ""
+
+   # A single slow file (override the default fast filter with `-m ""`):
+   pytest -m "" tests/apply/test_tokenization.py
+
    # Run with coverage
    pytest --cov=circuitkit tests/
    ```
+
+   > **Test tiers.** `pytest.ini` deselects the `slow`, `network`, and `gated`
+   > markers by default and forces HuggingFace offline mode, so a bare `pytest`
+   > (and CI's release gate) can never download gigabytes or hang for hours.
+   > Heavy modules are tagged centrally in `tests/conftest.py`; the slow tier
+   > is run locally (`pytest -m slow`). If you add a test that
+   > loads a real model or dataset, add its path to `_NETWORK_MODULES` there.
+   > Note: because slow tests are deselected by default, `pytest tests/tasks/…`
+   > alone may report "no tests ran" — add `-m ""` or `-m slow` to run them.
 
 4. **Format your code**:
    ```bash
@@ -140,7 +164,7 @@ To contribute documentation:
 
 ### Code Style Guide
 
-CircuitKit follows these conventions:
+CircuitKIT follows these conventions:
 
 #### Style
 - **PEP 8**: Follow [PEP 8](https://pep8.org/) style guide
@@ -383,7 +407,7 @@ pytest-watch
 # Format on save (if configured)
 black --watch src/
 
-# Interactive Python with CircuitKit
+# Interactive Python with CircuitKIT
 python -c "from circuitkit import *; import circuitkit; print(dir())"
 
 # Run specific backend tests
@@ -414,7 +438,7 @@ bandit -r src/circuitkit
 
 ## Questions?
 
-- **General**: Open a [Discussion](https://github.com/Lexsi-Labs/circuitkit/discussions)
+- **General**: Open an [Issue](https://github.com/Lexsi-Labs/circuitkit/issues/new/choose)
 - **Issues**: Check [existing Issues](https://github.com/Lexsi-Labs/circuitkit/issues)
 
 ## Recognition
@@ -427,7 +451,7 @@ Contributors are recognized in:
 
 ## License
 
-By contributing to CircuitKit, you agree that your contributions will be licensed under the Lexsi Labs Source Available License (LSAL) v1.2 (see [LICENSE.md](LICENSE.md), Section 6).
+By contributing to CircuitKIT, you agree that your contributions will be licensed under the Lexsi Labs Source Available License (LSAL) v1.2 (see [LICENSE.md](LICENSE.md), Section 6).
 
 ---
 

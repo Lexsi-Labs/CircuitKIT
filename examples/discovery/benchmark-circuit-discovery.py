@@ -292,7 +292,7 @@ def build_config(
     task_name: str,
 ) -> Dict[str, Any]:
     """
-    Build a complete CircuitKit config dict for one (algo, seed) combination.
+    Build a complete CircuitKIT config dict for one (algo, seed) combination.
 
     task_name is the already-resolved task name — a registered built-in name
     (e.g. 'ioi') or the name returned by register_custom_tasks() for custom

@@ -1,5 +1,5 @@
 """
-CircuitKit Tasks Package
+CircuitKIT Tasks Package
 
 This package provides the TaskSpec abstraction and registry for multi-task
 circuit discovery and analysis.

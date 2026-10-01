@@ -1,6 +1,14 @@
-# CircuitKit Examples
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../docs/assets/circuitkit-logo-white.png">
+    <img src="../docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
 
-Runnable, self-contained examples for the full CircuitKit workflow:
+# CircuitKIT Examples
+
+Runnable, self-contained examples for the full CircuitKIT workflow:
 **discover → evaluate → intervene**. Every numbered script runs end-to-end on
 **GPT-2 on CPU** in a few minutes — no GPU and no external data required.
 
@@ -53,7 +61,7 @@ real-world deployment scenarios:
 | `case-studies/20-transit-edge-deployment.py` | Smart Mobility | Edge deployment for AFC/gate hardware |
 | `case-studies/21-quantization-permanent-unlearning.ipynb` | AI Safety | Permanent knowledge removal via circuit-guided quantization |
 | `case-studies/22-gender-bias-audit-and-mitigation.ipynb` | Responsible AI | Localize, fix, and re-audit gender bias end-to-end |
-| `case-studies/23-jailbreak-safety-steering.ipynb` | LLM Safety | Circuit-restricted activation steering for jailbreak defense |
+| `case-studies/23-jailbreak-refusal-multi-model.ipynb` | LLM Safety | Localize jailbreak refusal across three instruction-tuned models; find vs. act on a behavior |
 
 ## Application examples
 

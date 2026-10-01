@@ -1,4 +1,4 @@
-"""CircuitKit artifacts module for unified score formats and circuit representation."""
+"""CircuitKIT artifacts module for unified score formats and circuit representation."""
 
 from .circuit_artifact import CircuitArtifact, Edge, Node, NodeType
 from .converters import (

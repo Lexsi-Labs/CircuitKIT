@@ -1,6 +1,6 @@
-# Core Concepts in CircuitKit
+# Core Concepts in CircuitKIT
 
-Understanding these fundamental concepts will help you use CircuitKit effectively.
+Understanding these fundamental concepts will help you use CircuitKIT effectively.
 
 ## Table of Contents
 
@@ -25,7 +25,7 @@ A **circuit** is a minimal subgraph of a neural network that performs a specific
 
 ### Circuit Representations
 
-CircuitKit represents circuits as directed graphs with:
+CircuitKIT represents circuits as directed graphs with:
 - **Nodes**: Attention heads, MLP layers, or individual neurons
 - **Edges**: Information flow between components
 - **Attributes**: Weight, type (attention/mlp), layer information
@@ -45,14 +45,14 @@ Circuit discovery is the process of identifying which parts of a neural network 
 
 ### Discovery Algorithms
 
-CircuitKit ships **13 discovery algorithms** across 4 backends (EAP, ACDC, IBCircuit,
+CircuitKIT ships **13 discovery algorithms** across 4 backends (EAP, ACDC, IBCircuit,
 CD-T). They are organized into explicit **stability tiers** — see the README's
 [stability-tier table](../../README.md#discovery-algorithms-and-stability-tiers) and the
 `STABILITY` map in `circuitkit.backends`. `discover_circuit` emits a `UserWarning` when
 an experimental- or research-tier algorithm is used.
 
-To pick an algorithm for a given model size, consult the
-[capability matrix](../algorithms/capability-matrix.md), which
+To pick an algorithm for a given model size, consult the README's
+[capability matrix](../../README.md#capability-matrix-algorithm--model-scale), which
 crosses each algorithm with model scale (GPT-2 → 7B+) and flags expected outcome
 (validated / may fail or be slow / known failure) with rough time and memory notes.
 
@@ -112,7 +112,7 @@ A **task** defines:
 
 ### Built-in Tasks
 
-CircuitKit registers **16 built-in tasks** (`ioi`, `sva`, `gender_bias`,
+CircuitKIT registers **16 built-in tasks** (`ioi`, `sva`, `gender_bias`,
 `capital_country`, `hypernymy`, `greater_than`, `double_io`, `boolq`, `glue`,
 `mmlu`, `winogrande`, `winogrande_mc`, `truthfulqa`, `ifeval`, `wmdp`, `gsm8k`).
 A few examples:
@@ -170,7 +170,7 @@ task = auto_task_from_hf(
 
 ### The 6-Pillar Framework
 
-CircuitKit evaluates circuit faithfulness across six pillars, implemented as classes
+CircuitKIT evaluates circuit faithfulness across six pillars, implemented as classes
 under `circuitkit.evaluation.pillars` and orchestrated by `run_full_faithfulness`. Pass a
 subset of pillar keys to `run_full_faithfulness(..., pillars=[...])` to skip expensive
 ones.
@@ -199,7 +199,7 @@ report = run_full_faithfulness(
 
 ### Metrics
 
-CircuitKit provides domain-specific metrics:
+CircuitKIT provides domain-specific metrics:
 
 - **Accuracy Metrics**: Accuracy, F1, Precision, Recall
 - **Ranking Metrics**: MRR (Mean Reciprocal Rank), NDCG

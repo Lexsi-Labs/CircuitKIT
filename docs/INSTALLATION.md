@@ -1,4 +1,4 @@
-# CircuitKit Installation Guide
+# CircuitKIT Installation Guide
 
 > **Reproducing the paper experiments?** Use the fixed environment in
 > [`../ENVIRONMENT.md`](../ENVIRONMENT.md) — the NVIDIA NeMo 25.09 container
@@ -12,7 +12,7 @@
 
 ```bash
 git clone https://github.com/Lexsi-Labs/circuitkit.git
-cd CircuitKit
+cd CircuitKIT
 pip install -e .
 ```
 
@@ -20,7 +20,7 @@ pip install -e .
 
 ```bash
 git clone https://github.com/Lexsi-Labs/circuitkit.git
-cd CircuitKit
+cd CircuitKIT
 pip install -e ".[gpu-cu126]" --extra-index-url https://download.pytorch.org/whl/cu126
 ```
 
@@ -28,18 +28,18 @@ pip install -e ".[gpu-cu126]" --extra-index-url https://download.pytorch.org/whl
 
 ## Dependency Groups
 
-CircuitKit uses optional dependency groups for different use cases:
+CircuitKIT uses optional dependency groups for different use cases:
 
 ### Core Dependencies
 
 Required for all features:
 ```
 torch, einops, plotly, tqdm, numpy, huggingface-hub,
-transformers>=4.52.3, ordered-set, pyyaml, networkx,
+transformers>=5.15,<6, ordered-set, pyyaml, networkx,
 matplotlib, ipywidgets, scikit-learn, evaluate,
 sacrebleu, rouge_score, bert-score, accelerate,
 sentence-transformers, click, rich, torch-pruning>=1.0,
-transformer-lens>=2.18,<3 (PyPI, verified against 2.18.x — adds Gemma-3 support)
+transformer-lens==3.8.0 (CircuitKIT applies its Gemma-4 / Sarvam-MoE / Cohere patches at import)
 ```
 
 Install core only:
@@ -90,7 +90,7 @@ Alternative CUDA versions available via PyTorch's wheel index:
 
 ### Development & Testing
 
-For contributing to CircuitKit:
+For contributing to CircuitKIT:
 ```bash
 pip install -e .[dev]
 ```
@@ -114,7 +114,7 @@ Includes: `mkdocs`, `mkdocs-material`, `pymdown-extensions`, `mkdocstrings[pytho
 
 ```bash
 git clone https://github.com/Lexsi-Labs/circuitkit.git
-cd CircuitKit
+cd CircuitKIT
 pip install -e .[dev,benchmarks,gpu-cu126] --extra-index-url https://download.pytorch.org/whl/cu126
 pip install -r requirements.txt
 ```
@@ -152,7 +152,7 @@ Enables: Basic circuit discovery, limited to CPU (slower)
 pip install "git+https://github.com/Lexsi-Labs/circuitkit.git"
 ```
 
-Installs CircuitKit directly from GitHub (no local clone). CircuitKit is not yet
+Installs CircuitKIT directly from GitHub (no local clone). CircuitKIT is not yet
 published to PyPI; install from source or from a Git ref.
 
 ---
@@ -202,7 +202,7 @@ python --version
 
 ### Issue: `ImportError: No module named 'transformer_lens'`
 
-**Solution**: CircuitKit pins `transformer-lens>=2.18,<3` from PyPI. Ensure pip has internet access:
+**Solution**: CircuitKIT pins `transformer-lens==3.8.0` from PyPI. Ensure pip has internet access:
 
 ```bash
 pip install -e . --no-cache-dir
@@ -305,7 +305,7 @@ Should complete without errors and output memory estimates.
 
 ## Uninstallation
 
-### Remove CircuitKit
+### Remove CircuitKIT
 
 ```bash
 pip uninstall circuitkit
@@ -313,7 +313,7 @@ pip uninstall circuitkit
 
 ### Remove with Dependencies
 
-To safely remove only CircuitKit and optional dependencies:
+To safely remove only CircuitKIT and optional dependencies:
 
 ```bash
 pip uninstall circuitkit spacy lm-eval torch-pruning

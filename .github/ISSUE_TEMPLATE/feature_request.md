@@ -1,6 +1,6 @@
 ---
 name: Feature Request
-about: Suggest an idea for CircuitKit
+about: Suggest an idea for CircuitKIT
 title: "[FEATURE] "
 labels: enhancement
 assignees: ''

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "circuitkit"
-version = "0.1.8"
+version = "0.1.9"
 # Pratinav Seth, Hem Gosalia, and Aditya Kasliwal are equal co-first authors.
 # Pratinav Seth is the corresponding author. Author order is kept consistent
 # with src/circuitkit/__init__.py and CITATION.cff.
@@ -55,13 +55,11 @@ dependencies = [
     "numpy",
     "pandas",  # imported at module top in circuitkit/api.py
     "scipy",  # used by evaluate/transfer_analysis.py + stability discovery
-    # Pin a consistent HF + transformer-lens set. transformer-lens 2.18 (below)
-    # requires transformers>=4.57; transformers 5.x drops attrs the TL loaders read
-    # (e.g. Qwen2Config.rope_theta) so newer models fail to load; and transformers<5
-    # requires huggingface-hub<1.0. transformer-lens 3.x removes APIs CircuitKit's
-    # ACDC backend imports (transformer_lens.past_key_value_caching), so it stays <3.
-    "huggingface-hub>=0.34,<1.0",
-    "transformers>=4.57,<5",
+    # One HF stack with the other Lexsi libraries (transformers>=5.15,<6).
+    # transformer-lens is pinned exactly: circuitkit/_tl_patches applies its
+    # Gemma-4 / Sarvam-MoE / Cohere patch series to the 3.8.0 sources at import.
+    "huggingface-hub>=1.5,<2",
+    "transformers>=5.15,<6",
     "safetensors",  # checkpoint export — evaluate/hf_checkpoint.py
     "ordered-set",
     "pyyaml",
@@ -84,9 +82,7 @@ dependencies = [
     # at import time under numpy>=2.
     "spacy>=3.8",
     "psutil",  # CLI debug + memory pre-flight checks
-    # transformer-lens from PyPI — verified against 2.18.x (adds Gemma-3 support).
-    # A published release is used (not a Git commit pin) for reproducible installs.
-    "transformer-lens>=2.18,<3",
+    "transformer-lens==3.8.0",
     # Structural pruning
     "torch-pruning>=1.0",
 ]
@@ -95,6 +91,12 @@ dependencies = [
 dev = [
     "pytest",
     "pytest-cov",
+    "pytest-timeout",  # per-test wall-clock cap so a stalled test can't hang CI
+    "pytest-xdist",  # parallel test execution (`-n auto`) for the slow/nightly tier
+    # Optional runtime extra pulled into the test env so the quantization tests
+    # (tests/unit/test_quantize_export_flow.py) run instead of importorskip-ing.
+    # Mirror of the `quantization` extra below; keep the version pin in sync.
+    "optimum-quanto>=0.2",
     "black",
     "flake8",
     "mypy",
@@ -164,7 +166,7 @@ include-package-data = true
 where = ["src"]
 
 [tool.setuptools.package-data]
-circuitkit = ["**/*.json", "**/*.csv", "py.typed"]
+circuitkit = ["**/*.json", "**/*.csv", "**/*.patch", "py.typed"]
 
 [tool.black]
 line-length = 100
@@ -176,7 +178,7 @@ line_length = 100
 
 [project.urls]
 "Homepage" = "https://github.com/Lexsi-Labs/circuitkit"
-"Documentation" = "https://lexsi-labs.github.io/circuitkit/"
+"Documentation" = "https://circuitkit.lexsi.ai/"
 "Repository" = "https://github.com/Lexsi-Labs/circuitkit"
 "Bug Tracker" = "https://github.com/Lexsi-Labs/circuitkit/issues"
 "Changelog" = "https://github.com/Lexsi-Labs/circuitkit/blob/main/CHANGELOG.md"

@@ -404,7 +404,7 @@ def build_finetune_dataloader(
     strict_split: bool = False,
 ) -> DataLoader:
     """
-    Build a DataLoader for causal LM finetuning from a CircuitKit task spec.
+    Build a DataLoader for causal LM finetuning from a CircuitKIT task spec.
 
     Delegates data generation to task_spec.build_finetuning_dataset(), which
     uses only a HuggingFace tokenizer (no HookedTransformer required). The
@@ -413,7 +413,7 @@ def build_finetune_dataloader(
 
     Parameters
     ----------
-    task_spec      : CircuitKit task spec with build_finetuning_dataset().
+    task_spec      : CircuitKIT task spec with build_finetuning_dataset().
     tokenizer      : HuggingFace tokenizer (already has pad_token set).
     model_name     : Full HuggingFace model identifier — forwarded to
                      build_finetuning_dataset for cache path reconstruction.

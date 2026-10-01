@@ -270,7 +270,7 @@ import re  # noqa: E402 - import after intentional pre-import setup
 
 
 def _eap_to_ck_name(eap_name: str) -> str:
-    """Convert an EAP node name to expected CircuitKit key, or '' if not applicable."""
+    """Convert an EAP node name to expected CircuitKIT key, or '' if not applicable."""
     m = re.match(r"a(\d+)\.h(\d+)", eap_name)
     if m:
         return f"A{m.group(1)}.{m.group(2)}"

@@ -57,7 +57,7 @@ The cards below link every guide, including the deeper references (Selectors, Vi
 
     ---
 
-    The selector registry — extend CircuitKit with custom scoring methods.
+    The selector registry — extend CircuitKIT with custom scoring methods.
 
     [:octicons-arrow-right-24: Selectors guide](../user-guide/selectors.md)
 

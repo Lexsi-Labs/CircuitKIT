@@ -1,5 +1,5 @@
 """
-Custom exceptions for CircuitKit with enhanced error handling.
+Custom exceptions for CircuitKIT with enhanced error handling.
 """
 
 import traceback
@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 
 
 class CircuitKitError(Exception):
-    """Base exception for CircuitKit."""
+    """Base exception for CircuitKIT."""
 
     def __init__(
         self,
@@ -145,7 +145,7 @@ def handle_exception(
     if isinstance(exception, CircuitKitError):
         return exception
 
-    # Map common exceptions to CircuitKit errors
+    # Map common exceptions to CircuitKIT errors
     if isinstance(exception, FileNotFoundError):
         return FileNotFoundError(str(exception), context)
     elif isinstance(exception, MemoryError):
@@ -312,10 +312,10 @@ class ErrorContext:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_val and isinstance(exc_val, CircuitKitError):
-            # Add context to existing CircuitKit error
+            # Add context to existing CircuitKIT error
             exc_val.context.update(self.context)
         elif exc_val:
-            # Convert to CircuitKit error with context
+            # Convert to CircuitKIT error with context
             raise handle_exception(exc_val, self.context) from exc_val
 
 

@@ -16,7 +16,7 @@ def warn_if_mps_editing(device) -> None:
     inconsistent, precision than CUDA/CPU, so the resulting edit magnitudes are
     unreliable and the edits can be **silently incorrect** (they may pass or fail
     a sanity check depending on op ordering). This is a backend limitation, not a
-    CircuitKit bug. Run knowledge editing on CUDA or CPU for correct results.
+    CircuitKIT bug. Run knowledge editing on CUDA or CPU for correct results.
 
     Emits at most one warning per process.
     """

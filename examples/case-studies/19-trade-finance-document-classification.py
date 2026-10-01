@@ -5,7 +5,7 @@ Banks process millions of trade documents — bills of lading, invoices,
 letters of credit. An LLM classifying these must run on-premises with
 no GPU, low latency, and verifiable accuracy.
 
-CircuitKit discovers the minimal circuit for document classification,
+CircuitKIT discovers the minimal circuit for document classification,
 prunes non-essential weights, and exports a HuggingFace checkpoint
 that runs on CPU-only banking infrastructure.
 """

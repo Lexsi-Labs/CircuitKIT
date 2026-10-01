@@ -1,5 +1,5 @@
 """
-Configuration management for CircuitKit CLI.
+Configuration management for CircuitKIT CLI.
 """
 
 import os

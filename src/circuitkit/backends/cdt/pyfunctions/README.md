@@ -1,3 +1,11 @@
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../../../docs/assets/circuitkit-logo-white.png">
+    <img src="../../../../../docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
+
 # pyfunctions
 
 Vendored CD-T reference implementation (contextual decomposition propagation ops).
@@ -27,4 +35,4 @@ Adapted from the CD_Circuit reference repo; modules use top-level
 ## How it fits
 
 Internal implementation invoked through `backends/cdt/adapter.py` and the CD-T
-`__init__` re-exports; not part of the public CircuitKit API.
+`__init__` re-exports; not part of the public CircuitKIT API.

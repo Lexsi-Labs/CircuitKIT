@@ -239,6 +239,10 @@ def run_full_faithfulness(  # noqa: C901 - complex function, refactor out of sco
     timing = {}
     total_start = time.time()
 
+    # Pillar 1 already measures the clean/corrupt baselines and the patched
+    # circuit; Pillars 2 and 5 reuse them instead of repeating those forwards.
+    patching_result = None
+
     # Initialize report
     report = FaithfulnessReport(
         patching_score=None,
@@ -311,6 +315,8 @@ def run_full_faithfulness(  # noqa: C901 - complex function, refactor out of sco
                 intervention_dataloader=intervention_dataloader,
                 device=device,
                 quiet=False,
+                clean_score=patching_result["clean_score"] if patching_result else None,
+                corrupt_score=patching_result["corrupt_score"] if patching_result else None,
             )
             # Headline score is the normalized 0-1 faithfulness ratio. None
             # when status='invalid' (inverted metric direction) — see Pillar 1.
@@ -349,6 +355,7 @@ def run_full_faithfulness(  # noqa: C901 - complex function, refactor out of sco
                 baseline_types=baseline_types,
                 device=device,
                 quiet=False,
+                circuit_score=patching_result["raw_score"] if patching_result else None,
             )
             report.baseline_comparison = baseline_result
             timing["baselines"] = time.time() - start

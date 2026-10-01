@@ -1,6 +1,6 @@
 # Architecture Registry
 
-CircuitKit's **architecture registry** provides a unified interface for pruning and quantization across different Transformer families. Discovery always runs through TransformerLens (which abstracts the architecture), but the application layer (pruning, quantization) needs to know the specific module paths and projection names for each family.
+CircuitKIT's **architecture registry** provides a unified interface for pruning and quantization across different Transformer families. Discovery always runs through TransformerLens (which abstracts the architecture), but the application layer (pruning, quantization) needs to know the specific module paths and projection names for each family.
 
 ---
 
@@ -16,8 +16,33 @@ CircuitKit's **architecture registry** provides a unified interface for pruning 
 | `phi` | Ready | `microsoft/Phi-3-mini-4k-instruct` |
 | `falcon` | Ready | `tiiuae/falcon-7b` |
 | `gpt2` | Ready | `gpt2`, `gpt2-xl` |
+| `cohere` | Experimental | `CohereLabs/tiny-aya-base`, `CohereLabs/c4ai-command-r7b-12-2024` (`cohere2`); `CohereLabs/aya-expanse-8b` (`cohere1`) |
+| `smollm3` | Experimental | `HuggingFaceTB/SmolLM3-3B` |
 
-**Production** = validated in the CircuitKit paper audit. **Ready** = registry entry exists, high confidence, not in the audit.
+**Production** = validated in the CircuitKIT paper audit. **Ready** = registry entry exists, high confidence, not in the audit. **Experimental** = discovery, evaluation, and interventions supported via the circuitkit TransformerLens port (`circuitkit.backends._tl_compat`), validated on real weights (see below for exactly what "validated" means for each surface). The `cohere` family now covers three checkpoints across two HF architectures — Tiny Aya and Command R7B (`Cohere2ForCausalLM`, `model_type="cohere2"`) and Aya Expanse (`CohereForCausalLM`, `model_type="cohere"`) — sharing one weight converter and one registry entry, since the pruning/quantization/steering module layout (`self_attn.{q,k,v,o}_proj`, `mlp.{gate,up,down}_proj`) is identical across all three. `smollm3` is a separate, Llama-shaped family (new in this stage). See [Tiny Aya (Cohere2)](tiny-aya.md) and [Experimental Models](experimental-models.md).
+
+### Two honest caveats (apply to `cohere` and `smollm3` alike)
+
+- **Quantization is validated for target-module resolution only.**
+  `applications/quantization/quant_utils.build_patterns`'s fnmatch patterns
+  were confirmed to match real `nn.Linear` submodules by name on all four
+  real loaded models (Tiny Aya, Command R7B, Aya Expanse, SmolLM3-3B) — but
+  `optimum-quanto`/`llmcompressor`/`compressed-tensors` are optional
+  dependencies **not installed** in the validation environment, so the
+  actual `quantize()`/GPTQ compression call itself was never run for any of
+  the four. This is not a full compression run; it proves the registry
+  entry resolves the right layers, nothing more.
+- **`CircuitWeightSteering`'s circuit-score format does not match
+  `discover_circuit`'s node-name format**, for any model, not just these
+  four. `weight_steering.py`'s own contract is `"A{layer}.{head}"`
+  (uppercase `A`, no `.h`); `discover_circuit`'s `Graph` node names are
+  `"a{layer}.h{head}"` (lowercase `a`, `.h` before the head index). A
+  discovered circuit's `node_scores` dict cannot be passed to
+  `CircuitWeightSteering` as-is — it needs a small regex conversion first.
+  This is a pre-existing property of the steering module (the existing
+  offline `tests/apply/test_weight_steering.py` already builds its scores in
+  the module's own format on GPT-2), not something introduced by or specific
+  to the `cohere`/`smollm3` families.
 
 ---
 
@@ -57,13 +82,15 @@ from circuitkit.applications import (
     SUPPORTED_FAMILIES,
     PRODUCTION_FAMILIES,
     READY_FAMILIES,
+    EXPERIMENTAL_FAMILIES,
     get_model_family,
     get_head_dim,
 )
 
-print(SUPPORTED_FAMILIES)    # All registered families
-print(PRODUCTION_FAMILIES)   # Production-validated families
-print(READY_FAMILIES)        # Ready-to-use families
+print(SUPPORTED_FAMILIES)     # All registered families
+print(PRODUCTION_FAMILIES)    # Production-validated families
+print(READY_FAMILIES)         # Ready-to-use families
+print(EXPERIMENTAL_FAMILIES)  # Experimental (e.g. cohere, smollm3 via the TL port)
 
 family = get_model_family("qwen2")  # "qwen" — maps an HF model_type, not a repo path
 head_dim = get_head_dim(layer, arch_cfg)  # first arg is a single decoder layer, not the whole model

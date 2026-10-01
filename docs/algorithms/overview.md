@@ -1,6 +1,6 @@
 # Algorithm Overview
 
-CircuitKit ships **13 discovery algorithms** across 4 backends. This page explains how to choose the right one. Note that "ships" is not "validated". Six are Stable (`eap`, `eap-ig`, `eap-gp`, `acdc`, `ibcircuit`, `cdt`) and have been tested across the GPT-2, Llama, Gemma, and Qwen families. The remaining seven are Research: implemented and validated on GPT-2/IOI but not yet exercised at scale or across architectures. Three of the Stable algorithms carry documented caveats: `acdc` is node-only by construction and slow, `ibcircuit` has a memory ceiling on multi-billion-parameter models at aggressive settings, and `cdt` scores on RoPE models are approximate.
+CircuitKIT ships **13 discovery algorithms** across 4 backends. This page explains how to choose the right one. Note that "ships" is not "validated". Six are Stable (`eap`, `eap-ig`, `eap-gp`, `acdc`, `ibcircuit`, `cdt`) and have been tested across the GPT-2, Llama, Gemma, and Qwen families. The remaining seven are Research: implemented and validated on GPT-2/IOI but not yet exercised at scale or across architectures. Three of the Stable algorithms carry documented caveats: `acdc` is node-only by construction and slow, `ibcircuit` has a memory ceiling on multi-billion-parameter models at aggressive settings, and `cdt` scores on RoPE models are approximate.
 
 <div class="grid cards" markdown>
 
@@ -42,7 +42,7 @@ CircuitKit ships **13 discovery algorithms** across 4 backends. This page explai
 
 | Goal | Algorithm | Why |
 |---|---|---|
-| New to CircuitKit, any model | `eap-ig` | Stable, fast, validated across model families |
+| New to CircuitKIT, any model | `eap-ig` | Stable, fast, validated across model families |
 | Speed over precision | `eap` | ~30% faster; slightly noisier |
 | Minimal circuit | `acdc` | Greedy edge-pruning. Node-only and slow |
 | Information-flow analysis | `ibcircuit` | No paired data needed |
@@ -109,8 +109,6 @@ CD-T uses a frozen-RoPE attention approximation (Q/K are not decomposed) and a 5
 | Research tier | ✅ | ❌ | ❌ | ❌ |
 
 ✅ Tested  ⚠️ Tested, with a documented caveat  ❌ Not validated
-
-Marks outside the GPT-2 column for `eap-gp`, `acdc`, `ibcircuit`, and `cdt` restate the stable-tier statement at family level. Faithfulness scores beyond GPT-2 are published only for `eap` and `eap-ig` (see [Audit Results](../trust/results.md)).
 
 Caveats: `acdc` is slow above GPT-2 scale, `ibcircuit` has a memory ceiling on multi-billion-parameter models at aggressive settings, and `cdt` scores on RoPE models (Llama, Gemma, Qwen) are approximate.
 

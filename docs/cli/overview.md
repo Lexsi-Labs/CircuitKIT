@@ -1,6 +1,6 @@
 # CLI Reference
 
-CircuitKit ships a `circuitkit` command-line interface built with Click and Rich. The CLI is the primary interface for scripted workflows, CI pipelines, and YAML-driven experiments.
+CircuitKIT ships a `circuitkit` command-line interface built with Click and Rich. The CLI is the primary interface for scripted workflows, CI pipelines, and YAML-driven experiments.
 
 ---
 

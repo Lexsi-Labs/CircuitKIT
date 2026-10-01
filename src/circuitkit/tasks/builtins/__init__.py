@@ -1,7 +1,7 @@
 """
 Built-in Task Specifications
 
-This module contains the standard task specifications that come with CircuitKit.
+This module contains the standard task specifications that come with CircuitKIT.
 
 Note: Task registration is now centralized in tasks/bootstrap.py to avoid
 duplication and circular import issues. These specs are imported here for

@@ -1,6 +1,6 @@
 # EAP Family
 
-**Edge Attribution Patching** (EAP) and its variants power most of CircuitKit's discovery. Three of the six Stable-tier algorithms, `eap`, `eap-ig` and `eap-gp`, belong to this family, alongside the Research-tier `eap-ig-activations` and `eap-clean-corrupted` and five other Research variants.
+**Edge Attribution Patching** (EAP) and its variants power most of CircuitKIT's discovery. Three of the six Stable-tier algorithms, `eap`, `eap-ig` and `eap-gp`, belong to this family, alongside the Research-tier `eap-ig-activations` and `eap-clean-corrupted` and five other Research variants.
 
 ---
 

@@ -1,5 +1,5 @@
 """
-Comprehensive logging utilities for CircuitKit.
+Comprehensive logging utilities for CircuitKIT.
 """
 
 import json
@@ -44,7 +44,7 @@ def configure_warning_filters():
 
 
 class CircuitKitFormatter(logging.Formatter):
-    """Custom formatter for cleaner CircuitKit logs."""
+    """Custom formatter for cleaner CircuitKIT logs."""
 
     # Color codes for terminal
     COLORS = {
@@ -116,7 +116,7 @@ class CircuitKitFormatter(logging.Formatter):
 
 
 class CircuitKitLogger:
-    """Enhanced logger for CircuitKit with structured logging capabilities."""
+    """Enhanced logger for CircuitKIT with structured logging capabilities."""
 
     def __init__(self, name: str = "circuitkit", level: int = logging.INFO):
         self.logger = logging.getLogger(name)

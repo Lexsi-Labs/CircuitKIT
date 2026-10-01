@@ -1,6 +1,6 @@
 # Citation Map
 
-Every paper referenced by an `arXiv:` identifier **inside the CircuitKit source
+Every paper referenced by an `arXiv:` identifier **inside the CircuitKIT source
 tree** (`src/`), mapped to its verified title, authors, arXiv page, and Hugging
 Face Papers page. Titles were checked against arXiv — if you add a new `arXiv:`
 reference in code, add a row here too.

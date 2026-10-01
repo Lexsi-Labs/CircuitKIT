@@ -33,11 +33,11 @@ What actually happens? Include error messages or output.
 
 ## Environment
 
-- CircuitKit version: (e.g., 0.3.0)
+- CircuitKIT version: (e.g., 0.3.0)
 - Python version: (e.g., 3.10)
 - Operating System: (e.g., Linux, Windows, macOS)
 - GPU/CUDA: (e.g., A100, CUDA 12.6)
-- How did you install CircuitKit: (pip, from source, etc.)
+- How did you install CircuitKIT: (pip, from source, etc.)
 
 ## Error Message
 

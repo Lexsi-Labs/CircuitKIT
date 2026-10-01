@@ -1,8 +1,8 @@
 """
-CircuitKit Visualization Design System.
+CircuitKIT Visualization Design System.
 
 Single source of truth for colors, typography, and layout constants used
-across all CircuitKit visualizers (Plotly notebook widgets and D3.js HTML
+across all CircuitKIT visualizers (Plotly notebook widgets and D3.js HTML
 exports). Any new visualizer should import from here rather than hardcoding
 colors or layout values.
 
@@ -26,7 +26,7 @@ from typing import Any, Dict, Optional
 @dataclass(frozen=True)
 class _Palette:
     """
-    Immutable color palette for CircuitKit visualizations.
+    Immutable color palette for CircuitKIT visualizations.
 
     Designed around a dark-slate / warm-amber research aesthetic: readable on
     white backgrounds in notebooks, accessible at WCAG AA contrast ratios,
@@ -141,7 +141,7 @@ def get_plotly_layout(
     """
     Return a consistent Plotly ``update_layout`` kwargs dict.
 
-    All CircuitKit Plotly figures should call::
+    All CircuitKIT Plotly figures should call::
 
         fig.update_layout(**get_plotly_layout(title="My Circuit", height=800))
 

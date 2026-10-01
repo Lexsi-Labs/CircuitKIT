@@ -1,6 +1,58 @@
 """Device auto-detection: CUDA > MPS > CPU."""
 
+import os
+from typing import Optional
+
 import torch
+
+_expandable_segments_applied: Optional[bool] = None
+
+
+def enable_expandable_segments() -> bool:
+    """Turn on the CUDA caching allocator's ``expandable_segments`` (idempotent).
+
+    Attribution and evaluation allocate differently sized activation buffers
+    for every batch. With fixed-size segments those allocations fragment the
+    pool and can OOM while gigabytes are nominally free; expandable segments
+    grow and remap instead.
+
+    Applied in-process through ``torch.cuda.memory._set_allocator_settings`` so
+    child processes (e.g. vLLM) do not inherit it. If that private API is
+    unavailable, falls back to ``PYTORCH_CUDA_ALLOC_CONF``, which only takes
+    effect while CUDA has not allocated yet. Skipped when CUDA/ROCm is absent,
+    when the user already set ``expandable_segments`` in
+    ``PYTORCH_CUDA_ALLOC_CONF``/``PYTORCH_ALLOC_CONF``, or when
+    ``CIRCUITKIT_NO_EXPANDABLE_SEGMENTS`` is set.
+
+    Returns:
+        True if CircuitKIT applied the setting, False otherwise.
+    """
+    global _expandable_segments_applied
+    if _expandable_segments_applied is not None:
+        return _expandable_segments_applied
+    _expandable_segments_applied = False
+
+    user_conf = os.environ.get("PYTORCH_CUDA_ALLOC_CONF", "") + os.environ.get(
+        "PYTORCH_ALLOC_CONF", ""
+    )
+    if (
+        os.environ.get("CIRCUITKIT_NO_EXPANDABLE_SEGMENTS")
+        or "expandable_segments" in user_conf
+        or not torch.cuda.is_available()
+        or torch.version.hip
+    ):
+        return False
+    try:
+        torch.cuda.memory._set_allocator_settings("expandable_segments:True")
+        _expandable_segments_applied = True
+    except (AttributeError, RuntimeError):
+        if not torch.cuda.is_initialized():
+            existing = os.environ.get("PYTORCH_CUDA_ALLOC_CONF")
+            os.environ["PYTORCH_CUDA_ALLOC_CONF"] = (
+                f"{existing},expandable_segments:True" if existing else "expandable_segments:True"
+            )
+            _expandable_segments_applied = True
+    return _expandable_segments_applied
 
 
 def get_device(prefer: str = "auto") -> str:
@@ -49,3 +101,6 @@ def empty_cache(device: str = "auto") -> None:
         torch.cuda.empty_cache()
     elif resolved == "mps":
         torch.mps.empty_cache()
+
+
+enable_expandable_segments()

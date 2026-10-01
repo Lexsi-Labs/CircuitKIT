@@ -1,4 +1,4 @@
-"""Stateful Discover → Evaluate → Intervene pipeline for CircuitKit.
+"""Stateful Discover → Evaluate → Intervene pipeline for CircuitKIT.
 
 The Pipeline class is a stateful orchestrator that carries model, circuit,
 and evaluation state across method calls. It delegates to ``quick.*`` functions
@@ -21,8 +21,10 @@ Example::
 
 from __future__ import annotations
 
+import gc
 import os
 import re
+from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
@@ -323,6 +325,40 @@ class Pipeline:
             )
         return self._model
 
+    @contextmanager
+    def _tl_models_on_cpu(self):
+        """Park the pipeline's resident TransformerLens models on CPU.
+
+        ``benchmark_circuit`` loads its own copy of the model (and, with the
+        vLLM backend, an engine that claims most of the device on startup), so
+        a TL model left on the GPU either OOMs it or forces a tiny
+        ``gpu_memory_utilization``. The models go back to their device when the
+        benchmark finishes, so later pipeline steps see them where they were.
+        """
+        import torch
+        from transformer_lens import HookedTransformer
+
+        moved = []
+        for model in (self._model, self._pruned_model):
+            if not isinstance(model, HookedTransformer):
+                continue
+            try:
+                device = next(model.parameters()).device
+            except StopIteration:
+                continue
+            if device.type != "cpu":
+                model.to("cpu")
+                moved.append((model, device))
+        if moved:
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        try:
+            yield
+        finally:
+            for model, device in moved:
+                model.to(device)
+
     def _ensure_hf_model(self) -> Any:
         """Load a HuggingFace ``AutoModelForCausalLM`` lazily, reusing the
         cached instance.
@@ -496,28 +532,17 @@ class Pipeline:
             "output_path": output_path,
         }
 
-        # Attach custom data block if the pipeline was built from custom data
-        if hasattr(self, "_custom_data_cfg"):
+        # Attach custom data block if the pipeline was built from custom data.
+        # __init__ always sets self._custom_data_cfg = None (only
+        # from_custom_data() sets it to a real dict), so a plain hasattr()
+        # check here was always True and made every discover() call eagerly
+        # load a real model via _ensure_model() below, even for plain
+        # (non-custom-data) pipelines. See issue #180.
+        if self._custom_data_cfg is not None:
             config["data"] = self._custom_data_cfg
             model = self._ensure_model()
             task_name = getattr(self, "_task_name_override", None)
             self.task = prepare_custom_task(config, model, task_name=task_name)
-
-            # prepare_custom_task() consumed `model` for its tokenizer only
-            # and has already popped config["data"], so discover_circuit()
-            # below will NOT re-run the custom-task setup - it loads its own
-            # model from config["model"]["name"] regardless. Release our copy
-            # now rather than holding two full models in GPU RAM simultaneously.
-            # Any later pipeline step that needs self._model will reload it
-            # transparently via _ensure_model().
-            self._model = None
-            import gc
-
-            gc.collect()
-            import torch
-
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
 
         # CDT warning: node-level only
         if algorithm.lower() == "cdt" and level != "node":
@@ -531,13 +556,10 @@ class Pipeline:
             config["discovery"]["level"] = "node"
             level = "node"
 
-        # If self._model is already in memory (e.g. a prior pipeline step
-        # populated it, or the non-custom-data path loaded it earlier), pass
-        # it through so discover_circuit() can skip reloading. In the common
-        # case self._model is None here (either the custom-data branch above
-        # just released it, or nothing pre-loaded it), and discover_circuit()
-        # loads exactly as before.
-        nodes = discover_circuit(config, _model=self._model)
+        # Load (or reuse) the pipeline's model and hand it to discover_circuit()
+        # so discovery, evaluate() and later steps share one copy instead of
+        # each loading their own.
+        nodes = discover_circuit(config, _model=self._ensure_model())
         self._artifact_path = output_path
         self._discovery_cfg = config
 
@@ -612,7 +634,9 @@ class Pipeline:
         config = self._build_eval_config(eval_cfg)
         config.update(kw)
 
-        self._eval_report = evaluate_circuit(config, pruned_artifact_path=self._artifact_path)
+        self._eval_report = evaluate_circuit(
+            config, pruned_artifact_path=self._artifact_path, _model=self._model
+        )
         self._history.append("evaluate")
         return self
 
@@ -897,14 +921,15 @@ class Pipeline:
             "model": {"name": self.model_name},
         }
 
-        benchmark_circuit(
-            self.model_name,
-            self._artifact_path,
-            eval_params,
-            config_for_report,
-            precision=self.precision,
-            **kw,
-        )
+        with self._tl_models_on_cpu():
+            benchmark_circuit(
+                self.model_name,
+                self._artifact_path,
+                eval_params,
+                config_for_report,
+                precision=self.precision,
+                **kw,
+            )
         self._history.append("benchmark")
 
     def visualize(self, mode: str = "graph", output: Optional[str] = None, **kw: Any) -> Any:

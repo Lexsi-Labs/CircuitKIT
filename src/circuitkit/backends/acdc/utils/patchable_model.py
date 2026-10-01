@@ -1,7 +1,7 @@
 from typing import Any, Collection, Dict, List, Optional, Set, Tuple
 
 import torch as t
-from transformer_lens.past_key_value_caching import HookedTransformerKeyValueCache
+from transformer_lens.cache.key_value_cache import TransformerLensKeyValueCache
 
 from ..types import DestNode, Edge, Node, PruneScores, SrcNode
 from ..utils.patch_wrapper import PatchWrapperImpl
@@ -48,7 +48,7 @@ class PatchableModel(t.nn.Module):
     is_factorized: bool
     is_transformer: bool
     separate_qkv: Optional[bool]
-    kv_caches: Optional[Dict[int, HookedTransformerKeyValueCache]]
+    kv_caches: Optional[Dict[int, TransformerLensKeyValueCache]]
     wrapped_model: t.nn.Module
 
     def __init__(
@@ -67,7 +67,7 @@ class PatchableModel(t.nn.Module):
         is_factorized: bool,
         is_transformer: bool,
         separate_qkv: Optional[bool],
-        kv_caches: Tuple[Optional[HookedTransformerKeyValueCache], ...],
+        kv_caches: Tuple[Optional[TransformerLensKeyValueCache], ...],
         wrapped_model: t.nn.Module,
     ) -> None:
         super().__init__()

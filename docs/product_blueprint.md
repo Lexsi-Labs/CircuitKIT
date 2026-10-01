@@ -1,11 +1,11 @@
 # 1. Product Blueprint & Systems Architecture — Roadmap / Aspirational
 
 !!! warning "Aspirational roadmap — none of this is implemented"
-    Everything below this notice describes a **possible future** deployment architecture (web ingestion layer, task queue, GPU worker pool, auto-scaling, `circuitkit worker` CLI command, a `circuitkit.api:app` FastAPI service). **None of it exists in `circuitkit` today.** CircuitKit v1.0.0 is a Python library and CLI you run directly (`pip install circuitkit`, `circuitkit discover`, `circuitkit evaluate`, ...) — there is no server, no task queue, no auto-scaling, and no `worker` subcommand. This page is excluded from the published documentation site (see `exclude_docs` in `mkdocs.yml`) and is kept only as a record of a possible future direction.
+    Everything below this notice describes a **possible future** deployment architecture (web ingestion layer, task queue, GPU worker pool, auto-scaling, `circuitkit worker` CLI command, a `circuitkit.api:app` FastAPI service). **None of it exists in `circuitkit` today.** CircuitKIT v1.0.0 is a Python library and CLI you run directly (`pip install circuitkit`, `circuitkit discover`, `circuitkit evaluate`, ...) — there is no server, no task queue, no auto-scaling, and no `worker` subcommand. This page is excluded from the published documentation site (see `exclude_docs` in `mkdocs.yml`) and is kept only as a record of a possible future direction.
 
     For the real, current architecture and usage, see [Flat Typed API](api-reference/flat-api.md), [Pipeline](api-reference/pipeline.md), and [CLI Reference](cli/applications.md).
 
-**CircuitKit** is a unified toolkit for mechanistic circuit discovery, faithfulness evaluation, and model intervention in transformer neural networks. The sections below sketch a hypothetical enterprise deployment built on top of CircuitKit — they are not a description of the shipped product.
+**CircuitKIT** is a unified toolkit for mechanistic circuit discovery, faithfulness evaluation, and model intervention in transformer neural networks. The sections below sketch a hypothetical enterprise deployment built on top of CircuitKIT — they are not a description of the shipped product.
 
 ## Enterprise Requirements
 

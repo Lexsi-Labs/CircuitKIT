@@ -1,6 +1,6 @@
 # Getting started
 
-CircuitKit runs a three-stage loop: **discover** the circuit driving a behaviour, **evaluate** how faithful that circuit is, then **act on it** — prune, quantize, edit, steer, or fine-tune — and export a reloadable HuggingFace checkpoint.
+CircuitKIT runs a three-stage loop: **discover** the circuit driving a behaviour, **evaluate** how faithful that circuit is, then **act on it** — prune, quantize, edit, steer, or fine-tune — and export a reloadable HuggingFace checkpoint.
 
 This page just orients you. Two links get you moving:
 

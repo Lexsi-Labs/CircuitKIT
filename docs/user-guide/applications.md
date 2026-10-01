@@ -1,6 +1,6 @@
 # Applications
 
-After discovering and evaluating a circuit, CircuitKit provides five ways to act on it. Pruning, quantization, and selective fine-tuning are available through the flat `ck.*` API and `Pipeline`; steering and knowledge editing are used via their `circuitkit.applications.*` classes. Pruning, quantization, and steering also have CLI commands.
+After discovering and evaluating a circuit, CircuitKIT provides five ways to act on it. Pruning, quantization, and selective fine-tuning are available through the flat `ck.*` API and `Pipeline`; steering and knowledge editing are used via their `circuitkit.applications.*` classes. Pruning, quantization, and steering also have CLI commands.
 
 <div class="grid cards" markdown>
 

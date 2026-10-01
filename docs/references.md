@@ -1,6 +1,6 @@
 # References
 
-This page collects the key papers and resources referenced throughout the CircuitKit documentation.
+This page collects the key papers and resources referenced throughout the CircuitKIT documentation.
 
 > For a machine-checkable map of every `arXiv:` reference cited **inside the source code**
 > (with Hugging Face Papers links), see the [Citation Map](citation-map.md). Vendored
@@ -29,7 +29,7 @@ This page collects the key papers and resources referenced throughout the Circui
 
 ## Software
 
-- **CircuitKit** — Seth, P.\*, Gosalia, H.\*, Kasliwal, A.\*, & Sankarapu, V. K. (2026). "CircuitKit: Circuit Discovery, Evaluation, and Application Toolkit for Mechanistic Interpretability." [GitHub](https://github.com/Lexsi-Labs/circuitkit) <br> <sub>\* Equal co-first authorship. Corresponding author: Pratinav Seth (pratinav.seth@lexsi.ai).</sub>
+- **CircuitKIT** — Seth, P.\*, Gosalia, H.\*, Kasliwal, A.\*, & Sankarapu, V. K. (2026). "CircuitKIT: Circuit Discovery, Evaluation, and Application Toolkit for Mechanistic Interpretability." [GitHub](https://github.com/Lexsi-Labs/circuitkit) <br> <sub>\* Equal co-first authorship. Corresponding author: Pratinav Seth (pratinav.seth@lexsi.ai).</sub>
 - **TransformerLens** — Nanda, N., & Bloom, J. (2022). [GitHub](https://github.com/TransformerLensOrg/TransformerLens)
 - **lm-evaluation-harness** — EleutherAI. [GitHub](https://github.com/EleutherAI/lm-evaluation-harness)
 - **PyTorch** — Paszke, A., & others. (2019). "PyTorch: An Imperative Style, High-Performance Deep Learning Library." *NeurIPS 2019*.

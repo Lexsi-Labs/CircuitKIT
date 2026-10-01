@@ -66,7 +66,7 @@ raw_metric = evaluate_graph(
 | 0.50 – 0.70 | **Weak.** A meaningful portion of the behavior is outside the circuit. |
 | < 0.50 | **Poor.** The circuit does not explain the behavior well. |
 
-**Typical values in the CircuitKit audit:**
+**Typical values in the CircuitKIT audit:**
 
 | Model | Task | Algorithm | Pillar 1 Score |
 |-------|------|-----------|:-----------:|

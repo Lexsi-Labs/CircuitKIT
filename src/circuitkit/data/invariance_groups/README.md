@@ -1,3 +1,11 @@
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../../docs/assets/circuitkit-logo-white.png">
+    <img src="../../../../docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
+
 # invariance_groups
 
 Data structures and a builder that turn task examples plus corruption transforms into typed, contracted invariance groups for circuit evaluation.
@@ -5,7 +13,7 @@ Data structures and a builder that turn task examples plus corruption transforms
 ## Key modules
 
 - `schema.py` — invariance-contract data structures: `VariantType` (transformation families), `InvarianceContract` (label/position/length invariance), `InvarianceVariant`, `InvarianceGroup`, `DEFAULT_CONTRACTS`, and `new_group_id`; all serialize to/from plain dicts (HuggingFace/Croissant-compatible).
-- `builder.py` — `InvarianceGroupBuilder` (`from_task_examples`) wraps CircuitKit corruption transforms to produce contracted groups with length-delta annotation; `register_paraphrase_transform` registers a custom paraphrase function.
+- `builder.py` — `InvarianceGroupBuilder` (`from_task_examples`) wraps CircuitKIT corruption transforms to produce contracted groups with length-delta annotation; `register_paraphrase_transform` registers a custom paraphrase function.
 
 ## Public API
 

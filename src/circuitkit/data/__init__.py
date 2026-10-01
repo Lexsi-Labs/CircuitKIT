@@ -1,5 +1,5 @@
 """
-CircuitKit Data Processing Module.
+CircuitKIT Data Processing Module.
 Provides data loading preprocessing capabilities for circuit discovery.
 """
 

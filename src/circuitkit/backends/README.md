@@ -1,7 +1,15 @@
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../docs/assets/circuitkit-logo-white.png">
+    <img src="../../../docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
+
 # backends
 
 Circuit-discovery algorithm backends (EAP, ACDC, CD-T, IBCircuit) plus the
-canonical registry of every algorithm name CircuitKit knows about.
+canonical registry of every algorithm name CircuitKIT knows about.
 
 ## Key modules
 

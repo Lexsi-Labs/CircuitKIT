@@ -1,8 +1,8 @@
-"""Save pruned HookedTransformer as a HuggingFace checkpoint for lm-eval.
+"""Save a (pruned, edited or steered) HookedTransformer as a HuggingFace checkpoint.
 
-Applies the pruning artifact directly to HF model weights (bypassing
-TransformerLens preprocessing), then saves as a standard HF checkpoint
-loadable by ``lm_eval.models.huggingface.HFLM`` or any HF tool.
+Converts the model's current weights back to the HF layout (see
+``save_pruned_checkpoint``), applies the pruning artifact to them, and saves a
+standard HF checkpoint loadable by ``lm_eval.models.huggingface.HFLM`` or any HF tool.
 """
 
 from __future__ import annotations
@@ -11,12 +11,15 @@ import logging
 import os
 import re
 import shutil
+import warnings
 from typing import Any, Dict, List, Optional, Union
 
 import torch as t
 from safetensors.torch import save_file as safe_save
 from transformer_lens import HookedTransformer
 from transformers import AutoConfig, AutoModelForCausalLM
+
+from ..provenance import model_input, write_provenance
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +78,7 @@ ARCH_CONFIGS: dict = {
         "key_ln1": "ln_1",
         "key_ln2": "ln_2",
         "prefix_embed": "transformer.wte.weight",
+        "prefix_pos_embed": "transformer.wpe.weight",
         "prefix_final_norm": "transformer.ln_f",
         "prefix_lm_head": "lm_head.weight",
     },
@@ -132,6 +136,7 @@ _LLAMA_LIKE = {
     "Qwen2MoeForCausalLM",
     "StableLmForCausalLM",
     "CohereForCausalLM",
+    "Cohere2ForCausalLM",
     "OlmoForCausalLM",
     "FalconForCausalLM",
 }
@@ -235,6 +240,139 @@ def _resolve_arch(original_architecture: str, model_name: str) -> dict:
 
     # Last resort: return Llama defaults (most modern models follow this)
     return cfg
+
+
+# Architectures whose current HookedTransformer weights export_checkpoint can write
+# back into the HF layout (inverse of TL's convert_*_weights for these families).
+CURRENT_WEIGHTS_ARCHS = frozenset(
+    {
+        "GPT2LMHeadModel",
+        "LlamaForCausalLM",
+        "MistralForCausalLM",
+        "Qwen2ForCausalLM",
+        "CohereForCausalLM",
+        "Cohere2ForCausalLM",
+    }
+)
+
+
+def tl_to_hf_state_dict(
+    model: HookedTransformer, arch_cfg: dict, hf_state_dict: Dict[str, t.Tensor], logit_scale: float = 1.0
+) -> Dict[str, t.Tensor]:
+    """Map a HookedTransformer's current weights onto HF state-dict keys.
+
+    Only keys present in ``hf_state_dict`` are returned, so parameters the HF
+    architecture does not have (Llama's zero biases, Cohere's ``ln2`` copy) are
+    dropped. ``logit_scale`` undoes Cohere's fold into ``W_U``. Check the result with
+    :func:`_tl_round_trip_mismatches`; unsupported layouts show up there.
+    """
+    import einops
+
+    tl = model.state_dict()
+    cfg = model.cfg
+    conv1d = arch_cfg.get("type") == "gpt2"  # GPT-2 Conv1D weights are [in, out]
+    out: Dict[str, t.Tensor] = {}
+
+    def put(key: str, value: Optional[t.Tensor]) -> None:
+        if value is not None and key in hf_state_dict:
+            out[key] = value
+
+    put(arch_cfg["prefix_embed"], tl["embed.W_E"])
+    pos_key = arch_cfg.get("prefix_pos_embed")
+    if pos_key in hf_state_dict and "pos_embed.W_pos" in tl:
+        w_pos = hf_state_dict[pos_key].clone()  # TL may keep only the first n_ctx rows
+        w_pos[: cfg.n_ctx] = tl["pos_embed.W_pos"].to(w_pos)
+        out[pos_key] = w_pos
+    put(f"{arch_cfg['prefix_final_norm']}.weight", tl.get("ln_final.w"))
+    put(f"{arch_cfg['prefix_final_norm']}.bias", tl.get("ln_final.b"))
+    put(arch_cfg["prefix_lm_head"], tl["unembed.W_U"].T / logit_scale)
+
+    for layer in range(cfg.n_layers):
+        b = f"blocks.{layer}"
+
+        def key(param: str) -> str:
+            return _hf_weight_key(arch_cfg, layer, param)
+
+        for n in ("1", "2"):
+            put(key(f"ln{n}_weight"), tl.get(f"{b}.ln{n}.w"))
+            put(key(f"ln{n}_bias"), tl.get(f"{b}.ln{n}.b"))
+        w_q, b_q = tl[f"{b}.attn.W_Q"], tl[f"{b}.attn.b_Q"]
+        w_k = tl.get(f"{b}.attn._W_K", tl.get(f"{b}.attn.W_K"))
+        w_v = tl.get(f"{b}.attn._W_V", tl.get(f"{b}.attn.W_V"))
+        b_k = tl.get(f"{b}.attn._b_K", tl.get(f"{b}.attn.b_K"))
+        b_v = tl.get(f"{b}.attn._b_V", tl.get(f"{b}.attn.b_V"))
+        w_o = tl[f"{b}.attn.W_O"]
+        if conv1d:
+            put(
+                key("attn_qkv_weight"),
+                t.cat([einops.rearrange(w, "n m h -> m (n h)") for w in (w_q, w_k, w_v)], dim=1),
+            )
+            put(key("attn_qkv_bias"), t.cat([x.flatten() for x in (b_q, b_k, b_v)]))
+            put(key("attn_o_weight"), einops.rearrange(w_o, "n h m -> (n h) m"))
+            put(key("mlp_in_weight"), tl[f"{b}.mlp.W_in"])
+            put(key("mlp_down_weight"), tl[f"{b}.mlp.W_out"])
+        else:
+            for name, w, bias in (("q", w_q, b_q), ("k", w_k, b_k), ("v", w_v, b_v)):
+                put(key(f"attn_{name}_weight"), einops.rearrange(w, "n m h -> (n h) m"))
+                put(key(f"attn_{name}_bias"), bias.flatten())
+            put(key("attn_o_weight"), einops.rearrange(w_o, "n h m -> m (n h)"))
+            put(key("mlp_gate_weight"), tl[f"{b}.mlp.W_gate"].T)
+            put(key("mlp_up_weight"), tl[f"{b}.mlp.W_in"].T)
+            put(key("mlp_down_weight"), tl[f"{b}.mlp.W_out"].T)
+        put(key("attn_o_bias"), tl.get(f"{b}.attn.b_O"))
+        put(key("mlp_in_bias"), tl.get(f"{b}.mlp.b_in"))
+        put(key("mlp_down_bias"), tl.get(f"{b}.mlp.b_out"))
+    return out
+
+
+def _tl_round_trip_mismatches(model: HookedTransformer, hf_model: Any, hf_repo_id: str) -> List[str]:
+    """TL parameters that TL's own HF->TL converter does not reproduce from ``hf_model``."""
+    from transformer_lens.loading_from_pretrained import get_pretrained_state_dict
+
+    tl = model.state_dict()
+    back = get_pretrained_state_dict(hf_repo_id, model.cfg, hf_model=hf_model, dtype=model.cfg.dtype)
+    bad = []
+    for k, v in back.items():
+        if k in tl:
+            rtol = 4 * t.finfo(tl[k].dtype).eps  # Cohere's W_U / logit_scale * logit_scale
+            if not t.allclose(v.float().cpu(), tl[k].float().cpu(), rtol=rtol, atol=0.0):
+                bad.append(k)
+    if "unembed.b_U" in tl and "unembed.b_U" not in back and tl["unembed.b_U"].any():
+        bad.append("unembed.b_U")  # HF lm_head has no bias
+    return bad
+
+
+def _write_current_weights(model: HookedTransformer, hf_model: Any, arch_cfg: dict, hf_repo_id: str) -> Optional[str]:
+    """Copy the model's current weights into ``hf_model``; return why not, or ``None``."""
+    arch = model.cfg.original_architecture
+    if arch not in CURRENT_WEIGHTS_ARCHS:
+        return f"no TransformerLens->HF weight converter for {arch}"
+    if str(model.cfg.normalization_type).endswith("Pre"):
+        return (
+            "the model was loaded with fold_ln=True, whose folded weights have no HF "
+            "equivalent; load it with circuitkit.load_model (no weight processing) or "
+            "HookedTransformer.from_pretrained_no_processing"
+        )
+    sd = hf_model.state_dict()
+    new = tl_to_hf_state_dict(model, arch_cfg, sd, getattr(hf_model.config, "logit_scale", 1.0))
+    lm, emb = arch_cfg["prefix_lm_head"], arch_cfg["prefix_embed"]
+    if lm in new and emb in new and sd[lm].data_ptr() == sd[emb].data_ptr():  # tied in HF
+        rtol = 4 * t.finfo(new[emb].dtype).eps
+        if t.allclose(new[lm].to(new[emb]), new[emb], rtol=rtol, atol=0.0):
+            del new[lm]  # still tied: keep the embedding exact
+        else:  # an edit touched only one side: untie
+            hf_model.config.tie_word_embeddings = False
+            hf_model.get_output_embeddings().weight = t.nn.Parameter(
+                t.empty_like(sd[lm]), requires_grad=False  # filled below
+            )
+            sd = hf_model.state_dict()
+    with t.no_grad():
+        for k, v in new.items():
+            sd[k].copy_(v.to(device=sd[k].device, dtype=sd[k].dtype))
+    bad = _tl_round_trip_mismatches(model, hf_model, hf_repo_id)
+    if bad:
+        return f"these weights have no HF equivalent for {arch}: {bad[:5]}"
+    return None
 
 
 def expected_zero_keys(
@@ -514,34 +652,44 @@ def save_pruned_checkpoint(
     output_path: str,
     *,
     overwrite: bool = False,
+    weights: str = "auto",
 ) -> str:
     """Apply pruning, convert to HF format, save safetensors + config.
 
     The HF checkpoint is a real ``AutoModelForCausalLM``-compatible directory,
     loadable by ``HFLM(pretrained=output_path, tokenizer=...)`` or any HF
-    inference tool.
+    inference tool. A ``lexsi_provenance.json`` is written next to it.
 
-    Note on TransformerLens preprocessing: TL folds LayerNorm into attention
-    weights (``fold_ln``) by default, which alters weight values. This function
-    loads the **original** HuggingFace weights (identical to what
-    ``HookedTransformer.from_pretrained_no_processing`` returns) and prunes
-    those directly. The result is a checkpoint with the same components
-    (heads / MLPs) zeroed, evaluated at the HF level. For exact parity with
-    TL's pruned model, use ``from_pretrained_no_processing`` in your discovery
-    pipeline as well, or compare faithfulness deltas (which are directionally
-    consistent).
+    Which weights are written (``weights``):
+
+    * ``"current"``: the model's **current** HookedTransformer weights, converted
+      back to the HF layout, so ROME / MEMIT edits and weight steering survive.
+      Supported for :data:`CURRENT_WEIGHTS_ARCHS` on models loaded without
+      ``fold_ln`` (``circuitkit.load_model`` does that by default). Every exported
+      tensor is checked by converting it back with TransformerLens's own loader;
+      anything that does not round-trip raises ``ValueError``.
+    * ``"original"``: the original Hugging Face weights. Only the pruning below
+      is applied; any other change made to the model is not exported.
+    * ``"auto"`` (default): ``"current"`` when possible, else ``"original"`` with a
+      warning that says why.
+
+    The pruning artifact is then applied on top by zeroing the pruned heads /
+    MLPs in the HF weights.
 
     Args:
-        model: The HookedTransformer model. Used only for architecture config
-            (``model.cfg.original_architecture``) and tokenizer name.
+        model: The HookedTransformer model.
         pruned_artifact: Node-level ``["A0.0", "MLP 1", ...]`` or neuron-level
-            ``{"mlp": {0: [1,2,3]}, "attn": {(0,0): [4,5,6]}}``.
+            ``{"mlp": {0: [1,2,3]}, "attn": {(0,0): [4,5,6]}}``. ``[]`` exports
+            without pruning (e.g. an edited model).
         output_path: Directory to write the checkpoint into.
         overwrite: If True, remove ``output_path`` first if it exists.
+        weights: ``"auto"``, ``"current"`` or ``"original"`` (see above).
 
     Returns:
         ``output_path`` for chaining.
     """
+    if weights not in ("auto", "current", "original"):
+        raise ValueError(f"weights must be 'auto', 'current' or 'original', got {weights!r}")
     if os.path.exists(output_path):
         if overwrite:
             shutil.rmtree(output_path)
@@ -568,6 +716,21 @@ def save_pruned_checkpoint(
     # *ForCausalLM class so the state dict is a flat model.layers.* layout with
     # no vision tower — exactly what the pruning surgery below expects.
     hf_model = _load_causal_lm(hf_repo_id, dtype=model_dtype)
+    if weights != "original":
+        problem = _write_current_weights(model, hf_model, arch_cfg, hf_repo_id)
+        if problem and weights == "current":
+            raise ValueError(f"Cannot export the current weights: {problem}.")
+        if problem:
+            warnings.warn(
+                f"Exporting the original Hugging Face weights plus the pruning mask: {problem}. "
+                "Any other change made to the model (ROME/MEMIT edits, weight steering) is "
+                "not in this checkpoint.",
+                stacklevel=2,
+            )
+            hf_model = _load_causal_lm(hf_repo_id, dtype=model_dtype)  # drop partial writes
+            weights = "original"
+        else:
+            weights = "current"
     state_dict = dict(hf_model.state_dict())
 
     n_heads = model.cfg.n_heads
@@ -626,6 +789,15 @@ def save_pruned_checkpoint(
     # so a downstream server (vLLM) can load them; no-op for text-only models.
     _copy_processor_configs(hf_repo_id, output_path)
 
+    write_provenance(
+        output_path,
+        "export_checkpoint.pruning",
+        inputs=[model_input(model)],
+        params={
+            "weights": weights,
+            "pruned": pruned_artifact if isinstance(pruned_artifact, list) else "neuron-level",
+        },
+    )
     return output_path
 
 
@@ -822,12 +994,16 @@ def save_quantized_checkpoint(
     # before touching optimum-quanto so a compressed-tensors model never falls
     # into the quanto path.
     if _has_compressed_tensors_modules(hf_model):
-        return save_compressed_tensors_checkpoint(
+        save_compressed_tensors_checkpoint(
             hf_model,
             output_path,
             tokenizer_name=tokenizer_name,
             overwrite=overwrite,
         )
+        write_provenance(
+            output_path, "export_checkpoint.quantization", inputs=[model_input(hf_model)]
+        )
+        return output_path
 
     if os.path.exists(output_path):
         if overwrite:
@@ -903,6 +1079,7 @@ def save_quantized_checkpoint(
         # configs so a downstream server (vLLM) can load them.
         _copy_processor_configs(tokenizer_name, output_path)
 
+    write_provenance(output_path, "export_checkpoint.quantization", inputs=[model_input(hf_model)])
     return output_path
 
 

@@ -28,7 +28,7 @@ def export_circuit_artifact(
 
     Converts ACDC's internal prune_scores representation to the unified
     CircuitArtifact schema for compatibility with interventions and
-    other CircuitKit modules.
+    other CircuitKIT modules.
 
     Args:
         prune_scores: Dictionary mapping module names to edge importance tensors

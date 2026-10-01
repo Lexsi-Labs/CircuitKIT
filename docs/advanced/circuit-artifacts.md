@@ -131,7 +131,7 @@ print(nodes[:10])  # list[str], e.g. ['A0.1', 'A2.3', 'MLP 5', ...]
 
 ## The CircuitArtifact Schema (Research)
 
-For research use, CircuitKit also provides a `CircuitArtifact` class that supports JSON serialization, graph queries, and validation:
+For research use, CircuitKIT also provides a `CircuitArtifact` class that supports JSON serialization, graph queries, and validation:
 
 ```python
 from circuitkit.artifacts import eap_to_artifact, CircuitArtifact

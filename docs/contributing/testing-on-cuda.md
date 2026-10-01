@@ -1,6 +1,6 @@
 # Testing on a CUDA machine
 
-Some of CircuitKit's validation can't run on a CPU-only or Apple-Silicon box. The
+Some of CircuitKIT's validation can't run on a CPU-only or Apple-Silicon box. The
 `gpu-cu126` extra pins `torch==2.6.0+cu126` / `torchvision==0.21.0+cu126`, and those
 `+cu126` wheels only exist on PyTorch's CUDA index — not on PyPI — so a plain
 `uv`/`pip` resolve fails off a CUDA host with *"no version of torch==2.6.0+cu126"*.
@@ -13,7 +13,7 @@ any config key — on a CUDA box the same code runs on the GPU.
 ## 1. Install on the CUDA box
 
 Pick the toolchain you use. Both install CUDA 12.6 torch from PyTorch's index first,
-then CircuitKit with the extras you need.
+then CircuitKIT with the extras you need.
 
 === "uv"
 

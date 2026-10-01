@@ -1,5 +1,5 @@
 """
-Unit tests for CircuitKit CLI.
+Unit tests for CircuitKIT CLI.
 """
 
 from click.testing import CliRunner
@@ -19,7 +19,7 @@ class TestCLI:
         """Test CLI help command."""
         result = self.runner.invoke(cli, ["--help"])
         assert result.exit_code == 0
-        assert "CircuitKit" in result.output
+        assert "CircuitKIT" in result.output
 
     def test_discover_help(self):
         """Test discover command help."""

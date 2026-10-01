@@ -67,4 +67,4 @@ Add any other context about the PR here (screenshots, performance metrics, etc.)
 
 ---
 
-**Thank you for your contribution to CircuitKit!**
+**Thank you for your contribution to CircuitKIT!**

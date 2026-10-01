@@ -1,5 +1,5 @@
 """
-Debugging commands for CircuitKit CLI.
+Debugging commands for CircuitKIT CLI.
 """
 
 import json
@@ -24,7 +24,7 @@ logger = get_logger(__name__)
 
 @click.group()
 def debug():
-    """Debugging and profiling tools for CircuitKit."""
+    """Debugging and profiling tools for CircuitKIT."""
 
 
 @debug.command()
@@ -194,7 +194,7 @@ def logging(level, file):
 @click.option("--data", "-d", help="Data file to test")
 def test(model, data):
     """Run comprehensive functionality tests."""
-    console.print("[bold blue]Running CircuitKit functionality tests...[/bold blue]")
+    console.print("[bold blue]Running CircuitKIT functionality tests...[/bold blue]")
 
     # Test 1: Model loading and basic operations
     console.print("\n[cyan]Test 1: Model Loading and Basic Operations[/cyan]")
@@ -255,9 +255,9 @@ def test(model, data):
     # Test model loading
     if model:
         try:
-            from transformer_lens import HookedTransformer
+            from circuitkit.quick import _from_pretrained
 
-            HookedTransformer.from_pretrained(model, device="cpu")
+            _from_pretrained(model, device="cpu")
             console.print(f"[green]✓[/green] Model '{model}' loaded successfully")
         except Exception as e:
             console.print(f"[red]✗[/red] Model loading failed: {e}")

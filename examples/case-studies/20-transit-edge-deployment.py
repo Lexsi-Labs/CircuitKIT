@@ -5,7 +5,7 @@ Metro ticketing systems use ML for fare classification, passenger flow
 prediction, and anomaly detection. Models must run on low-power edge
 hardware at station gates with sub-100ms latency.
 
-CircuitKit compresses the model while preserving faithfulness, ensuring
+CircuitKIT compresses the model while preserving faithfulness, ensuring
 the edge-deployed model makes the same decisions as the full model.
 """
 

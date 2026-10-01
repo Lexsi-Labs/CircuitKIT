@@ -1,7 +1,7 @@
-"""CircuitKit refusal-ablation experiment for the EMNLP paper.
+"""CircuitKIT refusal-ablation experiment for the EMNLP paper.
 
 Following the spirit of Arditi et al. 2024 (refusal mediated by a
-single direction), but using CircuitKit's native ActivationSteering
+single direction), but using CircuitKIT's native ActivationSteering
 wrapper restricted to a discovered circuit, rather than the C-DeltaTheta
 weight-steering pipeline (which is the separate NeurIPS submission).
 

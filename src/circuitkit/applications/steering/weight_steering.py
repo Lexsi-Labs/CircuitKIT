@@ -188,9 +188,11 @@ class CircuitWeightSteering:
             f"(top_k_frac={top_k_frac})",
         )
 
-        # Lazy: only compute when fine-tune called.
-        self._pos_model: Optional[HookedTransformer] = None
-        self._neg_model: Optional[HookedTransformer] = None
+        # Lazy: only compute when fine-tune called. Only the per-head slices are
+        # kept (on CPU), not the fine-tuned models, so at most one full copy
+        # of the model is alive during a fine-tune.
+        self._pos_slices: Optional[Dict[str, Dict[str, torch.Tensor]]] = None
+        self._neg_slices: Optional[Dict[str, Dict[str, torch.Tensor]]] = None
         self._steering_vector: Optional[Dict[str, Dict[str, torch.Tensor]]] = None
 
     # ----- fine-tuning -------------------------------------------------
@@ -236,8 +238,12 @@ class CircuitWeightSteering:
                     torch.nn.utils.clip_grad_norm_(params_to_train, grad_clip)
                 optim.step()
                 step += 1
+        m.zero_grad(set_to_none=True)
         m.eval()
         return m
+
+    def _head_slices(self, model: HookedTransformer) -> Dict[str, Dict[str, torch.Tensor]]:
+        return {name: get_head_weight_slice(model, name) for name in self.head_names}
 
     def fine_tune_positive(
         self,
@@ -250,9 +256,10 @@ class CircuitWeightSteering:
         grad_clip: Optional[float] = 1.0,
     ) -> HookedTransformer:
         """Fine-tune a copy of the target on the positive dataset; per-head
-        slices only. Returns the fine-tuned model and stores it
-        internally for ``compute_steering_vector``."""
-        self._pos_model = self._fine_tune(
+        slices only. Returns the fine-tuned model; only its per-head slices are
+        stored internally for ``compute_steering_vector``, so the model is freed
+        once the caller drops it."""
+        model = self._fine_tune(
             dataloader,
             loss_fn,
             n_steps=n_steps,
@@ -260,7 +267,8 @@ class CircuitWeightSteering:
             weight_decay=weight_decay,
             grad_clip=grad_clip,
         )
-        return self._pos_model
+        self._pos_slices = self._head_slices(model)
+        return model
 
     def fine_tune_negative(
         self,
@@ -273,7 +281,7 @@ class CircuitWeightSteering:
         grad_clip: Optional[float] = 1.0,
     ) -> HookedTransformer:
         """Same shape as fine_tune_positive but on the negative dataset."""
-        self._neg_model = self._fine_tune(
+        model = self._fine_tune(
             dataloader,
             loss_fn,
             n_steps=n_steps,
@@ -281,7 +289,8 @@ class CircuitWeightSteering:
             weight_decay=weight_decay,
             grad_clip=grad_clip,
         )
-        return self._neg_model
+        self._neg_slices = self._head_slices(model)
+        return model
 
     # ----- steering vector --------------------------------------------
 
@@ -292,15 +301,15 @@ class CircuitWeightSteering:
             {head_name: {"W_Q": tensor, "W_K": tensor, ..., "W_O": tensor}}
             where each tensor is the per-head slice difference.
         """
-        if self._pos_model is None or self._neg_model is None:
+        if self._pos_slices is None or self._neg_slices is None:
             raise RuntimeError(
                 "Run fine_tune_positive AND fine_tune_negative before "
                 "computing the steering vector.",
             )
         steering: Dict[str, Dict[str, torch.Tensor]] = {}
         for name in self.head_names:
-            pos = get_head_weight_slice(self._pos_model, name)
-            neg = get_head_weight_slice(self._neg_model, name)
+            pos = self._pos_slices[name]
+            neg = self._neg_slices[name]
             head_steering = {}
             for k in pos.keys():
                 if k in neg:

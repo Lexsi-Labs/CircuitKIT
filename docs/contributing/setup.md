@@ -27,7 +27,7 @@ For GPU development:
 pip install -e ".[dev,docs,gpu-cu126]"
 ```
 
-The `dev` extra installs `pytest`, `pytest-cov`, `black`, `isort`, `flake8`, `mypy`, and `pre-commit`. There is no `ruff` dependency — CircuitKit's toolchain is black + isort + flake8 + mypy. The `docs` extra installs MkDocs and plugins.
+The `dev` extra installs `pytest`, `pytest-cov`, `black`, `isort`, `flake8`, `mypy`, and `pre-commit`. There is no `ruff` dependency — CircuitKIT's toolchain is black + isort + flake8 + mypy. The `docs` extra installs MkDocs and plugins.
 
 ---
 
@@ -64,7 +64,7 @@ Test markers:
 
 ## Linting and Type Checking
 
-Ruff is not part of this toolchain — CircuitKit uses black, isort, flake8, and mypy:
+Ruff is not part of this toolchain — CircuitKIT uses black, isort, flake8, and mypy:
 
 ```bash
 # Format

@@ -1,22 +1,25 @@
 .PHONY: help install install-dev test lint format clean build docs
 
 help: ## Show this help message
-	@echo "CircuitKit Development Commands"
+	@echo "CircuitKIT Development Commands"
 	@echo "=============================="
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-install: ## Install CircuitKit in development mode
+install: ## Install CircuitKIT in development mode
 	pip install -e .
 
-install-dev: ## Install CircuitKit with development dependencies
+install-dev: ## Install CircuitKIT with development dependencies
 	pip install -e .[dev]
 	pre-commit install
 
 test: ## Run tests
 	pytest tests/ -v --cov=src/circuitkit --cov-report=term-missing
 
-test-fast: ## Run tests without coverage
-	pytest tests/ -v -x
+test-fast: ## Run tests without coverage, excluding slow/GPU/network-gated tests
+	pytest tests/ -v -x -m "not slow"
+
+check-env: ## Verify the multi-model integration environment contract (TL/transformers/support libs, GPU info)
+	pytest tests/test_environment.py -v
 
 lint: ## Run linting checks
 	flake8 src/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics

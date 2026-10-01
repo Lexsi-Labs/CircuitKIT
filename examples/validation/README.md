@@ -1,6 +1,14 @@
+<!-- circuitkit-logo -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../docs/assets/circuitkit-logo-white.png">
+    <img src="../../docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+  </picture>
+</p>
+
 # Real validation suite
 
-End-to-end validation scripts that run actual CircuitKit pipelines on real
+End-to-end validation scripts that run actual CircuitKIT pipelines on real
 models. Not unit tests — these verify features work on real hardware.
 
 ## Structure

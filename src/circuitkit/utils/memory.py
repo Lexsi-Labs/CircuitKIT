@@ -1,10 +1,10 @@
 """
-Memory optimization utilities for CircuitKit.
+Memory optimization utilities for CircuitKIT.
 Provides memory-efficient configurations and helpers.
 """
 
 import gc
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import torch
 
@@ -97,8 +97,15 @@ def get_memory_efficient_config(model_name: str, algorithm: str = "eap-ig") -> D
     return config
 
 
-def optimize_memory_usage():
-    """Apply memory optimization settings."""
+def optimize_memory_usage(device: Optional[int] = None, max_fraction: float = 0.8) -> None:
+    """Apply memory optimization settings.
+
+    Args:
+        device: CUDA device index. ``None`` (default) uses the current device.
+        max_fraction: Upper bound on the fraction of the device's TOTAL memory
+            this process may allocate. Defaults to 0.8 (prior behavior's fixed
+            value, now used as a ceiling rather than an unconditional setting).
+    """
     # Clear CUDA cache
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
@@ -107,11 +114,29 @@ def optimize_memory_usage():
     # Force garbage collection
     gc.collect()
 
-    # Set memory fraction if needed
     if torch.cuda.is_available():
-        torch.cuda.set_per_process_memory_fraction(0.8)
-
-    logger.info("Applied memory optimizations")
+        # A flat 0.8 caps this process regardless of what else is running on
+        # the device: on a shared GPU where other processes already hold, say,
+        # 60% of it, a flat 0.8 still lets this process try to claim up to 80%
+        # of TOTAL memory -- colliding with those other tenants well before
+        # hitting its own quota, while doing nothing useful on an idle GPU it
+        # has entirely to itself. Scale the cap by what is actually free right
+        # now (already-used memory plus a safety-margined slice of the rest),
+        # never exceeding max_fraction.
+        free_bytes, total_bytes = torch.cuda.mem_get_info(device)
+        reserved_by_us = torch.cuda.memory_reserved(device)
+        already_used_fraction = max(0.0, (total_bytes - free_bytes - reserved_by_us) / total_bytes)
+        # Never ask for less than what's already committed to this device --
+        # min() alone could undershoot already_used_fraction once it exceeds
+        # max_fraction, which set_per_process_memory_fraction cannot honor.
+        fraction = max(
+            already_used_fraction,
+            min(max_fraction, already_used_fraction + 0.9 * (free_bytes / total_bytes)),
+        )
+        torch.cuda.set_per_process_memory_fraction(fraction, device)
+        logger.info(f"Applied memory optimizations (per-process fraction capped at {fraction:.2f})")
+    else:
+        logger.info("Applied memory optimizations (no CUDA device)")
 
 
 def get_available_memory() -> Dict[str, float]:

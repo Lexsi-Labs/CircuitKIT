@@ -1,6 +1,6 @@
 # Evaluation
 
-CircuitKit evaluates circuit faithfulness with a **6-pillar framework**. Each pillar tests a different property; together they show whether the discovered subgraph actually explains the model's behaviour.
+CircuitKIT evaluates circuit faithfulness with a **6-pillar framework**. Each pillar tests a different property; together they show whether the discovered subgraph actually explains the model's behaviour.
 
 ## Quick start
 

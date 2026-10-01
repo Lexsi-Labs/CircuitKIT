@@ -1,0 +1,129 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Pratinav Seth <pratinav.seth@lexsi.ai>
+Date: Sat, 26 Sep 2026 22:31:20 +0530
+Subject: [PATCH 5/5] memory: contract W_O by einsum; drop .T.contiguous()
+ copies
+
+Avoids the [batch,pos,head,d_head,d_model] intermediate in attention and the
+per-forward weight copies in GatedMLP/Unembed (confirmed OOM sites on
+Gemma-4-31B). Changes bf16 accumulation order for EVERY model: logits are no
+longer bit-identical to HF. Optional; drop this patch to keep upstream parity.
+
+diff --git a/transformer_lens/components/abstract_attention.py b/transformer_lens/components/abstract_attention.py
+index 6e6b613..e016d3a 100644
+--- a/transformer_lens/components/abstract_attention.py
++++ b/transformer_lens/components/abstract_attention.py
+@@ -427,22 +427,32 @@ class AbstractAttention(ABC, nn.Module):
+                     )
+                 )
+             else:
+-                # Add singleton dimensions to make shapes compatible for broadcasting:
+-                w = einops.rearrange(
+-                    self.W_O,
+-                    "head_index d_head d_model -> 1 1 head_index d_head d_model",
+-                )
++                # Contract the d_head dimension directly via einsum, rather
++                # than broadcasting z and W_O up to a shared
++                # [batch, pos, head_index, d_head, d_model] shape and
++                # summing -- that intermediate is mathematically discarded
++                # immediately (only its reduction over d_head is kept), but
++                # PyTorch must still materialize it in full first. At large
++                # d_model (Gemma-4: 5376, vs. ~4096 for most models this
++                # shipped against) and n_heads (32) it is genuinely huge
++                # (batch * pos * head_index * d_head * d_model elements) and
++                # was a direct, confirmed cause of a CUDA OOM (the crash was
++                # exactly this line, found by actually running circuit
++                # discovery, not by profiling). einsum computes the
++                # identical per-head result without ever forming it.
++                w = self.W_O
+                 if w.device != z.device:
+                     w = w.to(z.device)
+                 # Ensure z has the same dtype as w before multiplication
+                 if z.dtype != w.dtype:
+                     z = z.to(w.dtype)
+-                z = einops.rearrange(
+-                    z, "batch pos head_index d_head -> batch pos head_index d_head 1"
++                unhooked_result = einops.einsum(
++                    z,
++                    w,
++                    "batch pos head_index d_head, head_index d_head d_model "
++                    "-> batch pos head_index d_model",
+                 )
+ 
+-                unhooked_result = (z * w).sum(-2)
+-
+                 result = self.hook_result(unhooked_result)  # [batch, pos, head_index, d_model]
+             out = (
+                 einops.reduce(result, "batch position index model->batch position model", "sum")
+diff --git a/transformer_lens/components/mlps/gated_mlp.py b/transformer_lens/components/mlps/gated_mlp.py
+index b19f6e3..efefc02 100644
+--- a/transformer_lens/components/mlps/gated_mlp.py
++++ b/transformer_lens/components/mlps/gated_mlp.py
+@@ -50,12 +50,26 @@ class GatedMLP(CanBeUsedAsMLP):
+     def forward(
+         self, x: Float[torch.Tensor, "batch pos d_model"]
+     ) -> Float[torch.Tensor, "batch pos d_model"]:
+-        # Use F.linear with contiguous transposed weights to match HF's nn.Linear
+-        # memory layout. In bfloat16, matmul accumulation order depends on tensor
+-        # contiguity, so matching HF's layout ensures numerically identical results.
++        # NOTE: upstream calls .T.contiguous() here (and on W_in/W_out below)
++        # to match HF's nn.Linear memory layout for exact bf16 numerical
++        # parity (matmul accumulation order can depend on contiguity). That
++        # materializes a full fresh [d_model, d_mlp] copy of each weight
++        # matrix on every forward call, at every layer -- at Gemma-4's scale
++        # (d_mlp=21504, far larger than most models this shipped against)
++        # that is genuinely large and was a confirmed, exact CUDA OOM site
++        # (found by actually running circuit discovery, not by profiling),
++        # on top of an already ~64.6GB base footprint for a 31B model on an
++        # 80GB card. Dropped .contiguous() here: F.linear/matmul are
++        # numerically correct on a non-contiguous transposed view regardless
++        # (just a transposed view, no copy), so this trades HF's exact bf16
++        # accumulation-order parity for actually fitting in memory -- an
++        # acceptable trade for EAP-IG's approximate attribution ranking,
++        # which does not depend on bit-exact logits. Do not assume this is
++        # still bit-identical to HF's forward pass if reusing this vendored
++        # copy for something that needs that guarantee.
+         if self.W_gate.device != x.device:
+             x = x.to(self.W_gate.device)
+-        pre_act = self.hook_pre(F.linear(x, self.W_gate.T.contiguous()))  # [batch, pos, d_mlp]
++        pre_act = self.hook_pre(F.linear(x, self.W_gate.T))  # [batch, pos, d_mlp]
+ 
+         if (
+             self.cfg.is_layer_norm_activation()
+@@ -66,11 +80,11 @@ class GatedMLP(CanBeUsedAsMLP):
+             post_act = self.hook_post(self.ln(mid_act))
+         else:
+             pre_linear = self.hook_pre_linear(
+-                F.linear(x, self.W_in.T.contiguous())  # [batch, pos, d_mlp]
++                F.linear(x, self.W_in.T)  # [batch, pos, d_mlp]
+             )
+ 
+             post_act = self.hook_post(
+                 (self.act_fn(pre_act) * pre_linear) + self.b_in
+             )  # [batch, pos, d_mlp]
+ 
+-        return F.linear(post_act, self.W_out.T.contiguous(), self.b_out)
++        return F.linear(post_act, self.W_out.T, self.b_out)
+diff --git a/transformer_lens/components/unembed.py b/transformer_lens/components/unembed.py
+index 4ffa3df..d120bd9 100644
+--- a/transformer_lens/components/unembed.py
++++ b/transformer_lens/components/unembed.py
+@@ -34,7 +34,15 @@ class Unembed(nn.Module):
+         self, residual: Float[torch.Tensor, "batch pos d_model"]
+     ) -> Float[torch.Tensor, "batch pos d_vocab_out"]:
+         residual = self.hook_in(residual)
+-        # Use F.linear with contiguous transposed weight to match HF's nn.Linear
+-        # memory layout, ensuring identical bfloat16 matmul accumulation order.
+-        result = F.linear(residual, self.W_U.T.contiguous(), self.b_U)
++        # NOTE: upstream calls .T.contiguous() here for exact bf16 numerical
++        # parity with HF's nn.Linear (see the same tradeoff documented in
++        # gated_mlp.py). W_U is [d_model, d_vocab_out] -- at Gemma-4's scale
++        # (d_vocab_out=262144) that is a ~2.8GB (bf16) transient copy on
++        # every forward call, on top of an already near-capacity 31B-model
++        # footprint. Dropped for the same reason as gated_mlp.py: a
++        # non-contiguous transposed view is numerically correct for
++        # F.linear/matmul regardless, just not bit-identical to HF's
++        # accumulation order -- an acceptable trade for EAP-IG's approximate
++        # attribution ranking.
++        result = F.linear(residual, self.W_U.T, self.b_U)
+         return self.hook_out(result)

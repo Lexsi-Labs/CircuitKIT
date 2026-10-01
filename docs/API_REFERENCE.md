@@ -1,13 +1,13 @@
-# CircuitKit API Reference v1.0.0
+# CircuitKIT API Reference v1.0.0
 
-Reference for CircuitKit's public API. For conceptual background see
+Reference for CircuitKIT's public API. For conceptual background see
 [`docs/guides/CONCEPTS.md`](../guides/CONCEPTS.md); for runnable examples see
 [`docs/tutorials/`](docs/tutorials/).
 
 > **External libraries.** Application scripts that wrap standard ML methods delegate to
 > upstream libraries: ROME / MEMIT knowledge editing can run through
 > [EasyEdit](https://github.com/zjunlp/EasyEdit), and LoRA-based healing uses
-> [PEFT](https://github.com/huggingface/peft). CircuitKit's own code handles circuit
+> [PEFT](https://github.com/huggingface/peft). CircuitKIT's own code handles circuit
 > discovery, faithfulness evaluation, and circuit-guided target selection.
 
 ---
@@ -90,7 +90,7 @@ Load a previously saved circuit artifact from disk.
 
 **Module**: `circuitkit.quick` (re-exported from `circuitkit`, lazily imported)
 
-For object-oriented use without config dicts, CircuitKit exposes a flat typed API at the
+For object-oriented use without config dicts, CircuitKIT exposes a flat typed API at the
 package root. These functions take and return Python objects directly (a loaded model, a
 `Circuit`) instead of a config dict + artifact path:
 
@@ -113,7 +113,7 @@ of the same pipeline; pick whichever fits your workflow.
 
 **Module**: `circuitkit.backends`
 
-CircuitKit ships **13 discovery algorithms** across 4 backends (EAP, ACDC, IBCircuit,
+CircuitKIT ships **13 discovery algorithms** across 4 backends (EAP, ACDC, IBCircuit,
 CD-T). Each algorithm has an explicit stability tier. The stability map is the single
 source of truth in `src/circuitkit/backends/__init__.py`.
 
@@ -139,8 +139,8 @@ STABILITY["relp"]         # "research"
 algorithm is requested.
 
 > Note: `STABILITY` also includes selector/baseline keys (`random`, `magnitude`,
-> `taylor`, `wanda`, `gptq`, `awq`, `tacq`, `multi_granular`) used by the
-> compression selectors — these are *not* discovery algorithms. The 13 discovery
+> `taylor`, `wanda`, `multi_granular`, `sparsegpt`, `gptq`, `awq`, `tacq`) used by the
+> compression selectors and baselines — these are *not* discovery algorithms. The 13 discovery
 > algorithms are the ones listed in the table above (the `DISCOVERY_ALGORITHMS`
 > frozenset exported from `circuitkit.backends`).
 

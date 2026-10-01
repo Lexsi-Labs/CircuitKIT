@@ -1,0 +1,116 @@
+"""Group F — gated real-weight evaluation regression for Command R7B (cohere2).
+
+Stage 5 (interventions & evaluation validation): proves the second of the
+three required CircuitKIT surfaces -- discovery (Stage 2) and interventions
+(``test_command_r7b_interventions.py``) are the other two -- by running
+circuit *evaluation* (faithfulness) on a real discovered circuit.
+
+Runs ``cdt`` discovery (already validated for this model in
+``test_command_r7b_discovery.py``) on ``greater_than``, then evaluates the
+resulting circuit's faithfulness via ``circuitkit.api.evaluate_circuit`` and
+asserts the returned ``FaithfulnessReport``'s
+``patching_score``/``ablation_score`` are present and finite.
+
+Double-load avoidance (the OOM audit's Stage 5 instruction): the model is
+loaded exactly ONCE via ``HookedTransformer.from_pretrained`` and the same
+handle is threaded through both ``discover_circuit(..., _model=model)`` and
+``evaluate_circuit(..., _model=model)``. Without the explicit ``_model=``
+handle, ``evaluate_circuit`` would call ``HookedTransformer.from_pretrained``
+internally a second time, loading a second full ~7B copy of the checkpoint.
+
+Note on ``evaluate_circuit``'s own qkv-flag cost: unlike ``discover_circuit``
+(which only sets ``use_attn_result``/``use_split_qkv_input``/
+``use_hook_mlp_in`` for the EAP-family algorithms), ``evaluate_circuit``
+*unconditionally* sets all three before calling ``run_full_faithfulness`` --
+regardless of which algorithm produced the circuit -- because
+``evaluate_graph``'s per-edge ablation hooks need them. On a 7B model this is
+the same qkv-flag activation shape that needed the CPU fallback for
+EAP-family discovery (see ``test_command_r7b_discovery.py`` / the Stage 2/3
+progress notes); however here the evaluation batch/example counts are tiny
+(batch_size=2, 4 examples, short greater_than prompts), which was verified
+empirically to fit on a single 47GB GPU without the CPU fallback needed by
+the much larger discovery-time EAP attribution pass. If a future run of this
+test OOMs on GPU, apply the same established fallback:
+``CUDA_VISIBLE_DEVICES="" pytest ...`` (forces CPU, slower but works, per the
+Stage 2/3 progress notes).
+
+Gating mirrors ``test_command_r7b_discovery.py``: opt in with
+``CIRCUITKIT_RUN_COMMAND_R7B=1`` and provide ``HF_TOKEN``. Marked ``slow``.
+
+    CIRCUITKIT_RUN_COMMAND_R7B=1 HF_TOKEN=... \
+        python -m pytest tests/regression/test_command_r7b_evaluation.py -v
+"""
+
+from __future__ import annotations
+
+import math
+import os
+
+import pytest
+import torch
+
+MODEL_NAME = "CohereLabs/c4ai-command-r7b-12-2024"
+
+_OPT_IN = os.environ.get("CIRCUITKIT_RUN_COMMAND_R7B", "").strip().lower() not in (
+    "",
+    "0",
+    "false",
+    "no",
+)
+_HAS_TOKEN = bool(os.environ.get("HF_TOKEN"))
+
+pytestmark = [
+    pytest.mark.slow,
+    pytest.mark.skipif(
+        not (_OPT_IN and _HAS_TOKEN),
+        reason=(
+            "real-weight Command R7B evaluation: set CIRCUITKIT_RUN_COMMAND_R7B=1 "
+            "and HF_TOKEN to run (loads a ~7B checkpoint once, shared across "
+            "discovery + evaluation)"
+        ),
+    ),
+]
+
+
+def test_faithfulness_report_is_finite_on_greater_than(tmp_path):
+    from transformer_lens import HookedTransformer
+
+    from circuitkit.api import discover_circuit, evaluate_circuit
+    from circuitkit.evaluation.report import FaithfulnessReport
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = HookedTransformer.from_pretrained(MODEL_NAME, device=device, dtype=torch.bfloat16)
+    try:
+        out = tmp_path / "cdt.pt"
+        cache_dir = str(tmp_path / "cache")
+        cfg = {
+            "model": {"name": MODEL_NAME, "precision": "bfloat16"},
+            "discovery": {
+                "algorithm": "cdt",
+                "task": "greater_than",
+                "level": "node",
+                "batch_size": 2,
+                "data_params": {"num_examples": 4, "seed": 42, "cache_dir": cache_dir},
+                "cache_dir": cache_dir,
+            },
+            "pruning": {"target_sparsity": 0.3, "scope": "heads"},
+            "eval": {"pillars": ["patching", "ablation"], "num_examples": 4},
+            "output_path": str(out),
+        }
+        discover_circuit(cfg, _model=model)
+
+        report = evaluate_circuit(cfg, pruned_artifact_path=str(out), _model=model)
+
+        assert isinstance(report, FaithfulnessReport)
+        assert report.patching_score is not None, "patching_score (Pillar 1) missing"
+        assert math.isfinite(
+            report.patching_score
+        ), f"patching_score is non-finite: {report.patching_score}"
+        assert report.ablation_score is not None, "ablation_score (Pillar 2) missing"
+        assert math.isfinite(
+            report.ablation_score
+        ), f"ablation_score is non-finite: {report.ablation_score}"
+    finally:
+        del model
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()

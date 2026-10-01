@@ -1,5 +1,5 @@
 """
-CircuitKit Scripts Module
+CircuitKIT Scripts Module
 
 Contains utility scripts for batch processing, benchmarking, and administrative tasks.
 """
