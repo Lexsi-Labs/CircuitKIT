@@ -44,7 +44,7 @@ def discover(algo: str, num_examples: int = 16) -> dict:
     t = time.time()
     discover_circuit(cfg)
     sidecar = artifact.parent / (artifact.stem + "_scores.json")
-    scores = json.loads(sidecar.read_text())["node_scores"]
+    scores = json.loads(sidecar.read_text(encoding="utf-8"))["node_scores"]
     return {
         "algorithm": algo,
         "wall_seconds": round(time.time() - t, 2),

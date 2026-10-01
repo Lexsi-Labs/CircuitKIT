@@ -121,7 +121,7 @@ def maybe_warn_worthiness(model_name: str, task: str) -> None:
         return
     latest = max(candidates, key=lambda p: p.stat().st_mtime)
     try:
-        rep = _json.loads(latest.read_text())
+        rep = _json.loads(latest.read_text(encoding="utf-8"))
         verdict = rep.get("verdict", "?")
         if verdict in ("RED", "YELLOW"):
             log.warning(

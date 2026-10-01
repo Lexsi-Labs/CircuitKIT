@@ -158,35 +158,50 @@ def _qkv_flags_enabled(model):
                 setattr(cfg, f, v)
 
 
-# EAP-family activation-headroom preflight. When triggered, throw at the point
-# of enabling the qkv flags instead of ~n_layers forwards later inside PyTorch's
-# allocator, which reports OOM without hint of the discovery pipeline cause.
-# Skipped on CPU (host RAM handles the blow-up gracefully) and for models under
-# _EAP_QKV_MEM_GUARD_MIN_GB of weights (small models have plenty of headroom).
+# EAP-family activation-headroom advisory. It warns before enabling qkv flags
+# but does not refuse a run: actual sequence lengths and allocator state vary,
+# so a preflight estimate must not block a model that can fit.
 _EAP_QKV_MEM_GUARD_ACTIVATION_MULT = 3.0
-_EAP_QKV_MEM_GUARD_MIN_GB = 1.0
 _EAP_QKV_MEM_GUARD_FREE_FRACTION = 0.95
 
 
-def _check_qkv_flag_memory_headroom(model, algo: str) -> None:
-    """Preflight VRAM guard for the EAP-family per-head activation blow-up.
+def _trust_remote_code_kwargs(model_cfg: Dict[str, Any]) -> Dict[str, Any]:
+    """Forward ``model.trust_remote_code`` to the loader, defaulting to off.
+
+    Sarvam-MoE ships its modeling code in the repository rather than in
+    ``transformers``, so loading it requires ``trust_remote_code=True``. The
+    YAML/dict config path had no way to say that even though ``load_model``
+    accepted it, which made Sarvam unloadable outside the quick API. Passing
+    this executes code from the model repository, so it is only forwarded when
+    explicitly enabled and never defaulted on.
+    """
+    if not model_cfg.get("trust_remote_code", False):
+        return {}
+    logger.warning(
+        "model.trust_remote_code is enabled: transformers will execute modeling "
+        "code from this repository. Only enable it for repositories you trust."
+    )
+    return {"trust_remote_code": True}
+
+
+def _check_qkv_flag_memory_headroom(
+    model, algo: str, *, batch_size: int = 1, seq_len: Optional[int] = None
+) -> None:
+    """Warn when EAP-family per-head activations may exceed free VRAM.
 
     Enabling ``use_attn_result`` / ``use_split_qkv_input`` / ``use_hook_mlp_in``
-    materialises per-head ``[batch, pos, n_heads, d_model]`` residual-stream
-    copies at every attention block, roughly multiplying per-layer activation
-    memory by ``n_heads``. For multi-billion-parameter checkpoints (tiny-aya
-    ``base`` = 3.35B bf16 ≈ 7 GB weights, Llama-3.2-3B, Gemma-2-9B, …) this
-    is the difference between running and OOMing mid-forward with a bare
-    allocator error that names no CircuitKIT call site.
-
-    Raises ``MemoryError`` with an actionable message when the estimated peak
-    (weights + ``_EAP_QKV_MEM_GUARD_ACTIVATION_MULT`` × weights headroom) does
-    not fit inside ``_EAP_QKV_MEM_GUARD_FREE_FRACTION`` of the current CUDA
-    device's free memory. No-op on CPU, on tiny models, or when parameters
-    cannot be enumerated.
+    materialise per-head activations across layers. Estimate that additional
+    allocation from the configured batch/sequence shape, model dimensions and
+    dtype—not parameter count. This is intentionally a warning, not a hard
+    guard: task token lengths and allocator behavior vary, and the estimate
+    should never reject a model that can run. Set
+    ``CIRCUITKIT_SKIP_MEM_GUARD=1`` to silence it. No-op on CPU or when the
+    model does not expose the dimensions needed for an estimate.
     """
     import torch as _torch
 
+    if os.environ.get("CIRCUITKIT_SKIP_MEM_GUARD") == "1":
+        return
     if not _torch.cuda.is_available():
         return
     try:
@@ -195,37 +210,44 @@ def _check_qkv_flag_memory_headroom(model, algo: str) -> None:
         return
     if first_param.device.type != "cuda":
         return
-    n_params = sum(p.numel() for p in model.parameters())
-    if n_params == 0:
-        return
     param_dtype = first_param.dtype
     if not param_dtype.is_floating_point:
         return
     bytes_per_param = _torch.finfo(param_dtype).bits // 8
-    weights_gb = (n_params * bytes_per_param) / (1024**3)
-    if weights_gb < _EAP_QKV_MEM_GUARD_MIN_GB:
+
+    cfg = getattr(model, "cfg", None)
+    n_heads = int(getattr(cfg, "n_heads", 0) or 0)
+    d_model = int(getattr(cfg, "d_model", 0) or 0)
+    n_layers = int(getattr(cfg, "n_layers", 0) or 0)
+    seq_len = int(seq_len or getattr(cfg, "n_ctx", 0) or 0)
+    batch_size = int(batch_size or 0)
+    if min(n_heads, d_model, n_layers, seq_len, batch_size) <= 0:
         return
-    # Weights already live on-device; activation headroom is the additional
-    # allocation the qkv flags will demand during the first forward+backward.
-    estimated_gb = weights_gb * (1.0 + _EAP_QKV_MEM_GUARD_ACTIVATION_MULT)
+
     device_index = first_param.device.index if first_param.device.index is not None else 0
-    free_bytes = (
-        _torch.cuda.get_device_properties(device_index).total_memory
-        - _torch.cuda.memory_reserved(device_index)
+    free_bytes, _total_bytes = _torch.cuda.mem_get_info(device_index)
+    estimated_bytes = (
+        batch_size
+        * seq_len
+        * n_heads
+        * d_model
+        * n_layers
+        * bytes_per_param
+        * _EAP_QKV_MEM_GUARD_ACTIVATION_MULT
     )
     free_gb = free_bytes / (1024**3)
-    if estimated_gb > free_gb * _EAP_QKV_MEM_GUARD_FREE_FRACTION:
-        n_heads = int(getattr(model.cfg, "n_heads", 0)) or "?"
-        raise MemoryError(
-            f"Discovery algorithm {algo!r} enables use_attn_result + "
-            f"use_split_qkv_input + use_hook_mlp_in, which materialise per-head "
-            f"[batch, pos, n_heads={n_heads}, d_model] activations at every "
-            f"attention block and roughly multiply activation memory by n_heads. "
-            f"Estimated peak footprint ~{estimated_gb:.1f} GB but only "
-            f"{free_gb:.1f} GB is free on the current CUDA device (weights "
-            f"~{weights_gb:.1f} GB in {param_dtype}). Options: use a smaller "
-            f"model, reduce the discovery batch size, or switch to 'ibcircuit' "
-            f"(which disables these flags internally)."
+    estimated_gb = estimated_bytes / (1024**3)
+    if estimated_bytes > free_bytes * _EAP_QKV_MEM_GUARD_FREE_FRACTION:
+        warnings.warn(
+            f"Discovery algorithm {algo!r} may need about {estimated_gb:.1f} GB "
+            f"for qkv-flag activations (batch={batch_size}, seq={seq_len}, "
+            f"heads={n_heads}, d_model={d_model}, layers={n_layers}, "
+            f"dtype={param_dtype}), while {free_gb:.1f} GB "
+            "is currently free. This estimate is advisory only; CircuitKIT will "
+            "continue and let the allocator determine whether the run fits. "
+            "Set CIRCUITKIT_SKIP_MEM_GUARD=1 to silence this warning.",
+            RuntimeWarning,
+            stacklevel=2,
         )
 
 
@@ -1216,7 +1238,10 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
         else:
             with log_execution_time("Model loading", logger):
                 model = _from_pretrained(
-                    model_cfg["name"], device=device, dtype=dtype
+                    model_cfg["name"],
+                    device=device,
+                    dtype=dtype,
+                    **_trust_remote_code_kwargs(model_cfg),
                 )
 
         algo = discovery_cfg["algorithm"].lower()
@@ -1255,7 +1280,22 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
             "peap",
             "eap-ifr",
         ):
-            _check_qkv_flag_memory_headroom(model, algo)
+            _data_params = discovery_cfg.get("data_params") or {}
+            _guard_seq_len = (
+                discovery_cfg.get("max_seq_len")
+                or discovery_cfg.get("max_length")
+                or _data_params.get("max_seq_len")
+                or _data_params.get("max_length")
+                or getattr(model.cfg, "n_ctx", None)
+            )
+            _check_qkv_flag_memory_headroom(
+                model,
+                algo,
+                batch_size=discovery_cfg.get(
+                    "batch_size", default_discovery.get("batch_size", 1)
+                ),
+                seq_len=_guard_seq_len,
+            )
             _flag_scope.enter_context(_qkv_flags_enabled(model))
 
         # Warn about experimental / research algorithms
@@ -2103,7 +2143,10 @@ def evaluate_circuit(
         else:
             with log_execution_time("Model loading", logger):
                 model = _from_pretrained(
-                    config["model"]["name"], device=device, dtype=dtype
+                    config["model"]["name"],
+                    device=device,
+                    dtype=dtype,
+                    **_trust_remote_code_kwargs(config["model"]),
                 )
         # These flags are required by the graph reconstruction / faithfulness
         # evaluation below regardless of model provenance. discover_circuit()

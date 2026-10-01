@@ -183,7 +183,7 @@ class TestIOIRegression:
         from circuitkit.tasks.builtins import ioi, ioi_legacy
 
         def class_body_size(module, class_name):
-            lines = Path(module.__file__).read_text().split("\n")
+            lines = Path(module.__file__).read_text(encoding="utf-8").split("\n")
             start = None
             for i, line in enumerate(lines):
                 if line.startswith(f"class {class_name}"):

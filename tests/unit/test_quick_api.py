@@ -577,6 +577,17 @@ def test_load_model_local_checkpoint_dir(tmp_path):
     assert torch.allclose(out, ref, atol=1e-4)
 
 
+@pytest.mark.parametrize("family", ["llama", "gemma"])
+def test_load_model_rejects_ambiguous_local_checkpoint_path(tmp_path, family):
+    """TL 3.8 dispatches some local loads from path substrings, not config.json."""
+    pytest.importorskip("transformer_lens")
+    checkpoint = tmp_path / f"{family}-checkpoint"
+    checkpoint.mkdir()
+
+    with pytest.raises(ValueError, match="Rename or symlink.*neutral path"):
+        quick.load_model(str(checkpoint), dtype="float32", device="cpu")
+
+
 @pytest.mark.parametrize("model_type", ["aya_vision", "cohere_compass"])
 def test_load_model_rejects_vision_language_checkpoints(tmp_path, model_type):
     pytest.importorskip("transformer_lens")

@@ -86,7 +86,7 @@ def hf_model():
     token = env_token if env_token.startswith("hf_") else True
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_NAME,
-        torch_dtype=torch.float32,
+        dtype=torch.float32,
         token=token,
         use_safetensors=True,
     )

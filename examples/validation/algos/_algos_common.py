@@ -99,7 +99,7 @@ def run_algo(
             f"discover_circuit did not write {scores_path}; "
             f"the algo dispatcher may not be saving CircuitScores."
         )
-    scores_blob = json.loads(scores_path.read_text())
+    scores_blob = json.loads(scores_path.read_text(encoding="utf-8"))
     node_scores: Dict[str, float] = {
         str(k): float(v) for k, v in scores_blob.get("node_scores", {}).items()
     }

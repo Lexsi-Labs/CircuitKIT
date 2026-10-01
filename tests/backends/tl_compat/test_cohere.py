@@ -159,17 +159,20 @@ class TestApplyPatchesLifecycle:
         _tl_compat.apply_patches()
         assert calls == [], "register() must not run again once _PATCHED is True"
 
-    def test_rejects_unsupported_tl_version(self, monkeypatch):
+    @pytest.mark.parametrize("version", ["3.0.0", "2.18.0"])
+    def test_rejects_unsupported_tl_version(self, monkeypatch, version):
         monkeypatch.setattr(_tl_compat, "_PATCHED", False)
-        monkeypatch.setattr(_tl_compat.transformer_lens, "__version__", raising=False, value="3.0.0")
-        with pytest.raises(RuntimeError, match="2.18"):
+        monkeypatch.setattr(
+            _tl_compat.transformer_lens, "__version__", raising=False, value=version
+        )
+        with pytest.raises(RuntimeError, match="3.8"):
             _tl_compat.apply_patches()
         # Aborted before completion -- must not claim to be patched.
         assert _tl_compat._PATCHED is False
 
-    def test_accepts_matching_minor_version(self, monkeypatch):
+    def test_accepts_transformerlens_38(self, monkeypatch):
         monkeypatch.setattr(_tl_compat, "_PATCHED", False)
-        monkeypatch.setattr(_tl_compat.transformer_lens, "__version__", raising=False, value="2.18.3")
+        monkeypatch.setattr(_tl_compat.transformer_lens, "__version__", raising=False, value="3.8.3")
         register_calls = []
         monkeypatch.setattr(cohere_patch, "register", lambda: register_calls.append(1))
         _tl_compat.apply_patches()
@@ -182,7 +185,7 @@ class TestApplyPatchesLifecycle:
         rather than failing the guard on that alone."""
         monkeypatch.setattr(_tl_compat, "_PATCHED", False)
         monkeypatch.setattr(_tl_compat.transformer_lens, "__version__", raising=False, value="")
-        monkeypatch.setattr(_tl_compat.importlib.metadata, "version", lambda name: "2.18.0")
+        monkeypatch.setattr(_tl_compat.importlib.metadata, "version", lambda name: "3.8.0")
         register_calls = []
         monkeypatch.setattr(cohere_patch, "register", lambda: register_calls.append(1))
         _tl_compat.apply_patches()
@@ -495,7 +498,7 @@ class TestGetPretrainedStateDict:
             )
 
         _, kwargs = mock_load.call_args
-        assert kwargs["torch_dtype"] == torch.bfloat16
+        assert kwargs["dtype"] == torch.bfloat16
         assert "hf_token" not in kwargs
         assert "n_ctx" not in kwargs
 

@@ -16,7 +16,7 @@ permissions:
 
 env:
   PYPI_PROJECT_NAME: circuitkit
-  PACKAGE_DISPLAY_NAME: CircuitKit
+  PACKAGE_DISPLAY_NAME: CircuitKIT
 
 jobs:
   plan:
@@ -268,7 +268,7 @@ jobs:
           else
             git config user.name github-actions[bot]
             git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-            git tag --annotate "$RELEASE_TAG" --message "CircuitKit $RELEASE_TAG"
+            git tag --annotate "$RELEASE_TAG" --message "CircuitKIT $RELEASE_TAG"
             git push origin "refs/tags/$RELEASE_TAG"
           fi
 
@@ -347,7 +347,7 @@ jobs:
           channel-id: "lexsi-labs-circuitkit-release" #${{ vars.SLACK_CHANNEL }}
           payload: |
             {
-              "text": "CircuitKit release",
+              "text": "CircuitKIT release",
               "blocks": [
                 {
                   "type": "section",

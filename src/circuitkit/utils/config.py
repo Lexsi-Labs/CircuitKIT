@@ -7,7 +7,10 @@ import yaml
 # Define a dictionary of default values. This makes the tool easier to use
 # as users only need to specify what they want to change.
 DEFAULT_CONFIG = {
-    "model": {"precision": "bfloat16"},
+    # ``trust_remote_code`` must stay opt-in and defaults to False: it makes
+    # ``transformers`` execute modeling code shipped by the model repository.
+    # Only architectures that need it (e.g. Sarvam-MoE) should set it.
+    "model": {"precision": "bfloat16", "trust_remote_code": False},
     "discovery": {
         "algorithm": "eap-ig",
         # "task" intentionally omitted — must be supplied by user config or inline data section
@@ -127,6 +130,8 @@ def _validate_config(config: Dict[str, Any]):
     # Model config
     if "name" not in config["model"]:
         raise ValueError("Missing required key 'model.name'")
+    if not isinstance(config["model"].get("trust_remote_code", False), bool):
+        raise ValueError("'model.trust_remote_code' must be true or false")
 
     # Discovery config
     algo = config["discovery"].get("algorithm")

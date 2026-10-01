@@ -316,7 +316,7 @@ def main(args):
 
     base_model = LlamaForCausalLM.from_pretrained(
         args.base_model,
-        torch_dtype=torch.float16,
+        dtype=torch.float16,
     )
     base_model.to(args.device)
     base_model.config.pad_token_id = tokenizer.pad_token_id

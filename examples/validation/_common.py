@@ -86,7 +86,7 @@ def get_fixture(force_rerun: bool = False) -> Dict[str, Any]:
         meta = _run_discovery()
         print(f"[fixture] Discovery complete in {meta['discovery_seconds']}s")
     else:
-        meta = json.loads(META_FILE.read_text())
+        meta = json.loads(META_FILE.read_text(encoding="utf-8"))
         print(f"[fixture] Cache hit ({CIRCUIT_ARTIFACT})")
 
     artifact = torch.load(CIRCUIT_ARTIFACT, weights_only=False, map_location="cpu")

@@ -120,7 +120,7 @@ class MasterGrid:
                     cell_file = out / f"{method}_{wrapper}_seed{seed}.json"
                     if cell_file.exists():
                         logger.info(f"  skip (cached): {cell_file.name}")
-                        result = json.loads(cell_file.read_text())
+                        result = json.loads(cell_file.read_text(encoding="utf-8"))
                         self._load_cell(result, method, wrapper, seed)
                         continue
 

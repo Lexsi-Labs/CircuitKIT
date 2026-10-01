@@ -279,7 +279,7 @@ def main(args):
     base_model = LlamaForCausalLM.from_pretrained(
         args.base_model,
         device_map="auto" if args.device != "cpu" else None,
-        torch_dtype=torch.float16,
+        dtype=torch.float16,
     )
     if args.device != "cpu":
         base_model.half()

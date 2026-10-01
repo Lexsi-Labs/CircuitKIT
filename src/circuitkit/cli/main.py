@@ -109,6 +109,16 @@ def cli(ctx, verbose, config):
         "'off' never wraps. When unset, the task's own default applies."
     ),
 )
+@click.option(
+    "--trust-remote-code",
+    is_flag=True,
+    default=False,
+    help=(
+        "Execute modeling code shipped by the model repository. Required for "
+        "architectures such as Sarvam-MoE that are not in transformers. Only "
+        "use with repositories you trust."
+    ),
+)
 def discover(
     model,
     algorithm,
@@ -125,6 +135,7 @@ def discover(
     random,
     mlp1,
     chat_template_mode,
+    trust_remote_code,
 ):
     """Run circuit discovery on a model using built-in task data generation"""
     from ..api import discover_circuit
@@ -136,7 +147,11 @@ def discover(
 
     # Create configuration
     config = {
-        "model": {"name": model, "precision": "bfloat16"},
+        "model": {
+            "name": model,
+            "precision": "bfloat16",
+            "trust_remote_code": trust_remote_code,
+        },
         "pruning": {"target_sparsity": sparsity, "scope": scope, "random": random},
         "discovery": {
             "algorithm": algorithm,

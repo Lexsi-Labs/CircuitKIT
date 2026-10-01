@@ -27,7 +27,7 @@ def main() -> int:
     g.add_feature_attribution(
         name="GPT-2 IOI EAP-IG attributions",
         description="Real EAP-IG node attributions on GPT-2 IOI",
-        html_figures={"importance_bar": feat_html.read_text()[:50000]},
+        html_figures={"importance_bar": feat_html.read_text(encoding="utf-8")[:50000]},
         top_nodes=feat_v.get_top_nodes(k=5),
     )
 
@@ -38,7 +38,7 @@ def main() -> int:
     g.add_circuit_graph(
         name="GPT-2 IOI circuit graph",
         description="Pruned 14 of 144 attention heads at α=0.1",
-        html_figure=graph_html.read_text()[:50000],
+        html_figure=graph_html.read_text(encoding="utf-8")[:50000],
         circuit_data={
             "n_nodes": len(fx["graph"]["nodes"]),
             "n_edges": len(fx["graph"]["edges"]),

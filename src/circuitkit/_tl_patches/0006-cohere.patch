@@ -1,20 +1,17 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Pratinav Seth <pratinav.seth@lexsi.ai>
 Date: Mon, 28 Sep 2026 02:35:37 +0530
-Subject: [PATCH 6/6] cohere: CohereForCausalLM / Cohere2ForCausalLM (Aya Expanse,
- Tiny Aya)
+Subject: [PATCH 6/6] cohere: add weight conversion for Cohere architectures
 
-Parallel attention+MLP block reading one bias-free LayerNorm (copied to
-ln1 and ln2), interleaved RoPE, logit_scale folded into W_U. Cohere2 adds
-sliding-window layers from config.layer_types and NoPE on full-attention
-layers via proportional_rotary_factor=0 (from 0004). Config conversion reads
-the HF config, so local checkpoint dirs of either architecture load too.
+Cohere config conversion and architecture registration are owned by
+`circuitkit.backends._tl_compat.cohere`. This patch supplies the corresponding
+weight-conversion hook to TransformerLens 3.8 for registered Cohere models.
 ---
- transformer_lens/loading_from_pretrained.py   | 49 +++++++++++++++
+ transformer_lens/loading_from_pretrained.py   |  3 +++
  .../pretrained/weight_conversions/__init__.py |  1 +
  .../pretrained/weight_conversions/cohere.py   | 59 +++++++++++++++++++
  transformer_lens/supported_models.py          | 12 ++++
- 4 files changed, 121 insertions(+)
+ 4 files changed, 75 insertions(+)
  create mode 100644 transformer_lens/pretrained/weight_conversions/cohere.py
 
 diff --git a/transformer_lens/loading_from_pretrained.py b/transformer_lens/loading_from_pretrained.py
@@ -29,60 +26,7 @@ index 30f216d..853a28b 100644
      convert_gemma4_weights,
      convert_gemma_weights,
      convert_gpt2_weights,
-@@ -842,6 +843,52 @@ def convert_hf_model_config(model_name: str, **kwargs: Any) -> dict[str, Any]:
-             "gated_mlp": True,
-             "default_prepend_bos": False,
-         }
-+    elif architecture in ("CohereForCausalLM", "Cohere2ForCausalLM"):
-+        # Cohere (Aya Expanse, Command R) and Cohere2 (Tiny Aya, Command R7B):
-+        # one bias-free LayerNorm feeds attention and MLP in parallel
-+        # (convert_cohere_weights copies it to ln1 and ln2), interleaved RoPE,
-+        # tied embeddings with logits multiplied by logit_scale (folded into W_U).
-+        if getattr(hf_config, "use_qk_norm", False) or getattr(hf_config, "attention_bias", False):
-+            raise NotImplementedError(
-+                f"{official_model_name}: Cohere use_qk_norm / attention_bias is not ported "
-+                "to HookedTransformer."
-+            )
-+        d_head = getattr(hf_config, "head_dim", None) or (
-+            hf_config.hidden_size // hf_config.num_attention_heads
-+        )
-+        cfg_dict = {
-+            "d_model": hf_config.hidden_size,
-+            "d_head": d_head,
-+            "n_heads": hf_config.num_attention_heads,
-+            "n_key_value_heads": hf_config.num_key_value_heads,
-+            "d_mlp": hf_config.intermediate_size,
-+            "n_layers": hf_config.num_hidden_layers,
-+            "n_ctx": hf_config.max_position_embeddings,
-+            "eps": hf_config.layer_norm_eps,
-+            "d_vocab": hf_config.vocab_size,
-+            "act_fn": hf_config.hidden_act,
-+            "initializer_range": hf_config.initializer_range,
-+            "normalization_type": "LN",
-+            "positional_embedding_type": "rotary",
-+            "rotary_base": _get_rope_theta(hf_config),
-+            "rotary_adjacent_pairs": True,
-+            "rotary_dim": d_head,
-+            "gated_mlp": True,
-+            "parallel_attn_mlp": True,
-+        }
-+        if architecture == "Cohere2ForCausalLM":
-+            # sliding_attention layers use RoPE within a window; full_attention
-+            # layers use no positional encoding at all, expressed as a
-+            # proportional_rotary_factor of 0 (every pair gets an infinite period).
-+            cfg_dict.update(
-+                use_local_attn=True,
-+                window_size=hf_config.sliding_window,
-+                attn_types=[
-+                    "local" if t == "sliding_attention" else "global"
-+                    for t in hf_config.layer_types
-+                ],
-+                proportional_rotary_factor=0.0,
-+            )
-     elif architecture == "Qwen2ForCausalLM":
-         # Note that Qwen1.5 models have architecture type Qwen2ForCausalLM.
-         cfg_dict = {
-@@ -2399,6 +2446,8 @@ def get_pretrained_state_dict(
+@@ -2399,6 +2400,8 @@ def get_pretrained_state_dict(
              state_dict = convert_qwen_weights(hf_model, cfg)
          elif cfg.original_architecture == "Qwen2ForCausalLM":
              state_dict = convert_qwen2_weights(hf_model, cfg)

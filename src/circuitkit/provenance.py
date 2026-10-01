@@ -22,7 +22,7 @@ SCHEMA = "lexsi.provenance/1"
 def read_provenance(path: Any) -> Optional[Dict[str, Any]]:
     """The record in ``<path>/lexsi_provenance.json``, or ``None`` (Hub ids, no file, bad JSON)."""
     try:
-        return json.loads((Path(path) / FILENAME).read_text())
+        return json.loads((Path(path) / FILENAME).read_text(encoding="utf-8"))
     except (OSError, TypeError, ValueError):
         return None
 

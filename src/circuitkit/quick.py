@@ -39,7 +39,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
     from transformer_lens import HookedTransformer
 
     from .evaluation.report import FaithfulnessReport
-    
+
     from pathlib import Path
 
 __all__ = [
@@ -129,6 +129,18 @@ def _register_checkpoint(name: str) -> None:
     """
     from transformer_lens import loading_from_pretrained as loading
     from transformers import PretrainedConfig
+    from pathlib import Path
+
+    local_path = Path(name).expanduser()
+    if local_path.is_dir():
+        path_lower = str(local_path).lower()
+        if "llama" in path_lower or "gemma" in path_lower:
+            raise ValueError(
+                f"Local checkpoint path {str(local_path)!r} contains 'llama' or 'gemma'. "
+                "TransformerLens 3.8 selects some model loaders from the path name "
+                "before reading config.json. Rename or symlink the directory to a "
+                "neutral path (for example, ./checkpoint) and retry."
+            )
 
     if name.lower() in loading.make_model_alias_map():
         return
@@ -163,6 +175,13 @@ def _from_pretrained(
     :func:`load_model`). It records the source (and the folder's
     ``lexsi_provenance.json``, if any) as ``model.lexsi_input`` for export provenance.
     """
+    from .utils.device import enable_expandable_segments
+
+    # Applying CUDA allocator policy is an explicit load-time side effect, not
+    # an import-time package side effect. Do it before TransformerLens loads the
+    # model, including when the core API calls this shared loader directly.
+    enable_expandable_segments()
+
     from transformer_lens import HookedTransformer
 
     from .provenance import read_provenance
@@ -241,10 +260,6 @@ def load_model(
         >>> circuit = ck.discover(model, "ioi", n_examples=16)
     """
     import torch
-
-    from .utils.device import enable_expandable_segments
-
-    enable_expandable_segments()
 
     # Importing circuitkit.backends applies CircuitKIT's TransformerLens
     # compatibility ports (idempotently) before from_pretrained resolves the
@@ -1004,7 +1019,7 @@ def benchmark(
         dtype=dtype,
         **kw,
     )
-    
+
 # --------------------------------------------------------------------------- #
 # load_scores                                                                  #
 # --------------------------------------------------------------------------- #

@@ -177,7 +177,7 @@ def make_circuit(nodes: list[str], scores: dict[str, float], algo: str = "eap-ig
 
 def magnitude_scores(model_name: str, ref_scores: dict[str, float]) -> dict[str, float]:
     """L1 weight-magnitude importance for the same node set."""
-    hf = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.float16, device_map="cpu")
+    hf = AutoModelForCausalLM.from_pretrained(model_name, dtype=torch.float16, device_map="cpu")
     nh = hf.config.num_attention_heads
     hd = hf.config.hidden_size // nh
     out: dict[str, float] = {}
@@ -408,7 +408,7 @@ def phase_quantization(
     t0 = progress(f"Loading HF model ({MODEL}) ...")
     tokenizer = AutoTokenizer.from_pretrained(MODEL)
     tokenizer.pad_token_id = tokenizer.pad_token_id or 0
-    base_model = AutoModelForCausalLM.from_pretrained(MODEL, torch_dtype=torch.float16)
+    base_model = AutoModelForCausalLM.from_pretrained(MODEL, dtype=torch.float16)
     base_model.to(DEVICE)
     base_model.config.pad_token_id = tokenizer.pad_token_id
     n_layers = base_model.config.num_hidden_layers
@@ -532,7 +532,7 @@ def phase_finetuning(
     tokenizer = AutoTokenizer.from_pretrained(MODEL)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
-    base_model = AutoModelForCausalLM.from_pretrained(MODEL, torch_dtype=torch.float16)
+    base_model = AutoModelForCausalLM.from_pretrained(MODEL, dtype=torch.float16)
     base_model.to(device)
     base_model.config.pad_token_id = tokenizer.pad_token_id
     done("Model loaded", t0)

@@ -42,7 +42,7 @@ NO_PROCESSING = dict(
 
 
 def _config(name):
-    return json.loads((CONFIGS / name).read_text())
+    return json.loads((CONFIGS / name).read_text(encoding="utf-8"))
 
 
 # ---------------------------------------------------------------------------- Gemma-4
@@ -65,6 +65,7 @@ def test_gemma4_registry_cfg_matches_config_json():
         "n_key_value_heads_local": tc["num_key_value_heads"],
         "d_mlp": tc["intermediate_size"],
         "d_vocab": tc["vocab_size"],
+        "n_ctx": tc["max_position_embeddings"],
         "eps": tc["rms_norm_eps"],
         "act_fn": tc["hidden_activation"],
         "window_size": tc["sliding_window"],

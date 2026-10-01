@@ -42,9 +42,14 @@ _NETWORK_MODULES = (
     "tests/unit/test_end_to_end.py",
     "tests/unit/test_pipeline_smoke.py",
     "tests/test_custom_data.py",
-    # whole integration-level directories exercise real discover/evaluate
-    # pipelines (they load a real model and/or a real dataset)
-    "tests/integration/",
+    # The integration suite mixes offline CPU tests with tests that load real
+    # Hub models. Keep only the network-backed modules here; notably,
+    # test_tl3_interop.py builds tiny random checkpoints locally and belongs in
+    # the default fast tier.
+    "tests/integration/test_chat_template_instruct.py",
+    "tests/integration/test_interfaces_e2e.py",
+    "tests/integration/test_steering_ioi.py",
+    "tests/integration/test_yaml_run_advanced.py",
     "tests/regression/",
     "tests/tasks/",
     "tests/benchmarks/",

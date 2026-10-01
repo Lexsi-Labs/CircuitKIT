@@ -235,7 +235,7 @@ index 3b8cac7..3ef9943 100644
 +        # no independent V weight, so convert_gemma4_weights() copies W_K's
 +        # converted values into this layer's (independent) W_V slot, which is
 +        # numerically equivalent for a single forward/backward pass. This is
-+        # irrelevant to C-Delta-Theta's actual repair mechanism (fine-tuning
++        # irrelevant to CircuitKIT's supported repair workflow (fine-tuning
 +        # and the weight-arithmetic patch only ever touch down_proj/o_proj,
 +        # never Q/K/V), and only affects the fidelity of the EAP-IG circuit-
 +        # discovery forward pass that TransformerLens is used for here.
@@ -266,7 +266,7 @@ index 3b8cac7..3ef9943 100644
 +            "n_key_value_heads_local": 16,
 +            "d_mlp": 21504,
 +            "n_layers": 60,
-+            "n_ctx": 8192,  # Safe default (model supports far more). Override via cfg_kwargs={"n_ctx": ...}
++            "n_ctx": 262144,  # HF max_position_embeddings; TL 3.8 masks active sequence length.
 +            "eps": 1e-06,
 +            "d_vocab": 262144,
 +            "act_fn": "gelu_pytorch_tanh",
@@ -423,7 +423,7 @@ index ecfa25b..1f24a18 100644
 +        those layers have no v_proj at all in HF; value states reuse the raw
 +        key projection. Represented here by copying W_K into TL's independent
 +        W_V slot for those layers (see the cfg_dict block's docstring for why
-+        this is fine for C-Delta-Theta's actual use of this model).
++        this is fine for CircuitKIT's supported use of this model).
 +    """
 +    state_dict = {}
 +

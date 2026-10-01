@@ -1,7 +1,7 @@
-"""Compatibility patches that teach TransformerLens 2.18 / 3.8 to load tiny-aya /
+"""Compatibility patches that teach TransformerLens 3.8 to load tiny-aya /
 Command R7B / Aya Expanse (``cohere2``/``cohere1``) and SmolLM3-3B (``smollm3``).
 
-TransformerLens 2.18 and 3.8 have no built-in support for these architectures. This
+TransformerLens 3.8 has no built-in support for these architectures. This
 package registers that support additively by patching
 ``transformer_lens.loading_from_pretrained`` and
 ``transformer_lens.components.abstract_attention`` at import time -- see
@@ -28,7 +28,7 @@ _PATCHED = False
 # whose shape may change across releases. Fail loud on a TL bump rather than
 # silently applying a patch written against a different internal layout.
 # 3.8 keeps the same three entry points (checked against 3.8.0).
-_SUPPORTED_TL_VERSION_PREFIXES = ("2.18", "3.8")
+_SUPPORTED_TL_VERSION_PREFIXES = ("3.8",)
 
 
 def _detect_transformer_lens_version() -> str:

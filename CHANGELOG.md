@@ -1,8 +1,8 @@
 <!-- circuitkit-logo -->
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/circuitkit-logo-white.png">
-    <img src="docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Lexsi-Labs/CircuitKIT/main/docs/assets/circuitkit-logo-white.png">
+    <img src="https://raw.githubusercontent.com/Lexsi-Labs/CircuitKIT/main/docs/assets/circuitkit-logo-black.png" width="200" alt="CircuitKIT">
   </picture>
 </p>
 
@@ -17,6 +17,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Importing `transformer_lens` before `circuitkit` now raises `ImportError` instead
+  of warning and continuing with the Gemma-4 / Sarvam-MoE / Cohere patches absent.
+- TransformerLens compatibility now targets **3.8.0 only**; the former 2.18 path
+  is not supported. Cohere config conversion is maintained in `_tl_compat/cohere.py`,
+  and Cohere/SmolLM3/Gemma-4 converters preserve the HF context limit because TL 3.8
+  constructs causal masks for active input lengths.
+- Gemma-4 and Sarvam-MoE are documented as discovery-only experimental ports, with
+  weight-memory estimates and Sarvam's `trust_remote_code=True` requirement;
+  end-to-end evaluation/intervention support is not claimed.
+- TransformerLens patch `0005-memory-no-weight-copies` is now opt-in via
+  `CIRCUITKIT_TL_MEMORY_PATCH=1` because it changes bf16 accumulation order.
+- CUDA `expandable_segments` is configured at model load, not when importing
+  CircuitKIT, avoiding an allocator side effect from a package import.
+- The Cohere config converter is kept only in `_tl_compat/cohere.py`; the duplicate
+  copy in patch `0006` is gone, and local checkpoint folders resolve from their
+  `config.json` instead.
+- `model.trust_remote_code` in YAML/dict configs, and `--trust-remote-code` on
+  `circuitkit discover`, now reach the loader, so Sarvam-MoE is loadable outside
+  `load_model`. It stays opt-in: absent or false forwards nothing, and enabling it
+  logs a warning that model-repository code will be executed.
 - **Logo refresh.** New chip-mark identity across the repo: the CircuitKIT lockup (wordmark now spelled with a capital "KIT"),
   a vector mark, and a favicon set, all in `docs/assets/`. The docs header, favicon and landing hero use them, and every README,
   the root docs and the example notebooks carry the lockup. The lockup PNGs have true transparency (no baked-in halo). The old
@@ -26,11 +46,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The EAP qkv activation-memory preflight now estimates activation storage from
+  batch size, sequence length, model dimensions and dtype, and uses CUDA's
+  actual free-memory query. It emits an advisory `RuntimeWarning` instead of
+  refusing a run from an approximate estimate; set
+  `CIRCUITKIT_SKIP_MEM_GUARD=1` to silence it.
 - Docs and README pointed at `lexsi-labs.github.io/circuitkit/`, which 404s; the site lives at `https://circuitkit.lexsi.ai/`.
   Also fixed the README "Applications" deep link.
 - Stale version strings: landing-page chip, both BibTeX blocks and the install check said `1.0.0`; they now read the installed package version.
   `CITATION.cff` release date corrected, and the release-notes page now explains the older `v1.0.0` internal milestone.
 - Issue-template contact links pointed at a personal fork, and the contributing guide pointed to GitHub Discussions (not enabled).
+- `tests/apply/test_hallucination_detection.py::TestLinearProbe::test_probe_get_logits`
+  was flaky (~2.8% of runs) because it asserted that randomly initialised probe
+  logits fall outside [0, 1]; it now pins the probe weights and input.
+- The patch-hook test no longer hard-codes `PATH=/usr/bin:/bin` for its `git apply`
+  subprocess, which broke `git` lookup on Windows and on macOS installs that keep
+  it in `/opt/homebrew/bin`.
+- An example notebook's saved output contained an absolute `/home/jovyan/...` path
+  from the machine it was recorded on.
+- The README and CHANGELOG logo and doc links used repo-relative paths, so the logo
+  rendered blank on the PyPI project page (which renders the README outside the
+  repository) and the internal doc links 404'd there. They are now absolute
+  `raw.githubusercontent.com` / GitHub URLs.
 
 ## [Unreleased] (next release)
 
@@ -87,8 +124,9 @@ The next release after 0.1.8; the release pipeline assigns its number. (The `[1.
   `node_scores` (`CircuitScores.to_json(top_fraction=...)`). Readers of
   `node_scores` are unchanged; `CircuitScores.from_dict` ignores the new keys.
 - `arch_registry`: the `cohere` family's name lists Aya Expanse and Tiny Aya.
-- TransformerLens patch series: Gemma-4 (`google/gemma-4-31B-it`) and Sarvam-MoE
-  (`sarvamai/sarvam-30b`) `HookedTransformer` support on transformer-lens 3.8.0.
+- Experimental, discovery-only TransformerLens ports for Gemma-4
+  (`google/gemma-4-31B-it`) and Sarvam-MoE (`sarvamai/sarvam-30b`) on
+  transformer-lens 3.8.0; evaluation/intervention support is not claimed.
   It replaces the TransformerLens fork vendored in the audit repo.
   The new `0004-gemma4-hf-parity` fixes three places where that fork disagreed
   with Hugging Face on Gemma-4: global-layer RoPE, the final logit softcap and
@@ -145,7 +183,7 @@ The next release after 0.1.8; the release pipeline assigns its number. (The `[1.
   research-tier pruning baseline.
 - **Interactive circuit visualization sample.** A rendered EAP-IG circuit for
   GPT-2 on IOI ships at `examples/visualization/ioi_eap-ig.html` and is embedded
-  live in the [Visualization](docs/user-guide/visualization.md) docs page.
+  live in the [Visualization](https://github.com/Lexsi-Labs/CircuitKIT/blob/main/docs/user-guide/visualization.md) docs page.
 
 ### Changed
 - **Brand name `CircuitKit` renamed to `CircuitKIT`** across documentation,
@@ -192,10 +230,11 @@ on gpt2 (fp32) and Llama-3.2-1B-Instruct (bf16):
 - **`discover()` -> `evaluate()` reloaded the model.** `Pipeline` now loads the
   model once via `_ensure_model()` and threads it through both
   `discover_circuit()` and `evaluate_circuit()`.
-- **`expandable_segments:True`** is now enabled for the CUDA allocator at
-  first use (`circuitkit.utils.device.enable_expandable_segments()`, with a
+- **`expandable_segments:True`** is enabled at model-load time, not at package
+  import (`circuitkit.utils.device.enable_expandable_segments()`, with a
   `CIRCUITKIT_NO_EXPANDABLE_SEGMENTS` opt-out), reducing fragmentation from
-  the variable-shaped activation buffers above.
+  variable-shaped activation buffers without changing allocator state merely
+  by importing CircuitKIT.
 - **Every faithfulness pillar recomputed the same baselines.** Pillar 1
   already computes the clean/corrupt baselines and the patched circuit's
   score; Pillars 2 and 5 now reuse them instead of repeating those forwards.
@@ -1171,7 +1210,7 @@ CircuitKIT follows [Semantic Versioning](https://semver.org/):
 For issues, questions, or contributions:
 - **Issues**: [GitHub Issues](https://github.com/Lexsi-Labs/circuitkit/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/Lexsi-Labs/circuitkit/discussions)
-- **Contributing**: See [CONTRIBUTING.md](CONTRIBUTING.md)
+- **Contributing**: See [CONTRIBUTING.md](https://github.com/Lexsi-Labs/CircuitKIT/blob/main/CONTRIBUTING.md)
 
 ---
 

@@ -43,6 +43,17 @@ def _tiny(arch, path):
     if arch == "gpt2":
         cfg = transformers.GPT2Config(n_embd=64, n_layer=2, n_head=4, n_positions=64, n_ctx=64, **shape)
         cls = transformers.GPT2LMHeadModel
+    elif arch == "llama":
+        cfg = transformers.LlamaConfig(
+            hidden_size=64,
+            intermediate_size=96,
+            num_hidden_layers=2,
+            num_attention_heads=4,
+            num_key_value_heads=2,
+            max_position_embeddings=64,
+            **shape,
+        )
+        cls = transformers.LlamaForCausalLM
     else:
         shape.update(
             hidden_size=64,
@@ -116,6 +127,32 @@ def _down_weight(hf, arch):
 ARCHS = ["gpt2", "cohere", "cohere2"]
 
 
+def test_eap_ig_activations_llama_has_nonzero_scores():
+    """Activation IG must retain a gradient path through rotary decoder blocks."""
+    import tempfile
+    from pathlib import Path
+
+    # Keep the local checkpoint path neutral: TransformerLens uses path-name
+    # heuristics for Llama/Gemma and rejects ambiguous local directory names.
+    with tempfile.TemporaryDirectory(prefix="ck-model-") as directory:
+        root = Path(directory)
+        src = _tiny("llama", root / "model")
+        task = _task(root, "tl3_activation_ig_llama")
+        model = ck.load_model(src, dtype="float32", device="cpu")
+        circuit = ck.discover(
+            model,
+            task,
+            algorithm="eap-ig-activations",
+            n_examples=4,
+            batch_size=2,
+            ig_steps=2,
+            output_path=str(root / "eap-ig-activations.pt"),
+        )
+
+    assert circuit.scores
+    assert any(abs(float(score)) > 0 for score in circuit.scores.values())
+
+
 @pytest.mark.parametrize("arch", ARCHS)
 def test_export_writes_edited_weights(arch, tmp_path):
     """Edit W_out and W_U, export, reload with HF: the edits are there (audit fix 4)."""
@@ -136,7 +173,7 @@ def test_export_writes_edited_weights(arch, tmp_path):
         got = hf(tokens).logits.log_softmax(-1)
     assert torch.allclose(got, ref, atol=1e-4)
 
-    prov = json.loads((tmp_path / "out" / FILENAME).read_text())
+    prov = json.loads((tmp_path / "out" / FILENAME).read_text(encoding="utf-8"))
     assert prov["schema"] == "lexsi.provenance/1" and prov["library"] == "circuitkit"
     assert prov["version"] == ck.__version__
     assert prov["params"]["weights"] == "current"
@@ -153,7 +190,7 @@ def test_export_of_folded_model_warns_and_keeps_original_weights(tmp_path):
         out = ck.export_checkpoint(model, ["MLP 0"], str(tmp_path / "out"))
     hf = transformers.AutoModelForCausalLM.from_pretrained(out)
     assert not hf.transformer.h[0].mlp.c_proj.weight.any()  # the pruning still lands
-    assert json.loads((tmp_path / "out" / FILENAME).read_text())["params"]["weights"] == "original"
+    assert json.loads((tmp_path / "out" / FILENAME).read_text(encoding="utf-8"))["params"]["weights"] == "original"
 
 
 @pytest.mark.parametrize("arch", ARCHS)
@@ -176,7 +213,7 @@ def test_stack_runs(arch, tmp_path):
     assert circuit.scores
 
     # SafeTune's core/circuit_kit/adapter.py reads these keys.
-    blob = json.loads((tmp_path / "c_scores.json").read_text())
+    blob = json.loads((tmp_path / "c_scores.json").read_text(encoding="utf-8"))
     units, sugg = blob["safety_units"], blob["layer_suggestions"]
     assert units["unit_ids"] and set(units["unit_ids"]) <= set(blob["node_scores"])
     prefix = "transformer.h." if arch == "gpt2" else "model.layers."

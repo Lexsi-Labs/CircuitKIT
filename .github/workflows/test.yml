@@ -2,9 +2,9 @@ name: Tests
 
 # Fast test tier — the release gate. A bare `python -m pytest` here runs ONLY
 # the fast tier (see pytest.ini `addopts`, which deselects slow/network/gated
-# and forces HF offline mode). This job is what build/release depends on; it is
-# capped so it can never again burn the 6-hour job ceiling. Heavy tests are run
-# locally with `pytest -m slow`.
+# and forces HF offline mode). This is the push/PR fast-test job. The separate
+# patch-release workflow runs its own release test gate; it does not depend on
+# this job. Heavy tests are run locally with `pytest -m slow`.
 #
 # A handful of fast-tier tests use small, fixed, public artifacts (the gpt2
 # tokenizer, the MiniLM sentence-transformers model, spaCy's en_core_web_sm) —

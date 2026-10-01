@@ -16,7 +16,7 @@ rotary (NoPE) policy. Three more model families now ride that seam:
 | **SmolLM3-3B** | `SmolLM3ForCausalLM` | `smollm3` | `_tl_compat/smollm3.py` |
 
 All four are **experimental** discovery/evaluation/intervention targets:
-TransformerLens (2.18 or 3.8) has no native support for any of `cohere`, `cohere2`, or
+TransformerLens 3.8.0 has no native support for any of `cohere`, `cohere2`, or
 `smollm3`; the port adds it additively, at import time, with every patch
 falling through to stock TL for any other architecture. Command R7B and Aya
 Expanse are **not gated on the Hub the way tiny-aya is**, but both are
@@ -29,6 +29,26 @@ repository — no `HF_TOKEN` needed.
     These are experimental discovery targets. Results should only be
     trusted once the real-weight **parity gate** passes on your machine (see
     [Tests](#tests) below).
+
+!!! note "Local checkpoint folders"
+    TransformerLens 3.8 uses `llama` and `gemma` substrings in a local checkpoint
+    path for loader selection before it reads `config.json`. CircuitKIT rejects
+    ambiguous local paths with a rename/symlink suggestion; use a neutral folder
+    name such as `./checkpoint`. Local SmolLM3 checkpoint folders are not
+    supported by the current port; load `HuggingFaceTB/SmolLM3-3B` by Hub ID.
+
+## Gemma-4 and Sarvam-MoE: discovery-only TransformerLens ports
+
+The Gemma-4 and Sarvam-MoE patches provide a **discovery-only** TransformerLens
+path. They do not establish support for CircuitKIT evaluation, pruning,
+quantization, steering or interventions; those surfaces are not validated for
+these models. Treat successful loading as experimental, not as full model
+support.
+
+| Checkpoint | Scope and requirements |
+|---|---|
+| `google/gemma-4-31B-it` | Text-side discovery only; the multimodal vision tower is not exposed through the TransformerLens port. At bf16, weights alone are about 58 GiB; use an 80 GB-class GPU or larger to leave room for activations. |
+| `sarvamai/sarvam-30b` | TransformerLens discovery only. Sarvam ships its modeling code in the repository rather than in `transformers`, so it needs `trust_remote_code`: `load_model(..., trust_remote_code=True)`, `trust_remote_code: true` under `model:` in a YAML/dict config, or `circuitkit discover --trust-remote-code`. This executes code from the model repository, so it is off by default and never inferred. At bf16, weights alone are about 56 GiB; use an 80 GB-class GPU or larger to leave room for activations. |
 
 ---
 
@@ -59,7 +79,7 @@ repository — no `HF_TOKEN` needed.
 | `logit_scale` | 0.25 (real fold) | 0.125 (real fold) | none (no post-multiply at all) |
 | Tied embeddings | yes | yes | yes |
 | Vocab | 256000 | 256000 | 128256 |
-| Max position embeddings (real ckpt) | 132096 (capped to 8192, see below) | 8192 (cap is a no-op) | 65536 (capped to 8192, see below) |
+| Max position embeddings (real ckpt) | 132096 (preserved) | 8192 | 65536 (preserved) |
 | Gated on the Hub? | `gated=auto` (license click-through) | `gated=auto` (license click-through) | fully public |
 
 For reference, [Tiny Aya](tiny-aya.md) is 36 layers / `d_model=2048` / 16:4
@@ -139,20 +159,14 @@ explicit `head_dim`, so this is a separate function rather than a branch):
 | `head_dim` not always set | same `getattr(..., None) or (hidden_size // n_heads)` fallback as cohere1 |
 | `attention_bias` / `mlp_bias` / `use_sliding_window` = `True` | each raises `NotImplementedError` — none true on the real checkpoint, but the converter would otherwise silently produce a wrong model |
 
-### `n_ctx` capping
+### Context length and memory
 
-Command R7B (`max_position_embeddings=132096`) and SmolLM3-3B
-(`max_position_embeddings=65536`) both exceed TL's practical `n_ctx` limit:
-`AbstractAttention` allocates a **dense** `n_ctx × n_ctx` causal mask per
-layer, and at either of those raw values that mask alone is tens of GB of
-float32 per layer — enough to OOM model construction before a single
-forward pass. Both ports cap `n_ctx` to `min(max_position_embeddings, 8192)`
-(the same value, and the same rationale, TL's own stock converters use for
-other long-context models such as Gemma-3). Aya Expanse's own
-`max_position_embeddings=8192` sits exactly at this cap, so it is a no-op
-there. Callers needing more context can still pass
-`HookedTransformer.from_pretrained(..., n_ctx=<value>)`, applied *after*
-this converter runs.
+The ports preserve each checkpoint's full `max_position_embeddings` in
+TransformerLens 3.8. That release keeps an empty causal-mask buffer and builds
+the mask for the active input length at forward time; it does not allocate a
+dense `n_ctx × n_ctx` mask during model construction. Longer input sequences
+still require more attention memory, so choose sequence length and batch size
+for the available device rather than relying on an artificial 8192-token cap.
 
 ### Weight conversion
 
@@ -227,7 +241,7 @@ ACDC has no built-in `greater_than` support.
 Offline unit tests (no network, no GPU, no gated weights) run in ordinary CI:
 
 - `tests/backends/tl_compat/test_command_r7b.py` — registration, config
-  mapping (including the `logit_scale=0.25` fold and the `n_ctx` cap).
+  mapping (including the `logit_scale=0.25` fold and the preserved context length).
 - `tests/backends/tl_compat/test_aya_expanse.py` — registration, the cohere1
   config converter (no sliding window / `attn_types`, `head_dim` fallback,
   `use_qk_norm` guard), rotary-everywhere NoPE policy.
@@ -301,7 +315,8 @@ CIRCUITKIT_RUN_SMOLLM3=1 CIRCUITKIT_RUN_SMOLLM3_ACDC=1 \
   (four orders of magnitude under the gate); SmolLM3-3B KL ≈ 2.9e-8–1.1e-7
   (four to five orders of magnitude under the gate), with argmax agreement
   and the exact per-layer NoPE mask (`{3, 7, 11, ..., 35}` skip rotary) both
-  confirmed directly on the loaded model.
+  confirmed directly on the loaded model. These figures are from manual
+  real-weight GPU runs; CI does not reproduce this parity measurement.
 - **Discovery** (`test_*_discovery.py`) — end-to-end `discover_circuit` on
   `greater_than` for 5 of the 6 stable algorithms (`eap`, `eap-ig`,
   `eap-gp`, `ibcircuit`, `cdt`); asserts finite, non-degenerate node scores.
@@ -354,7 +369,7 @@ that its entire discovery gate ran on GPU with no CPU fallback.
   models extend; its Tests section documents `CIRCUITKIT_RUN_TINY_AYA`.
 - [Architecture Registry](architecture-registry.md) — the `cohere` family
   (now covering Tiny Aya, Command R7B, and Aya Expanse) and the new
-  `smollm3` family, plus what Stage 5's intervention validation actually
+  `smollm3` family, plus what the intervention validation actually
   covered per model.
 - `circuitkit.backends._tl_compat` — the port source
   (`registry.py`, `cohere.py`, `smollm3.py`).

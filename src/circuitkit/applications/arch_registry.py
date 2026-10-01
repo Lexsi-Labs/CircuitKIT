@@ -149,7 +149,7 @@ MODEL_ARCH_REGISTRY = {
             "window). Discovery via the circuitkit _tl_compat TransformerLens "
             "port; gated weights (Command R7B, Aya Expanse, tiny-aya) need "
             "HF_TOKEN. See docs/advanced/tiny-aya.md.\n"
-            "Stage 5 intervention validation (real weights, all three models: "
+            "Real-weight intervention validation (all three models: "
             "tiny-aya/CohereLabs/tiny-aya-base, Command R7B/CohereLabs/"
             "c4ai-command-r7b-12-2024, Aya Expanse/CohereLabs/aya-expanse-8b): "
             "evaluation (circuitkit.api.evaluate_circuit faithfulness, "
@@ -205,8 +205,8 @@ MODEL_ARCH_REGISTRY = {
             "4th layer skips rotary on the real checkpoint), tied embeddings, no "
             "logit scale. Discovery via the circuitkit _tl_compat TransformerLens "
             "port; public weights, no HF_TOKEN required. See docs/advanced/ "
-            "(SmolLM3 page, once added in Stage 6).\n"
-            "Stage 5 intervention validation (real weights, HuggingFaceTB/"
+            "docs/advanced/experimental-models.md.\n"
+            "Real-weight intervention validation (HuggingFaceTB/"
             "SmolLM3-3B): evaluation (circuitkit.api.evaluate_circuit "
             "faithfulness, patching+ablation pillars) confirmed finite on "
             "greater_than. Pruning (applications/pruning/score_extractor."
@@ -225,7 +225,7 @@ MODEL_ARCH_REGISTRY = {
             "kv-head floor-div mapping) and applying a steering vector on real "
             "weights, producing a still-finite forward pass. This model was "
             "small enough (~6GB bf16) that no CPU fallback was needed for any "
-            "Stage 5 gate, unlike the two ~7-8B cohere-family models. See "
+            "validation gate, unlike the two ~7-8B cohere-family models. See "
             "tests/regression/test_smollm3_{evaluation,interventions}.py."
         ),
     },

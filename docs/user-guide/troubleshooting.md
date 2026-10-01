@@ -33,12 +33,13 @@ pip install -e ".[benchmarks]"
 
 ### CUDA out of memory during discovery
 
-For EAP-family algorithms on large models, a preflight guard now raises an
-actionable `MemoryError` before the per-head activation flags are enabled
-(naming the algorithm, `n_heads`, and the `ibcircuit` escape hatch) instead of
-an opaque allocator abort partway through discovery. If you hit it, the
-options below still apply — or switch to `ibcircuit`, which doesn't need
-those flags.
+For EAP-family algorithms, CircuitKIT estimates the qkv-flag activation
+footprint from batch size, sequence length, model dimensions and dtype, then
+compares it with CUDA's current free memory. If it looks tight, it emits an
+advisory `RuntimeWarning` and continues; the estimate is not a hard block. Set
+`CIRCUITKIT_SKIP_MEM_GUARD=1` to silence the warning. If allocation later fails,
+reduce sequence length or batch size, or use `ibcircuit`, which does not need
+the qkv flags.
 
 Reduce example count or batch size:
 ```python
@@ -125,7 +126,7 @@ pipe.evaluate(pillars=None, target_task="sva")
 
 Ensure the reloaded model uses the same dtype and device as the original:
 ```python
-model = AutoModelForCausalLM.from_pretrained(path, torch_dtype=torch.float32)
+model = AutoModelForCausalLM.from_pretrained(path, dtype=torch.float32)
 ```
 
 ## Visualization

@@ -1,7 +1,10 @@
 <p align="center">
+  <!-- Absolute raw URLs, not repo-relative paths: PyPI renders this README
+       outside the repository, so a relative srcset/src resolves to nothing and
+       the logo comes out blank on the project page. -->
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/circuitkit-logo-white.png">
-    <img src="docs/assets/circuitkit-logo-black.png" width="360" alt="CircuitKIT">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Lexsi-Labs/CircuitKIT/main/docs/assets/circuitkit-logo-white.png">
+    <img src="https://raw.githubusercontent.com/Lexsi-Labs/CircuitKIT/main/docs/assets/circuitkit-logo-black.png" width="360" alt="CircuitKIT">
   </picture>
 </p>
 
@@ -13,7 +16,7 @@
 <p align="center">
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg" alt="Python 3.10+"></a>
   <a href="https://pytorch.org/"><img src="https://img.shields.io/badge/PyTorch-2.0%2B-ee4c2c.svg" alt="PyTorch 2.0+"></a>
-  <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-LSAL%20v1.2-blue.svg" alt="License: LSAL v1.2 (source-available)"></a>
+  <a href="https://github.com/Lexsi-Labs/CircuitKIT/blob/main/LICENSE.md"><img src="https://img.shields.io/badge/license-LSAL%20v1.2-blue.svg" alt="License: LSAL v1.2 (source-available)"></a>
   <a href="https://circuitkit.lexsi.ai/"><img src="https://img.shields.io/badge/docs-mkdocs%20material-FF4B0A.svg" alt="Docs"></a>
 </p>
 
@@ -110,6 +113,11 @@ the five validated on real weights are `eap`, `eap-ig`, `eap-gp`, `ibcircuit`,
 weights; the actual `optimum-quanto`/`llmcompressor` compression call is not
 exercised in every environment, since those are optional dependencies.
 
+Gemma-4 and Sarvam-MoE have separate **experimental, discovery-only**
+TransformerLens ports; this is not a claim of end-to-end CircuitKIT support.
+Their hardware and Sarvam loading requirements are documented in
+[Experimental Models](https://github.com/Lexsi-Labs/CircuitKIT/blob/main/docs/advanced/experimental-models.md#gemma-4-and-sarvam-moe-discovery-only-transformerlens-ports).
+
 All four are **experimental** — see [Tiny Aya](https://circuitkit.lexsi.ai/advanced/tiny-aya/)
 and [Experimental Models](https://circuitkit.lexsi.ai/advanced/experimental-models/)
 for architecture details, config mapping, and the full opt-in test matrix.
@@ -158,4 +166,4 @@ pytest tests/ -q
 
 ## License
 
-Lexsi Labs Source Available License (LSAL) v1.2: free for academic research and teaching on MIT-like terms; use by any organization requires written acknowledgement or permission (Section 1A); commercial use requires a separate license; responsible-use conditions apply. See [LICENSE.md](LICENSE.md).
+Lexsi Labs Source Available License (LSAL) v1.2: free for academic research and teaching on MIT-like terms; use by any organization requires written acknowledgement or permission (Section 1A); commercial use requires a separate license; responsible-use conditions apply. See [LICENSE.md](https://github.com/Lexsi-Labs/CircuitKIT/blob/main/LICENSE.md).

@@ -34,7 +34,7 @@ from . import _tl_compat
 
 logger = logging.getLogger(__name__)
 
-# Registers tiny-aya (cohere2) support with TransformerLens (2.18 or 3.8) before any
+# Registers tiny-aya (cohere2) support with TransformerLens 3.8 before any
 # HookedTransformer.from_pretrained() call. Must run at import time of this
 # package, since every discovery backend imports from `circuitkit.backends`
 # (directly or via a submodule) before touching TransformerLens.

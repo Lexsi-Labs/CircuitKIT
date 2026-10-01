@@ -42,7 +42,7 @@ def main() -> int:
         if not rows_path.exists():
             cell_rows[(model, task)] = None
             continue
-        cell_rows[(model, task)] = json.loads(rows_path.read_text())
+        cell_rows[(model, task)] = json.loads(rows_path.read_text(encoding="utf-8"))
 
     # Master table: rows = algorithms, cols = (model, task) -> patching score.
     lines = ["# Algo Benchmark — paper-style 6-pillar (subset)", ""]

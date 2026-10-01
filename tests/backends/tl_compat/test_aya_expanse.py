@@ -58,8 +58,7 @@ MODEL_NAME = "CohereLabs/aya-expanse-8b"
 # integration guide): 32 layers, d_model 4096, 32 query / 8 KV heads, d_head
 # 128 (hidden_size // n_heads, not an explicit config field), d_mlp 14336
 # (gated SiLU), vocab 256000, rope_theta 10000, logit_scale 0.125, tied
-# embeddings, max_position_embeddings 8192 (already <= the port's
-# _MAX_SAFE_N_CTX cap, unlike Command R7B's 132096).
+# embeddings, max_position_embeddings 8192.
 _N_LAYERS = 32
 
 
@@ -153,9 +152,7 @@ class TestAyaExpanseConfigConversion:
         # logit_scale is folded at weight-conversion time, not threaded
         # through the HookedTransformerConfig -- same contract as cohere2.
         assert "logit_scale" not in cfg_dict
-        # Real max_position_embeddings (8192) already sits at the port's cap,
-        # so this is a floor-not-ceiling case, not the OOM-avoidance case
-        # Command R7B needed -- see TestAyaExpanseContextLength below.
+        # Preserve the model's own context length.
         assert cfg_dict["n_ctx"] == 8192
 
     def test_no_local_attn_no_sliding_window_no_attn_types(self):
@@ -224,23 +221,20 @@ class TestAyaExpanseConfigConversion:
 
 
 class TestAyaExpanseContextLength:
-    """Aya Expanse's real max_position_embeddings is 8192 -- already exactly
-    at the port's _MAX_SAFE_N_CTX cap, unlike Command R7B's 132096. This is
-    the "floor, not ceiling" case: confirm the min() still behaves correctly
-    on both sides for this architecture's own config converter."""
+    """The converter preserves the Hub config's maximum context length."""
 
-    def test_real_value_is_not_padded_up(self):
+    def test_real_context_is_preserved(self):
         fake_hf_cfg = _make_aya_expanse_hf_config(head_dim=128)
         assert fake_hf_cfg.max_position_embeddings == 8192
         with patch("transformers.AutoConfig.from_pretrained", return_value=fake_hf_cfg):
             cfg_dict = tl_loading.convert_hf_model_config(MODEL_NAME)
         assert cfg_dict["n_ctx"] == 8192
 
-    def test_a_hypothetically_larger_context_would_be_capped(self):
+    def test_larger_context_is_not_capped(self):
         fake_hf_cfg = _make_aya_expanse_hf_config(head_dim=128, max_position_embeddings=132096)
         with patch("transformers.AutoConfig.from_pretrained", return_value=fake_hf_cfg):
             cfg_dict = tl_loading.convert_hf_model_config(MODEL_NAME)
-        assert cfg_dict["n_ctx"] == cohere_patch._MAX_SAFE_N_CTX
+        assert cfg_dict["n_ctx"] == fake_hf_cfg.max_position_embeddings == 132096
 
 
 class TestAyaExpanseRotaryAppliesToEveryLayer:

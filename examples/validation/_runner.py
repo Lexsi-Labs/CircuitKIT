@@ -45,7 +45,7 @@ def main(layer: str = "visualizations") -> int:
         status_dir = run_dir / s.stem
         status_file = status_dir / "status.json"
         if status_file.exists():
-            status = json.loads(status_file.read_text())
+            status = json.loads(status_file.read_text(encoding="utf-8"))
         else:
             status = {"status": "BROKEN", "error": "no status.json produced"}
         rows.append({

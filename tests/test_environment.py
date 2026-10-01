@@ -1,8 +1,8 @@
 """Reproducible environment preflight for the multi-model integration
-(SmolLM3-3B, Aya Expanse 8B, Command R7B — see the integration guide's Stage 0).
+(SmolLM3-3B, Aya Expanse 8B, Command R7B — see the integration guide).
 
 Codifies the checks the plan asks to run by hand so the environment contract
-is re-runnable rather than a one-off: TransformerLens 2.18.x or 3.8.x (the
+is re-runnable rather than a one-off: TransformerLens 3.8.x (the
 ``_tl_compat`` port's version guard target), transformers new enough to import
 all three HF architectures used by this port (``cohere``, ``cohere2``,
 ``smollm3``), and the support libraries the ports/tests rely on.

@@ -101,6 +101,3 @@ def empty_cache(device: str = "auto") -> None:
         torch.cuda.empty_cache()
     elif resolved == "mps":
         torch.mps.empty_cache()
-
-
-enable_expandable_segments()

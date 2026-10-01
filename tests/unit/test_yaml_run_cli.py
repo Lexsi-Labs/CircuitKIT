@@ -586,6 +586,6 @@ class TestDiscoveryKeysAndReport:
 
         import json
 
-        saved = json.loads((out / "faithfulness_report.json").read_text())
+        saved = json.loads((out / "faithfulness_report.json").read_text(encoding="utf-8"))
         assert saved["patching_score"] == 0.0
         assert saved["metadata"]["patching_raw_ratio"] == -12.21

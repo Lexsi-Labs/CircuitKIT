@@ -15,6 +15,7 @@ import importlib.machinery
 import importlib.metadata
 import importlib.util
 import linecache
+import os
 import re
 import sys
 import warnings
@@ -33,11 +34,20 @@ Hunk = Tuple[int, List[str]]  # (old start line, body lines with their ' '/'-'/'
 Series = Dict[str, List[List[Hunk]]]
 
 
+def _patch_enabled(patch: Path) -> bool:
+    """Keep the numerically different memory optimization explicitly opt-in."""
+    return patch.name != "0005-memory-no-weight-copies.patch" or os.environ.get(
+        "CIRCUITKIT_TL_MEMORY_PATCH"
+    ) == "1"
+
+
 def parse_series(patch_dir: Path = PATCH_DIR) -> Series:
     """``{module name: [hunks of each patch that touches it]}``, patches in file-name order."""
     series: Series = {}
     for patch in sorted(patch_dir.glob("*.patch")):
-        lines = patch.read_text().splitlines()
+        if not _patch_enabled(patch):
+            continue
+        lines = patch.read_text(encoding="utf-8").splitlines()
         i, target = 0, None
         while i < len(lines):
             line = lines[i]
@@ -111,7 +121,7 @@ class TransformerLensPatchFinder(importlib.abc.MetaPathFinder):
             return None
         real = importlib.machinery.PathFinder.find_spec(fullname, path)
         if real is not None:
-            source = Path(real.origin).read_text()
+            source = Path(real.origin).read_text(encoding="utf-8")
             origin, search = real.origin, real.submodule_search_locations
         else:  # a file the series creates
             parent = sys.modules[fullname.rpartition(".")[0]]
@@ -144,12 +154,11 @@ def install() -> Optional[TransformerLensPatchFinder]:
         )
         return None
     if "transformer_lens" in sys.modules:
-        warnings.warn(
+        raise ImportError(
             "transformer_lens was imported before circuitkit, so CircuitKIT's Gemma-4 / "
-            "Sarvam-MoE / Cohere support is not loaded. Import circuitkit first.",
-            stacklevel=2,
+            "Sarvam-MoE / Cohere compatibility patches were not installed. Restart the "
+            "process and import circuitkit before transformer_lens."
         )
-        return None
     series = parse_series()
     if not series:
         raise ImportError(f"CircuitKIT's TransformerLens patch files are missing from {PATCH_DIR}.")
