@@ -17,18 +17,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Importing `transformer_lens` before `circuitkit` now raises `ImportError` instead
+  of warning and continuing with the Gemma-4 / Sarvam-MoE / Cohere patches absent.
 - TransformerLens compatibility now targets **3.8.0 only**; the former 2.18 path
   is not supported. Cohere config conversion is maintained in `_tl_compat/cohere.py`,
   and Cohere/SmolLM3/Gemma-4 converters preserve the HF context limit because TL 3.8
   constructs causal masks for active input lengths.
 - Gemma-4 and Sarvam-MoE are documented as discovery-only experimental ports, with
-  weight-memory estimates and Sarvam's `trust_remote_code=True` requirement.
+  weight-memory estimates and Sarvam's `trust_remote_code=True` requirement;
+  end-to-end evaluation/intervention support is not claimed.
 - TransformerLens patch `0005-memory-no-weight-copies` is now opt-in via
   `CIRCUITKIT_TL_MEMORY_PATCH=1` because it changes bf16 accumulation order.
 - CUDA `expandable_segments` is configured at model load, not when importing
   CircuitKIT, avoiding an allocator side effect from a package import.
-- Gemma-4 and Sarvam-MoE TransformerLens ports are documented as discovery-only;
-  end-to-end evaluation/intervention support is not claimed.
+- The Cohere config converter is kept only in `_tl_compat/cohere.py`; the duplicate
+  copy in patch `0006` is gone, and local checkpoint folders resolve from their
+  `config.json` instead.
 - **Logo refresh.** New chip-mark identity across the repo: the CircuitKIT lockup (wordmark now spelled with a capital "KIT"),
   a vector mark, and a favicon set, all in `docs/assets/`. The docs header, favicon and landing hero use them, and every README,
   the root docs and the example notebooks carry the lockup. The lockup PNGs have true transparency (no baked-in halo). The old
