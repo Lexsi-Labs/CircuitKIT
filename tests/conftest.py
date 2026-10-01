@@ -18,7 +18,7 @@ import circuitkit  # noqa: F401  - installs the TransformerLens patch hook first
 # an entire directory.
 #
 # Bias is intentionally toward OVER-marking: a fast test wrongly moved to the
-# nightly tier only loses a little gate coverage, whereas a heavy test left in
+# slow tier only loses a little gate coverage, whereas a heavy test left in
 # the gate can hang the release. Anything not listed here runs in the fast tier.
 #
 # `network`  -> also implies deselection by default AND is what the offline

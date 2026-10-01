@@ -123,7 +123,7 @@ To contribute documentation:
    > markers by default and forces HuggingFace offline mode, so a bare `pytest`
    > (and CI's release gate) can never download gigabytes or hang for hours.
    > Heavy modules are tagged centrally in `tests/conftest.py`; the slow tier
-   > runs nightly (`.github/workflows/nightly.yml`). If you add a test that
+   > is run locally (`pytest -m slow`). If you add a test that
    > loads a real model or dataset, add its path to `_NETWORK_MODULES` there.
    > Note: because slow tests are deselected by default, `pytest tests/tasks/…`
    > alone may report "no tests ran" — add `-m ""` or `-m slow` to run them.
