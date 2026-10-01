@@ -38,7 +38,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `token_swap`, which it can generate.
 - A pinned device was ignored by discovery and evaluation.
 
-## [1.0.0] - 2026-07-03
+## [Unreleased] (draft "1.0.0" — never published)
+
+> The work below was planned against a 1.0.0 release that was never made.
+> PyPI's newest `circuitkit` is **0.1.7**; there has been no 1.0.0.
+
 
 ### Changed (BREAKING) — submodules renamed to stop shadowing installed packages
 
@@ -645,7 +649,11 @@ documentation, and a fresh set of runnable examples. The public API
   listed as 3.9), fixed the verification snippet's import paths, and removed the
   inaccurate `pip install circuitkit` instruction (not published to PyPI).
 
-## [0.2.0] - 2026-04-13
+## [Unreleased] (draft "0.2.0" — never published)
+
+> Planned as 0.2.0; never published. A later section carries the 0.1.x
+> releases that actually shipped.
+
 
 ### Major Features Added
 
@@ -875,7 +883,7 @@ from circuitkit.analysis import CircuitAnalyzer
 
 ---
 
-## [0.1.0] - 2025-01-15
+## [0.1.0] - 2026-08-18
 
 ### Initial Release
 
