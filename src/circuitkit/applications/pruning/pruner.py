@@ -32,6 +32,7 @@ import torch as t
 from transformer_lens import HookedTransformer
 
 from circuitkit.artifacts.scores import CircuitScores
+from circuitkit.utils.hparams import validate as _validate_hparams
 from circuitkit.utils.logging import get_logger
 
 
@@ -122,6 +123,11 @@ class StructuralPruner:
             ValueError: If sparsity, scope or scores level is invalid.
             RuntimeError: If masking fails on a specific layer.
         """
+        # Outside [0, 1] raises HyperparameterError; past ~40% sparsity every selector collapsed
+        # without recovery fine-tuning in our runs, so that warns (never blocks) and the choice
+        # is deliberate. See utils/hparams.py. Checked first so the error type is the same on
+        # every route; the plain check below stays as a backstop for non-numeric values.
+        _validate_hparams({"pruning.target_sparsity": sparsity}, stacklevel=2)
         if not 0.0 <= sparsity <= 1.0:
             raise ValueError(f"sparsity must be in [0.0, 1.0], got {sparsity}")
 

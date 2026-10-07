@@ -20,7 +20,7 @@ discovery:
   level: node                  # "node" or "neuron", default: node
   chat_template_mode: auto     # "auto", "on", "off" — optional
   batch_size: 4
-  ig_steps: 5                  # EAP-IG only
+  ig_steps: 3                  # EAP-IG family only (default 3)
   data_params:
     num_examples: 128
     batch_size: 4
@@ -175,6 +175,9 @@ applications:
 export:
   path: ./checkpoints/pruned
 ```
+
+In the `evaluate` block, `pillars` defaults to `[patching, ablation]` when omitted (list more
+names, or write `pillars: all`, for the others), `n_examples` to 256 and `n_stability_runs` to 3.
 
 `Pipeline` has no `from_yaml()` classmethod or `.run()` method. Run a pipeline YAML file via the CLI instead:
 

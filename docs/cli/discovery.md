@@ -21,7 +21,7 @@ circuitkit discover [OPTIONS]
 | `--sparsity` | `-s` | `0.3` | Target sparsity (0.0–1.0) |
 | `--level` | `-l` | `node` | `node` or `neuron` |
 | `--batch-size` | `-b` | `4` | Discovery batch size |
-| `--ig-steps` | | `5` | Integrated Gradients steps (EAP-IG only) |
+| `--ig-steps` | | `3` | Integrated Gradients steps (EAP-IG only) |
 | `--scope` | | `both` | Pruning scope: `heads`, `mlp`, `both` |
 | `--num-examples` | | `128` | Number of examples to attribute over |
 | `--chat-template-mode` | | task default | `auto`, `on`, or `off` |

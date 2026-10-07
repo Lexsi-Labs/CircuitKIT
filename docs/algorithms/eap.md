@@ -19,7 +19,7 @@ EAP-IG extends this with Integrated Gradients — instead of using the gradient 
 
 $$\text{attr}_{IG}(u \to v) = (\text{act}_{clean} - \text{act}_{corrupt}) \cdot \int_0^1 \frac{\partial f}{\partial \text{act}_\alpha} d\alpha$$
 
-approximated with `ig_steps` steps (default: 5).
+approximated with `ig_steps` steps (default: 3).
 
 ---
 
@@ -35,7 +35,7 @@ discover_circuit({
         "task": "ioi",
         "level": "node",
         "data_params": {"num_examples": 128},
-        "ig_steps": 5,           # integration steps (default; increase for accuracy)
+        "ig_steps": 3,           # integration steps (the default; see "Tuning EAP-IG")
     },
     "pruning": {"target_sparsity": 0.3, "scope": "heads"},
     "output_path": "./circuit.pt",
@@ -47,7 +47,7 @@ discover_circuit({
 - Marginally more expensive (~`ig_steps` × the cost of vanilla EAP)
 - Validated across GPT-2 through Llama-3.2-3B, Gemma-4B, Qwen2.5-1.5B
 
-**Memory guidance:** With `ig_steps=5`, peak GPU memory is ~1.5× the model size. For 3B models, this means ~9–12 GB. See [Memory Optimization](../advanced/memory-optimization.md) for reduction strategies.
+**Memory guidance:** At `ig_steps=5` (the previous default), peak GPU memory was ~1.5× the model size; for 3B models, about 9–12 GB. The default of 3 steps needs less. See [Memory Optimization](../advanced/memory-optimization.md) for reduction strategies.
 
 ---
 
@@ -101,11 +101,12 @@ The number of integration steps controls the accuracy vs. speed tradeoff:
 | `ig_steps` | Accuracy | Runtime (GPT-2, 128 examples) |
 |-----------|---------|-------------------------------|
 | 1 | Low (= vanilla EAP) | ~45s |
-| 5 | Good (default) | ~3.5 min |
+| 3 (default) | Good | ~2 min (estimated: cost is linear in steps) |
+| 5 | Good | ~3.5 min |
 | 10 | High | ~7 min |
 | 20 | Very high | ~14 min |
 
-For research-grade circuit discovery, use `ig_steps=10`. For iteration, `ig_steps=3` is often sufficient.
+The default of 3 is enough. In the EAP-IG paper (Hanna et al., 2024) every step count above 2 gave similarly faithful circuits, 2 steps was unfaithful on some tasks, and 1 step is plain EAP. More steps cost proportionally more time without a measured gain, so raise `ig_steps` only to confirm that a result does not depend on it. `eap-gp` reads the same key; its paper uses 5, so set `ig_steps=5` for a paper-faithful EAP-GP run.
 
 ### `n_examples`
 

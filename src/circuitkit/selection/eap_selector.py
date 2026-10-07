@@ -26,7 +26,7 @@ def _run_eap_on_model(model, task_name: str, algorithm: str, config: dict) -> di
         "level": "node",
         "mlp_hook": "mlp_out",
         "batch_size": config.get("batch_size", 4),
-        "ig_steps": config.get("ig_steps", 5),
+        "ig_steps": config.get("ig_steps", 3),
         "model_name": config.get("model_name", getattr(model.cfg, "model_name", "unknown")),
         "data_params": {
             "num_examples": config.get("num_examples", 128),
@@ -46,7 +46,7 @@ def _run_eap_on_model(model, task_name: str, algorithm: str, config: dict) -> di
     attribute_node(
         model, graph, dataloader, metric,
         method="EAP-IG-inputs" if algorithm == "eap-ig" else "EAP",
-        ig_steps=config.get("ig_steps", 5) if algorithm == "eap-ig" else 0,
+        ig_steps=config.get("ig_steps", 3) if algorithm == "eap-ig" else 0,
         neuron=False,
     )
 

@@ -204,5 +204,6 @@ in the [Examples overview](examples/overview.md).
   <img class="ck-lexsi-on-dark" src="assets/lexsi-logo-white.png" alt="Lexsi Labs" width="240">
 </a>
 <p><a href="https://www.lexsi.ai">https://www.lexsi.ai</a></p>
+<p><a href="https://discord.gg/MhVUGVYE8q">Discord</a> · <a href="https://github.com/Lexsi-Labs">GitHub</a> · <a href="https://x.com/Lexsi_labs">X</a> · <a href="https://www.linkedin.com/company/lexsi-labs/">LinkedIn</a> · <a href="https://huggingface.co/Lexsi">Hugging Face</a></p>
 <p>Mumbai 🇮🇳 · Paris 🇫🇷 · London 🇬🇧</p>
 </div>

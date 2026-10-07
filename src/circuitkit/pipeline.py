@@ -28,6 +28,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
+from .utils.hparams import PILLARS_BASIC
+
 if TYPE_CHECKING:
     from circuitkit.evaluation.report import FaithfulnessReport
 
@@ -69,8 +71,10 @@ def _resolve_pillars(pillars: Optional[Union[List, str]]) -> Optional[List[str]]
 
     Integers 1-6 map to their pillar name; string names pass through unchanged
     (validated downstream by ``run_full_faithfulness``, which also knows the
-    unnumbered ``intervention_reliability`` pillar). ``None`` or ``"all"``
-    returns ``None`` (run every pillar).
+    unnumbered ``intervention_reliability`` pillar). ``"all"`` returns ``None``
+    (run every pillar). ``None`` also returns ``None``: it means "no spec", and
+    the caller decides the default (:meth:`Pipeline.evaluate` runs the two basic
+    pillars).
     """
     if pillars is None or pillars == "all":
         return None
@@ -471,7 +475,7 @@ class Pipeline:
                 (e.g. IOI). Vary it across runs for genuine multi-seed error
                 bars; leave ``None`` to use the data default.
             **kw: Extra keys forwarded into the discovery config block
-                (e.g. ``ig_steps=5``).
+                (e.g. ``ig_steps=3``).
 
         Returns:
             ``self`` for chaining.
@@ -587,7 +591,7 @@ class Pipeline:
         *,
         pillars: Optional[Union[List, str]] = None,
         n_examples: int = 256,
-        n_stability_runs: int = 5,
+        n_stability_runs: int = 3,
         target_task: Optional[str] = None,
         **kw: Any,
     ) -> "Pipeline":
@@ -597,12 +601,15 @@ class Pipeline:
         to have been loaded from an artifact/scores).
 
         Args:
-            pillars: Subset of pillars to run. ``None`` or ``"all"`` runs all.
-                Pass a list of ints (1-6) or names:
+            pillars: Which pillars to run. ``None`` (the default) runs the two
+                basic pillars, ``"patching"`` and ``"ablation"``. ``"all"`` runs
+                every pillar, including the expensive ones (stability and
+                generalization re-run discovery). Pass a list of ints (1-6) or names:
                 ``"patching"``, ``"ablation"``, ``"stability"``,
                 ``"robustness"``, ``"baselines"``, ``"generalization"``.
             n_examples: Number of evaluation examples.
-            n_stability_runs: Stability pillar rediscovery count.
+            n_stability_runs: Stability pillar rediscovery count (default 3; only
+                used when the stability pillar runs).
             target_task: Override task for cross-task generalization pillar.
             **kw: Forwarded to :func:`circuitkit.api.evaluate_circuit`.
 
@@ -624,6 +631,8 @@ class Pipeline:
             "full_faithfulness_eval": True,
             "n_stability_runs": n_stability_runs,
         }
+        if pillars is None:
+            pillars = list(PILLARS_BASIC)
         resolved_pillars = _resolve_pillars(pillars)
         if resolved_pillars is not None:
             eval_cfg["pillars"] = resolved_pillars

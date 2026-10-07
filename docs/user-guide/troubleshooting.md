@@ -108,7 +108,7 @@ Generalization re-discovers the circuit on the target task. Limit `n_examples` o
 
 `target_task` was not supplied. Pass it explicitly:
 ```python
-pipe.evaluate(pillars=None, target_task="sva")
+pipe.evaluate(pillars="all", target_task="sva")
 ```
 
 ## Pruning / Export

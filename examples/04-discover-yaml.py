@@ -9,7 +9,7 @@ Python data code required.
 The same YAML can be used from the CLI:
     circuitkit discover-yaml --model gpt2 \\
         --task-yaml examples/simple_csv_task.yaml --algorithm eap-ig \\
-        --level node --sparsity 0.2 --num-examples 8 \\
+        --level node --sparsity 0.2 --num-examples 32 \\
         --output ./results/example_yaml_circuit.pt
 
 This script does the equivalent through the Python API by registering the
@@ -47,7 +47,7 @@ def main():
             "level": "node",
             "batch_size": 2,
             "ig_steps": 2,
-            "data_params": {"num_examples": 8},
+            "data_params": {"num_examples": 32},
         },
         "pruning": {"target_sparsity": 0.2, "scope": "heads"},
         "output_path": "./results/example_yaml_circuit.pt",

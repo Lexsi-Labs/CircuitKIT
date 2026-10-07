@@ -96,7 +96,7 @@ Score a discovered circuit with the 6-pillar faithfulness framework.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `pillars` | all | Subset to run, e.g. `["patching", "ablation"]` |
+| `pillars` | `["patching", "ablation"]` | Which pillars to run: a list of names, or `"all"` for every pillar |
 | `n_examples` | 256 | Evaluation examples |
 | `**kw` | — | Forwarded to `run_full_faithfulness` (e.g. `n_stability_runs`) |
 

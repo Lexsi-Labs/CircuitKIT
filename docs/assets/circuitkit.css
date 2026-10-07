@@ -1,7 +1,8 @@
 /* ============================================================================
    CircuitKIT — design system
-   Direction: minimal, technical, monochrome + restrained orange accent
-   matching the CircuitKIT logo (FF4B0A).
+   Direction: minimal, technical, black and orange. Lexsi ink for the chrome,
+   a warm paper for the page, and the Lexsi orange (#FF4B0A) as the one accent.
+   Colours are the tokens lexsi.ai publishes (--orange--orange-*, --neutral--*).
    Type: Bricolage Grotesque (display) · Schibsted Grotesk (text, via theme)
          · IBM Plex Mono (code, via theme)
    ========================================================================== */
@@ -9,39 +10,75 @@
 @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&display=swap');
 
 :root {
-  --ck-ink: #0f172a;
-  --ck-ink-2: #1e293b;
-  --ck-accent: #FF4B0A;
+  /* Lexsi brand tokens (from lexsi.ai) */
+  --lx-orange-400: #ff692e;
+  --lx-orange-500: #ff4b0a; /* the Lexsi orange */
+  --lx-orange-600: #e62e05;
+  --lx-orange-700: #bc1b06;
+  --lx-ink: #07080a; /* neutral-900 */
+  --lx-ink-2: #2c2c2c; /* neutral-800 */
+  --lx-ink-3: #404040; /* neutral-700 */
+  --lx-milk: #f4f3ec; /* milk-white */
+
+  --ck-ink: var(--lx-ink);
+  --ck-ink-2: var(--lx-ink-2);
+  --ck-accent: var(--lx-orange-500);
   --ck-accent-dim: rgba(255, 75, 10, 0.12);
-  --ck-paper: #f8fafc;
+  /* Link text: #FF4B0A is 3.0-3.4:1 on a light page and orange-600 (#e62e05) is 4.2:1,
+     both under the 4.5:1 that WCAG AA asks for body text. Light mode links therefore use
+     #d42905, orange-600 darkened a few percent (4.9:1 on the page), and darken again on
+     hover (orange-700, 6.1:1). Dark mode keeps the exact brand orange (5.8:1) and
+     lightens on hover. */
+  --ck-accent-link: #d42905;
+  --ck-accent-hover: var(--lx-orange-700);
+  --ck-paper: #fbfaf7;
   --ck-display: "Bricolage Grotesque", "Schibsted Grotesk", sans-serif;
 }
 
 /* ── Palette: light ─────────────────────────────────────────────────────── */
 [data-md-color-scheme="default"] {
   --md-primary-fg-color: var(--ck-ink);
-  --md-primary-fg-color--light: var(--ck-ink-2);
-  --md-primary-fg-color--dark: #020617;
-  --md-accent-fg-color: var(--ck-accent);
-  --md-typeset-a-color: var(--ck-accent);
+  --md-primary-fg-color--light: var(--lx-ink-3);
+  --md-primary-fg-color--dark: #000;
+  --md-accent-fg-color: var(--ck-accent-hover);
+  --md-typeset-a-color: var(--ck-accent-link);
   --md-default-bg-color: var(--ck-paper);
-  --md-code-bg-color: #eef2f6;
+  --md-code-bg-color: var(--lx-milk);
   --md-footer-bg-color: var(--ck-ink);
-  --md-footer-bg-color--dark: #020617;
+  --md-footer-bg-color--dark: #000;
 }
 
 /* ── Palette: dark ────────────────────────────────────────────────────────── */
+/* Material's slate scheme derives every grey from a blue hue; set neutral ones
+   so the dark theme is black, not navy. */
 [data-md-color-scheme="slate"] {
-  --md-primary-fg-color: #0c1220;
-  --md-primary-fg-color--light: var(--ck-ink-2);
-  --md-primary-fg-color--dark: #070d16;
-  --md-accent-fg-color: var(--ck-accent);
+  --md-primary-fg-color: var(--ck-ink);
+  --md-primary-fg-color--light: var(--lx-ink-3);
+  --md-primary-fg-color--dark: #000;
+  --md-accent-fg-color: var(--lx-orange-400);
   --md-typeset-a-color: var(--ck-accent);
-  --md-default-bg-color: #0f1722;
-  --md-default-fg-color--lightest: rgba(148, 163, 184, 0.12);
-  --md-code-bg-color: #151e2e;
-  --md-footer-bg-color: #0c1220;
-  --md-footer-bg-color--dark: #070d16;
+  --md-default-bg-color: #0c0d0f;
+  --md-default-bg-color--light: rgba(12, 13, 15, 0.54);
+  --md-default-bg-color--lighter: rgba(12, 13, 15, 0.26);
+  --md-default-bg-color--lightest: rgba(12, 13, 15, 0.07);
+  --md-default-fg-color: rgba(255, 255, 255, 0.9);
+  --md-default-fg-color--light: rgba(255, 255, 255, 0.62);
+  --md-default-fg-color--lighter: rgba(255, 255, 255, 0.34);
+  --md-default-fg-color--lightest: rgba(255, 255, 255, 0.1);
+  --md-typeset-color: var(--md-default-fg-color);
+  --md-code-fg-color: #e8e6e1;
+  --md-code-bg-color: #15161a;
+  --md-typeset-table-color: rgba(255, 255, 255, 0.1);
+  --md-typeset-table-color--light: rgba(255, 255, 255, 0.03);
+  --md-typeset-kbd-color: rgba(255, 255, 255, 0.1);
+  --md-typeset-kbd-accent-color: rgba(255, 255, 255, 0.18);
+  --md-typeset-kbd-border-color: #000;
+  --md-footer-bg-color: var(--ck-ink);
+  --md-footer-bg-color--dark: #000;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--ck-accent) 28%, transparent);
 }
 
 /* ── Typography ─────────────────────────────────────────────────────────── */
@@ -146,14 +183,14 @@
 }
 
 [data-md-color-scheme="default"] {
-  --ck-anim-edge: rgba(15, 23, 42, 0.13);
-  --ck-anim-node: rgba(15, 23, 42, 0.42);
+  --ck-anim-edge: rgba(7, 8, 10, 0.13);
+  --ck-anim-node: rgba(7, 8, 10, 0.42);
   --ck-anim-glow: rgba(255, 75, 10, 0.30);
 }
 
 [data-md-color-scheme="slate"] {
-  --ck-anim-edge: rgba(148, 163, 184, 0.16);
-  --ck-anim-node: rgba(214, 225, 240, 0.50);
+  --ck-anim-edge: rgba(255, 255, 255, 0.14);
+  --ck-anim-node: rgba(255, 255, 255, 0.5);
   --ck-anim-glow: rgba(255, 75, 10, 0.55);
 }
 
@@ -237,12 +274,14 @@
 .ck-hero .md-button--primary {
   background-color: var(--ck-accent);
   border-color: var(--ck-accent);
+  color: #fff;
   transition: background-color 125ms, border-color 125ms, transform 125ms;
 }
 
 .ck-hero .md-button--primary:hover {
-  background-color: #E14108;
-  border-color: var(--ck-accent);
+  background-color: var(--lx-orange-600);
+  border-color: var(--lx-orange-600);
+  color: #fff;
   transform: translateY(-1px);
 }
 
@@ -260,20 +299,20 @@
 /* ── Mermaid: brand palette ─────────────────────────────────────────────── */
 :root,
 [data-md-color-scheme="default"] {
-  --md-mermaid-node-bg-color: color-mix(in srgb, var(--ck-accent) 10%, #ffffff);
+  --md-mermaid-node-bg-color: color-mix(in srgb, var(--ck-accent) 9%, #ffffff);
   --md-mermaid-node-fg-color: var(--ck-ink);
-  --md-mermaid-edge-color: var(--ck-ink-2);
+  --md-mermaid-edge-color: var(--lx-ink-3);
   --md-mermaid-label-bg-color: var(--ck-paper);
   --md-mermaid-label-fg-color: var(--ck-ink);
   --md-mermaid-font-family: var(--md-text-font-family);
 }
 
 [data-md-color-scheme="slate"] {
-  --md-mermaid-node-bg-color: #1a2438;
-  --md-mermaid-node-fg-color: #cbd5e1;
-  --md-mermaid-edge-color: #64748b;
-  --md-mermaid-label-bg-color: #0f1722;
-  --md-mermaid-label-fg-color: #cbd5e1;
+  --md-mermaid-node-bg-color: #1c1d21;
+  --md-mermaid-node-fg-color: #ece9e4;
+  --md-mermaid-edge-color: #8a8782;
+  --md-mermaid-label-bg-color: #0c0d0f;
+  --md-mermaid-label-fg-color: #ece9e4;
 }
 
 /* ── Full-width tables ──────────────────────────────────────────────────── */
@@ -310,12 +349,12 @@
 
 .md-typeset .grid.cards > ul > li:hover {
   border-top: 2px solid var(--ck-accent);
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 6px 18px rgba(7, 8, 10, 0.08);
   transform: translateY(-2px);
 }
 
 [data-md-color-scheme="slate"] .md-typeset .grid.cards > ul > li:hover {
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
 }
 
 .md-typeset .grid.cards > ul > li .twemoji.lg {
@@ -356,6 +395,22 @@
 .md-typeset .admonition,
 .md-typeset details {
   border-left-color: var(--ck-accent);
+}
+
+/* Admonitions: the informational types (Material colours them blue, teal and
+   violet) take the brand orange so the page carries one accent. Success,
+   warning, failure, danger, question and quote keep their semantic colours. */
+.md-typeset .admonition:is(.note, .abstract, .summary, .tldr, .info, .todo, .tip, .hint, .important, .example),
+.md-typeset details:is(.note, .abstract, .summary, .tldr, .info, .todo, .tip, .hint, .important, .example) {
+  border-color: var(--ck-accent);
+}
+
+.md-typeset :is(.note, .abstract, .summary, .tldr, .info, .todo, .tip, .hint, .important, .example) > :is(.admonition-title, summary) {
+  background-color: var(--ck-accent-dim);
+}
+
+.md-typeset :is(.note, .abstract, .summary, .tldr, .info, .todo, .tip, .hint, .important, .example) > :is(.admonition-title, summary)::before {
+  background-color: var(--ck-accent);
 }
 
 .md-footer-social__link:hover svg {

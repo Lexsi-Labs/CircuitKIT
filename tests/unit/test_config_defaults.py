@@ -165,6 +165,37 @@ class TestConfigDefaults:
             config["discovery"]["beta"] == 0.001
         ), "Beta mismatch not fixed: config doesn't use 0.001"
 
+    def test_ig_steps_default_is_three(self):
+        """ig_steps only matters for the EAP-IG family; 3 steps is enough (Hanna et al. 2024)."""
+        assert DEFAULT_CONFIG["discovery"]["ig_steps"] == 3
+
+        config = load_and_validate_config(
+            {"model": {"name": "gpt2"}, "discovery": {"algorithm": "eap-ig", "task": "ioi"}}
+        )
+        assert config["discovery"]["ig_steps"] == 3
+
+    def test_ig_steps_can_still_be_overridden(self):
+        config = load_and_validate_config(
+            {
+                "model": {"name": "gpt2"},
+                "discovery": {"algorithm": "eap-ig", "task": "ioi", "ig_steps": 10},
+            }
+        )
+        assert config["discovery"]["ig_steps"] == 10
+
+    def test_n_stability_runs_default_is_three(self):
+        assert DEFAULT_CONFIG["eval"]["n_stability_runs"] == 3
+
+        config = load_and_validate_config(
+            {"model": {"name": "gpt2"}, "discovery": {"algorithm": "eap-ig", "task": "ioi"}}
+        )
+        assert config["eval"]["n_stability_runs"] == 3
+
+    def test_default_eval_is_the_fast_two_pillar_path(self):
+        """dict-config runs patching + ablation unless full_faithfulness_eval is switched on."""
+        assert DEFAULT_CONFIG["eval"]["full_faithfulness_eval"] is False
+        assert "pillars" not in DEFAULT_CONFIG["eval"]
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

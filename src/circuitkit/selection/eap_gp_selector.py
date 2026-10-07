@@ -28,7 +28,7 @@ def eap_gp_selector(model, task_name: str, config: dict) -> dict:
         "level": "node",
         "mlp_hook": "mlp_out",
         "batch_size": config.get("batch_size", 4),
-        "ig_steps": config.get("ig_steps", 5),
+        "ig_steps": config.get("ig_steps", 3),
         "model_name": config.get("model_name", getattr(model.cfg, "model_name", "unknown")),
         "data_params": {
             "num_examples": config.get("num_examples", 128),
@@ -45,7 +45,7 @@ def eap_gp_selector(model, task_name: str, config: dict) -> dict:
 
     graph = Graph.from_model(model, node_scores=True, neuron_level=False, mlp_hook="mlp_out")
 
-    attribute_node(model, graph, dataloader, metric, method="eap-gp", ig_steps=config.get("ig_steps", 5), neuron=False, quiet=False)
+    attribute_node(model, graph, dataloader, metric, method="eap-gp", ig_steps=config.get("ig_steps", 3), neuron=False, quiet=False)
 
     scores = {}
     for node in graph.nodes.values():

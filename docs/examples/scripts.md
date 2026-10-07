@@ -16,7 +16,7 @@ python examples/01-quickstart.py
 import circuitkit as ck
 
 model   = ck.load_model("gpt2", dtype="float32")
-circuit = ck.discover(model, "ioi", algorithm="eap-ig", n_examples=16)
+circuit = ck.discover(model, "ioi", algorithm="eap-ig", n_examples=32)
 print(circuit.top_nodes(5))
 ```
 

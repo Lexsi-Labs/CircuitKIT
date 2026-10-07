@@ -56,7 +56,7 @@ class Pillar3_Stability:
         graph: Graph,
         dataloader: DataLoader,
         metric_fn,
-        n_runs: int = 5,
+        n_runs: int = 3,
         seed_start: int = 42,
         device: str = "auto",
         quiet: bool = False,
@@ -76,7 +76,7 @@ class Pillar3_Stability:
             dataloader: Evaluation dataset yielding (clean, corrupted, label) batches.
             metric_fn: Metric function with signature
                 (logits, clean_logits, input_lengths, labels) -> Tensor [batch].
-            n_runs: Number of discovery runs with different seeds (default 5).
+            n_runs: Number of discovery runs with different seeds (default 3).
             seed_start: Starting seed for determinism (default 42).
             device: Target device ("cuda" or "cpu"). Defaults to "cuda".
             quiet: Suppress progress bar. Defaults to False.

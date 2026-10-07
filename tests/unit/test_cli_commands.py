@@ -7,10 +7,21 @@ All tests verify command registration and --help output only;
 end-to-end execution is covered by the integration suite.
 """
 
+import re
+
 import pytest
 from click.testing import CliRunner
 
 from circuitkit.cli.main import cli
+
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _plain(text):
+    """CLI output without colour codes. Rich colours it when the shell exports FORCE_COLOR, which
+    splits a plain substring such as "Hyperparameter warnings (2)" into styled fragments."""
+    return _ANSI.sub("", text)
+
 
 # ---------------------------------------------------------------------------
 # Fixture
@@ -176,3 +187,90 @@ class TestTopLevelHelp:
         result = runner.invoke(cli, ["--help"])
         for cmd in ("inspect", "prune", "quantize", "export", "run"):
             assert cmd in result.output, f"'{cmd}' not shown in top-level --help"
+
+
+# ---------------------------------------------------------------------------
+# Defaults
+# ---------------------------------------------------------------------------
+
+class TestCliDefaults:
+    def test_discover_ig_steps_default_is_three(self):
+        option = next(p for p in cli.commands["discover"].params if p.name == "ig_steps")
+        assert option.default == 3
+
+
+class TestValidateConfigCommand:
+    @staticmethod
+    def _write(tmp_path, text):
+        path = tmp_path / "cfg.yaml"
+        path.write_text(text)
+        return str(path)
+
+    VALID = (
+        "model: {name: gpt2}\n"
+        "discovery: {algorithm: eap-ig, task: ioi, level: node, data_params: {num_examples: 128}}\n"
+        "pruning: {target_sparsity: 0.3, scope: both}\n"
+    )
+
+    def test_valid_config_passes(self, runner, tmp_path):
+        result = runner.invoke(cli, ["validate-config", "--config", self._write(tmp_path, self.VALID)])
+        assert result.exit_code == 0, _plain(result.output)
+        assert "Configuration is valid" in _plain(result.output)
+        assert "warnings" not in _plain(result.output).lower()
+
+    def test_invalid_range_fails_and_names_the_parameter(self, runner, tmp_path):
+        text = self.VALID.replace("level: node,", "level: node, ig_steps: 0,")
+        result = runner.invoke(cli, ["validate-config", "--config", self._write(tmp_path, text)])
+        assert result.exit_code != 0
+        assert "discovery.ig_steps" in _plain(result.output)
+
+    def test_irrelevant_parameter_is_ignored(self, runner, tmp_path):
+        text = self.VALID.replace("algorithm: eap-ig,", "algorithm: eap,").replace(
+            "level: node,", "level: node, ig_steps: 0,"
+        )
+        result = runner.invoke(cli, ["validate-config", "--config", self._write(tmp_path, text)])
+        assert result.exit_code == 0, _plain(result.output)
+
+    WARN = (
+        "model: {name: gpt2}\n"
+        "discovery: {algorithm: eap-ig, task: ioi, data_params: {num_examples: 8}}\n"
+        "pruning: {target_sparsity: 0.6, scope: both}\n"
+    )
+
+    def test_sensible_range_warns_but_passes(self, runner, tmp_path):
+        result = runner.invoke(cli, ["validate-config", "--config", self._write(tmp_path, self.WARN)])
+        assert result.exit_code == 0, _plain(result.output)
+        assert "Hyperparameter warnings (2)" in _plain(result.output)
+
+    def test_strict_fails_on_warnings(self, runner, tmp_path):
+        result = runner.invoke(
+            cli, ["validate-config", "--config", self._write(tmp_path, self.WARN), "--strict"]
+        )
+        assert result.exit_code != 0
+        assert "num_examples" in _plain(result.output)
+
+    def test_pipeline_yaml_gets_a_clear_message(self, runner, tmp_path):
+        text = "model: gpt2\ntask: ioi\ndiscovery: {algorithm: eap-ig}\n"
+        result = runner.invoke(cli, ["validate-config", "--config", self._write(tmp_path, text)])
+        assert result.exit_code != 0
+        assert "circuitkit run" in _plain(result.output)
+
+    def test_missing_file_aborts(self, runner, tmp_path):
+        result = runner.invoke(cli, ["validate-config", "--config", str(tmp_path / "nope.yaml")])
+        assert result.exit_code != 0
+        assert "not found" in _plain(result.output)
+
+
+class TestHparamsCommand:
+    def test_table_lists_the_parameters(self, runner):
+        result = runner.invoke(cli, ["hparams"])
+        assert result.exit_code == 0, _plain(result.output)
+        for name in ("discovery.ig_steps", "eval.n_stability_runs", "pruning.target_sparsity"):
+            assert name in _plain(result.output)
+
+    def test_markdown_matches_the_docs_generator(self, runner):
+        from circuitkit.utils.hparams import render_markdown
+
+        result = runner.invoke(cli, ["hparams", "--markdown"])
+        assert result.exit_code == 0, _plain(result.output)
+        assert _plain(result.output) == render_markdown()

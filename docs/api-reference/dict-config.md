@@ -38,8 +38,8 @@ Run a discovery algorithm and return a pruning artifact. Writes three files to d
             "num_examples": 128,
             "batch_size": 4,
         },
-        # EAP-IG specific (optional):
-        "ig_steps": 5,
+        # EAP-IG family only (optional; default 3):
+        "ig_steps": 3,
     },
     "pruning": {
         "target_sparsity": 0.3,    # fraction of components to remove
@@ -69,7 +69,7 @@ circuit = discover_circuit({
         "algorithm": "eap-ig",
         "task": "ioi",
         "level": "node",
-        "ig_steps": 5,
+        "ig_steps": 3,
         "data_params": {"num_examples": 64, "batch_size": 4},
     },
     "pruning": {"target_sparsity": 0.3, "scope": "both"},
@@ -151,7 +151,7 @@ discovery:
   algorithm: eap-ig
   task: ioi
   level: node
-  ig_steps: 5
+  ig_steps: 3
   data_params:
     num_examples: 128
     batch_size: 4

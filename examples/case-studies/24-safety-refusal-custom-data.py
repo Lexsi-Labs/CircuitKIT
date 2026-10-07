@@ -45,7 +45,7 @@ WHAT IT DOES
 2. Runs circuit discovery with eap-ig on gpt2 (num_examples 16, batch_size 2,
    ig_steps 2 — kept tiny so this runs in a couple of minutes on CPU).
 3. Evaluates faithfulness with the meaningful pillars for a signed-metric task:
-   ["patching", "ablation", "baselines", "stability"] (n_stability_runs 2).
+   ["patching", "ablation", "baselines", "stability"] (n_stability_runs 3).
    The "robustness" pillar is intentionally EXCLUDED: its ratio is
    uninterpretable for signed metrics like logit_diff.
 4. Repeats across 3 seeds and prints mean ± std of the Pillar-1 (patching)
@@ -115,7 +115,7 @@ def run_one_seed(seed: int) -> float:
         algorithm="eap-ig",
         level="node",
         sparsity=0.3,
-        n_examples=16,
+        n_examples=32,
         batch_size=2,
         ig_steps=2,
         seed=seed,
@@ -125,8 +125,8 @@ def run_one_seed(seed: int) -> float:
     # --- 3. Faithfulness evaluation (meaningful pillars only) --------------
     pipe.evaluate(
         pillars=PILLARS,
-        n_examples=16,
-        n_stability_runs=2,
+        n_examples=100,
+        n_stability_runs=3,
     )
 
     report = pipe.report

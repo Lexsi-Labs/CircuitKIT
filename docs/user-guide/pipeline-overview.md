@@ -80,7 +80,7 @@ pipe.discover(
     sparsity=0.3,               # fraction of nodes to prune
     scope="both",              # "heads", "mlp", or "both"
     batch_size=4,
-    # extra keyword args are forwarded into the discovery config block, e.g. ig_steps=5
+    # extra keyword args are forwarded into the discovery config block, e.g. ig_steps=3
 )
 ```
 
@@ -96,7 +96,7 @@ pipe.evaluate(pillars=["patching", "ablation"], n_examples=128)
 pipe.evaluate(pillars=["patching", "ablation", "baselines"], n_examples=256)
 
 # Full audit — publication quality
-pipe.evaluate(pillars=None, n_examples=512,
+pipe.evaluate(pillars="all", n_examples=512,
               n_stability_runs=5, target_task="sva")
 ```
 

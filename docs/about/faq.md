@@ -22,7 +22,7 @@ The six Stable-tier discovery algorithms (`eap`, `eap-ig`, `eap-gp`, `acdc`, `ib
 
 **Which algorithm should I use?**
 
-Start with `eap-ig` (the default). It is the most accurate stable algorithm. For speed over accuracy, use `eap`. For memory-constrained settings, reduce `ig_steps` to 3. See [Algorithm Selection Guide](../algorithms/overview.md).
+Start with `eap-ig` (the default). It is the most accurate stable algorithm. For speed over accuracy, use `eap`. For memory-constrained settings, lower `batch_size` first (`ig_steps` already defaults to 3). See [Algorithm Selection Guide](../algorithms/overview.md).
 
 **How many examples do I need?**
 
@@ -74,7 +74,7 @@ Production: `llama`, `qwen`, `gemma`. Ready: `mistral`, `phi`, `falcon`, `gpt2`.
 
 **How do I reduce memory usage for large models?**
 
-Set `model.precision="bfloat16"`, `ig_steps=3`, `batch_size=1`, and lower `n_examples`. Combined, these reduce peak VRAM by about 80%. There is no `memory_efficient` or `use_half_precision_activations` config key — those are not read anywhere in the discovery backend. See [Memory Optimization](../advanced/memory-optimization.md).
+Set `model.precision="bfloat16"`, `batch_size=1`, and lower `n_examples` (`ig_steps` already defaults to 3). Measured against the previous defaults (`ig_steps=5`, `batch_size=4`, 128 examples), the combination reduced peak VRAM by about 80%. There is no `memory_efficient` or `use_half_precision_activations` config key — those are not read anywhere in the discovery backend. See [Memory Optimization](../advanced/memory-optimization.md).
 
 **How long does discovery take?**
 

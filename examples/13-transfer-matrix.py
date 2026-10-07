@@ -12,7 +12,7 @@ numpy_matrix = matrix.build(
     model,
     discovery_cfg_template={
         "model": {"name": "gpt2", "precision": "float32"},
-        "discovery": {"algorithm": "eap-ig", "data_params": {"num_examples": 16}},
+        "discovery": {"algorithm": "eap-ig", "data_params": {"num_examples": 32}},
         "pruning": {"target_sparsity": 0.3},
     },
     device="cpu",

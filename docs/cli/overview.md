@@ -32,7 +32,8 @@ circuitkit --help
 | `circuitkit steer` | Activation steering at inference |
 | `circuitkit benchmark` | Compare circuit methods and baselines across tasks |
 | `circuitkit inspect` | Inspect a circuit artifact's contents |
-| `circuitkit validate-config` | Validate a discovery config YAML |
+| `circuitkit validate-config` | Validate a dict-config YAML, including hyperparameter ranges |
+| `circuitkit hparams` | Show the valid and sensible range of each hyperparameter |
 | `circuitkit run` | Run a full pipeline from a YAML config |
 | `circuitkit data check` | Check a dataset for EAP compatibility |
 | `circuitkit data prepare` | Prepare a dataset for discovery |

@@ -41,7 +41,7 @@ def rediscover(
     model,
     task_spec,
     discovery_cfg: dict,
-    n_runs: int = 5,
+    n_runs: int = 3,
     seed_start: int = 42,
     device: str = "auto",
 ) -> List[Dict[str, float]]:
@@ -57,7 +57,7 @@ def rediscover(
         model: Already-loaded HookedTransformer (not reloaded per run).
         task_spec: TaskSpec with build_dataloader() and metric_fn().
         discovery_cfg: Original discovery config dict (not mutated).
-        n_runs: Number of independent re-discoveries (default 5).
+        n_runs: Number of independent re-discoveries (default 3).
         seed_start: First seed; run i uses seed seed_start + i.
         device: 'cuda' or 'cpu'.
 
@@ -300,7 +300,7 @@ def _rediscover_eap(model, task_spec, cfg: dict, algo: str, device: str) -> Dict
         dataloader,
         metric,
         method=method,
-        ig_steps=cfg.get("ig_steps", default.get("ig_steps", 20)),
+        ig_steps=cfg.get("ig_steps", default.get("ig_steps", 3)),
         neuron=is_neuron,
         intervention=intervention,
     )

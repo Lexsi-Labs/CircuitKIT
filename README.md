@@ -20,6 +20,15 @@
   <a href="https://circuitkit.lexsi.ai/"><img src="https://img.shields.io/badge/docs-mkdocs%20material-FF4B0A.svg" alt="Docs"></a>
 </p>
 
+<p align="center">
+  <a href="https://discord.gg/MhVUGVYE8q"><img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
+  <a href="https://github.com/Lexsi-Labs"><img src="https://img.shields.io/badge/GitHub-Lexsi--Labs-171515?logo=github&logoColor=white" alt="Lexsi Labs on GitHub"></a>
+  <a href="https://x.com/Lexsi_labs"><img src="https://img.shields.io/badge/X-Follow-000000?logo=x&logoColor=white" alt="Follow on X"></a>
+  <a href="https://www.linkedin.com/company/lexsi-labs/"><img src="https://img.shields.io/badge/LinkedIn-Lexsi%20Labs-0A66C2?logo=linkedin&logoColor=white" alt="Lexsi Labs on LinkedIn"></a>
+  <a href="https://huggingface.co/Lexsi"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Lexsi-FFD21E" alt="Lexsi on Hugging Face"></a>
+  <a href="https://lexsi.ai"><img src="https://img.shields.io/badge/Website-lexsi.ai-FF4B0A.svg" alt="lexsi.ai"></a>
+</p>
+
 ---
 
 CircuitKIT is a framework for mechanistic interpretability. Given a model and a task, it discovers the circuit driving that behaviour, evaluates how faithful it is, and lets you act on it (prune, quantize, edit, steer, or fine-tune), then export a reloadable HuggingFace checkpoint.

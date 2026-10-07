@@ -32,10 +32,11 @@ circuit = discover_circuit({
         "task": "ioi",
         "level": "node",
         "data_params": {"num_examples": 64},
-        # Optional: scope the tao (threshold) grid ACDC sweeps.
-        # Omit these to use the backend defaults.
-        "tao_bases": [1, 3, 5, 7, 9],
-        "tao_exps": [-5, -4, -3, -2],
+        # Optional: scope the tao (threshold) grid ACDC sweeps. Omit these to use the
+        # backend defaults (bases [1, 5] x exps [-5, -4, -3, -2] = 8 sweeps); this narrower
+        # grid runs 2 x 2 = 4.
+        "tao_bases": [1, 5],
+        "tao_exps": [-3, -2],
         "faithfulness_target": "kl_div",  # or "mse"
     },
     "pruning": {"target_sparsity": 0.3, "scope": "heads"},
@@ -52,12 +53,12 @@ circuit = discover_circuit({
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `tao_bases` | `[1, 3, 5, 7, 9]` | Bases for the tao (threshold) grid ACDC sweeps. |
+| `tao_bases` | `[1, 5]` | Bases for the tao (threshold) grid ACDC sweeps. |
 | `tao_exps` | `[-5, -4, -3, -2]` | Exponents for the tao grid; each edge is scored by the smallest tao at which it is pruned. |
 | `faithfulness_target` | `"kl_div"` | Metric ACDC optimizes the circuit for; `"kl_div"` or `"mse"`. |
 | `num_examples` | `128` | Example count under `data_params`, used to build the batch ACDC patches over. |
 
-ACDC does not use a single threshold — it sweeps a grid of tao values built from the product of `tao_bases` and `tao_exps` (defaults give 20 sweeps). Narrow the grid to trim runtime:
+ACDC does not use a single threshold — it sweeps a grid of tao values built from the product of `tao_bases` and `tao_exps` (defaults give 8 sweeps). Narrow the grid to trim runtime:
 
 1. Keep the defaults for a full sweep.
 2. To go faster, pass fewer values, e.g. `tao_bases=[1]` and `tao_exps=[-3]` for a single tao.

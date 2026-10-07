@@ -4,6 +4,8 @@ from typing import Any, Dict, Union
 
 import yaml
 
+from .hparams import validate_config_hparams
+
 # Define a dictionary of default values. This makes the tool easier to use
 # as users only need to specify what they want to change.
 DEFAULT_CONFIG = {
@@ -18,7 +20,7 @@ DEFAULT_CONFIG = {
         "data_params": {"batch_size": 16, "num_examples": 128},
         "batch_size": 4,
         "method": "EAP-IG-inputs",
-        "ig_steps": 5,
+        "ig_steps": 3,  # EAP-IG family only; 3 is enough (Hanna et al. 2024), cost is linear
         "intervention": "patching",  # Discovery intervention mode
         # IBCircuit-specific defaults
         "num_epochs": 1000,
@@ -36,6 +38,7 @@ DEFAULT_CONFIG = {
     "eval": {
         "num_examples": 256,
         "seed": 42,
+        "n_stability_runs": 3,  # re-discoveries compared by the stability pillar
         "full_faithfulness_eval": False,
     },
     "data": None,  # Optional inline data config;
@@ -329,7 +332,21 @@ def load_and_validate_config(config_input: Union[str, Dict[str, Any]]) -> Dict[s
     # Merge the user's config on top of the defaults
     config = deep_merge(user_config, config)
 
+    # Hyperparameter ranges first, so a bad value raises the same HyperparameterError (a
+    # ValueError) whichever check would have caught it: ``_validate_config`` below still
+    # rejects e.g. a sparsity outside [0, 1], but with its own, different error type.
+    # Values outside the *valid* range raise; values outside the *sensible* range warn, but
+    # only for keys the caller wrote themselves (``user_config``, before the defaults were
+    # merged in). See circuitkit.utils.hparams.
+    validate_config_hparams(config, user_config)
+
     # Validate the final merged config
     _validate_config(config)
+
+    # ``eval.pillars: all`` is the config spelling of "every pillar"; the evaluator takes
+    # None for that, as Pipeline.evaluate and ck.faithfulness do for ``pillars="all"``.
+    eval_section = config.get("eval")
+    if isinstance(eval_section, dict) and isinstance(eval_section.get("pillars"), str) and eval_section["pillars"] == "all":
+        eval_section["pillars"] = None
 
     return config

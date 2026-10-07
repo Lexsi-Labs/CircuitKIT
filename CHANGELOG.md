@@ -17,6 +17,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Hyperparameter ranges** (`circuitkit.utils.hparams`). Each hyperparameter now has a *valid*
+  range (outside it the value cannot work: `HyperparameterError`, a `ValueError`) and a *sensible*
+  range (inside valid, but earlier runs or the literature show it is risky: `HyperparameterWarning`).
+  `HyperparameterWarning` derives from `Warning`, not `UserWarning`, because importing
+  `circuitkit.api` ignores every `UserWarning`. Integer parameters must be integers (`ig_steps: 3.0`
+  is rejected instead of failing later in the backend). Only values you set explicitly are warned
+  about, so defaults never warn. `validation: {strict: true}` in a dict/YAML config, or
+  `CIRCUITKIT_STRICT_HPARAMS=1`, turns the warnings into errors (`ck.prune`, `ck.quantize` and
+  `ck.faithfulness` have no config, so only the environment variable applies to them). Checked in
+  `load_and_validate_config` (so `discover_circuit`, `evaluate_circuit`, the flat API, `Pipeline` and
+  the CLI), and in `ck.prune`, `ck.quantize` and `ck.faithfulness`. Parameters an algorithm does not
+  read are not checked (`ig_steps` is ignored by `eap`), and an unknown pillar name now fails before
+  any discovery work instead of after it. `eval.pillars: all` is accepted in a config. A
+  `HyperparameterError` keeps its type through the `@handle_errors` wrapper of `discover_circuit`,
+  `evaluate_circuit` and `benchmark_circuit`, which turns other `ValueError`s into `ValidationError`.
+  Only ranges with a citable basis are listed; the reference is generated into
+  `docs/reference/hyperparameters.md`.
+- `circuitkit hparams` prints the table of ranges (`--markdown` for the docs tables).
 - `CohereLabs/aya-expanse-32b` registered alongside Aya Expanse 8B through the
   same `cohere1` TransformerLens compatibility port (`_tl_compat/cohere.py`) —
   no new converter code, only the repo ID added to `AYA_EXPANSE_MODEL_NAMES`.
@@ -58,6 +76,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `*-v3` bipartite-graph assets were removed.
 - Docs accent colour is now the logo orange `#FF4B0A` (links, buttons, landing animation, glows, docs badge); it was `#EC5A2C`.
 - Docs site now builds with a small template override (`overrides/main.html`) for the SVG favicon, ICO fallback and iOS icon.
+- **Defaults.** `discovery.ig_steps` now defaults to 3 (it was 5, and the EAP-IG backends
+  fell back to 30 when it was unset). It only affects the EAP-IG family, and the EAP-IG paper
+  (Hanna et al., 2024) finds every value above 2 similarly faithful. `eval.n_stability_runs`
+  and the stability pillar now default to 3 (was 5). `Pipeline.evaluate` and `ck.faithfulness`
+  now run only the two basic pillars (`patching`, `ablation`) by default; pass `pillars="all"`
+  for every pillar (what `pillars=None` used to mean). `run_full_faithfulness(pillars=None)`
+  is unchanged and still runs every pillar, and so does a dict-config run with
+  `full_faithfulness_eval: true`. EAP-GP reads the same `ig_steps` key, so it now also
+  defaults to 3 steps (its paper uses 5; set `ig_steps=5` for a paper-faithful run).
+  `circuitkit run` follows `Pipeline.evaluate`: an `evaluate:` block without `pillars:` now runs
+  the two basic pillars instead of all of them; list `pillars:` (or `pillars: all`) for more.
 
 ### Fixed
 
@@ -83,6 +112,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rendered blank on the PyPI project page (which renders the README outside the
   repository) and the internal doc links 404'd there. They are now absolute
   `raw.githubusercontent.com` / GitHub URLs.
+- The ACDC docs and a code comment gave the default threshold grid as `tao_bases=[1, 3, 5, 7, 9]`
+  (20 sweeps); the backend default is `[1, 5]` (8 sweeps). The docs now match the code.
+- The edge-level `attribute()` passed `steps=None` to the EAP-IG scorers when `ig_steps` was
+  unset, which raised a `TypeError` in `range(1, steps + 1)`; it now uses 3 like the node-level path.
+- `circuitkit validate-config` only parsed the YAML and printed "Configuration is valid" without
+  running any check. It now runs the same validation as `discover` and `evaluate` (including the
+  hyperparameter ranges) and exits non-zero on an invalid config; `--strict` also fails on
+  warnings. A `circuitkit run` pipeline YAML gets an explicit message instead of a misleading error.
 - **Behaviour change:** `ck.benchmark()` and the underlying `run_lm_eval` /
   `export_and_benchmark` / `compare_base_vs_intervened` helpers default to
   `dtype="float32"` again. The `bfloat16` default introduced under "VRAM policy

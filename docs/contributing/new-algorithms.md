@@ -146,7 +146,7 @@ def test_myalgo_returns_scores():
     import circuitkit as ck
 
     model = ck.load_model("gpt2", dtype="float32")
-    circuit = ck.discover(model, "ioi", algorithm="myalgo", n_examples=8)
+    circuit = ck.discover(model, "ioi", algorithm="myalgo", n_examples=32)
 
     assert len(circuit) > 0
     assert all(isinstance(v, float) for v in circuit.scores.values())

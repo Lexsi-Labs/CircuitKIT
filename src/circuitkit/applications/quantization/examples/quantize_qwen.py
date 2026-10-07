@@ -567,7 +567,7 @@ def parse_args():
     p.add_argument(
         "--ig-steps",
         type=int,
-        default=5,
+        default=3,
         help="Integrated Gradients steps (higher = slower, more accurate)",
     )
     p.add_argument(

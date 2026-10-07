@@ -29,7 +29,7 @@ CONFIG = {
     "discovery": {
         "algorithm": "eap-ig", "task": "ioi", "level": "node",
         "batch_size": 2, "ig_steps": 2,
-        "data_params": {"num_examples": 16},
+        "data_params": {"num_examples": 32},
     },
     "pruning": {"target_sparsity": 0.2, "scope": "both"},
     "output_path": OUTPUT_PATH,

@@ -20,7 +20,7 @@ report = run_full_faithfulness(
     discovery_cfg=discovery_cfg,
     # optional:
     pillars=None,           # List[str] or None (all)
-    n_stability_runs=5,
+    n_stability_runs=3,
     n_reliability_seeds=3,
     target_task_spec=None,  # required for Pillar 6
     target_dataloader=None,
@@ -36,8 +36,8 @@ report = run_full_faithfulness(
 | `graph` | circuit graph | — | The EAP graph with nodes selected via `apply_topn()` or `apply_threshold()` |
 | `task_spec` | `TaskSpec` | — | Task specification |
 | `discovery_cfg` | `Dict` | — | Discovery config block |
-| `pillars` | `List[str]` or `None` | `None` (all) | Subset to run |
-| `n_stability_runs` | `int` | 5 | Pillar 3 re-discovery runs |
+| `pillars` | `List[str]` or `None` | `None` (all) | Subset to run. The user-facing `Pipeline.evaluate` and `ck.faithfulness` default to just `patching` and `ablation`; this low-level function keeps "all" as its default |
+| `n_stability_runs` | `int` | 3 | Pillar 3 re-discovery runs |
 | `n_reliability_seeds` | `int` | 3 | Intervention-reliability seeds |
 | `target_task_spec` | optional | `None` | Required for Pillar 6; omitting skips it |
 | `pruning_cfg` | `Dict` or `None` | `None` | Passed through to re-discovery pillars |

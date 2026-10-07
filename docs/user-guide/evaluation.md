@@ -34,10 +34,12 @@ With Pipeline:
 pipe = Pipeline("gpt2", task="ioi")
 pipe.discover(algorithm="eap-ig", n_examples=128, sparsity=0.3)
 pipe.evaluate(pillars=["patching", "ablation", "baselines"], n_examples=256)     # subset
-pipe.evaluate(pillars=None, n_examples=512,           # full audit
+pipe.evaluate(pillars="all", n_examples=512,          # full audit
               n_stability_runs=5)
 print(pipe.report)
 ```
+
+By default `pipe.evaluate()` (and `ck.faithfulness`) run only the two basic pillars, `patching` and `ablation`. Pass a list of names to choose others, or `pillars="all"` for every pillar. Stability and generalization re-run discovery, so they are the slow ones; `n_stability_runs` defaults to 3.
 
 ## The 6 pillars
 
@@ -68,7 +70,7 @@ pipe.evaluate(pillars=["patching", "ablation", "baselines"], n_examples=256)
 
 **Full audit** — publication quality:
 ```python
-pipe.evaluate(pillars=None, n_examples=512,
+pipe.evaluate(pillars="all", n_examples=512,
               n_stability_runs=5, target_task="sva")
 ```
 

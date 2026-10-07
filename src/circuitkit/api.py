@@ -1344,8 +1344,8 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
                     **discovery_cfg.get("data_params", {}),
                 )
                 # ACDC sweeps one full edge pass per (base, exp) tao value.
-                # With the library defaults (5 bases x 4 exps = 20 sweeps of
-                # ~32k edges) a single GPT-2 run takes hours. Expose the tao
+                # With the backend defaults (2 bases x 4 exps = 8 sweeps of
+                # ~32k edges) a single GPT-2 run is still slow. Expose the tao
                 # grid via discovery_cfg so callers can scope the search;
                 # fall back to the backend defaults when unspecified.
                 _acdc_kwargs = {}
@@ -2414,7 +2414,7 @@ def evaluate_circuit(
                     pruning_cfg=pruning_cfg,
                     device=device,
                     pillars=graph_pillars,
-                    n_stability_runs=eval_cfg.get("n_stability_runs", 5),
+                    n_stability_runs=eval_cfg.get("n_stability_runs", DEFAULT_CONFIG["eval"]["n_stability_runs"]),
                     metric_fn=metric,
                     dataloader=dataloader,
                     intervention_dataloader=intervention_dataloader,
@@ -2476,7 +2476,7 @@ def evaluate_circuit(
                 pruning_cfg=pruning_cfg,
                 device=device,
                 pillars=eval_cfg.get("pillars", None),
-                n_stability_runs=eval_cfg.get("n_stability_runs", 5),
+                n_stability_runs=eval_cfg.get("n_stability_runs", DEFAULT_CONFIG["eval"]["n_stability_runs"]),
                 metric_fn=metric,
                 dataloader=dataloader,
                 intervention_dataloader=intervention_dataloader,

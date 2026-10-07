@@ -11,7 +11,7 @@ model = load_model("gpt2")
 discover_circuit({
     "model": {"name": "gpt2", "precision": "float32"},
     "discovery": {"algorithm": "eap-ig", "task": "ioi",
-                  "data_params": {"num_examples": 16}},
+                  "data_params": {"num_examples": 32}},
     "output_path": "./results/steering_circuit.pt",
 })
 
