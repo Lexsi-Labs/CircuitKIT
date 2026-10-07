@@ -68,6 +68,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rendered blank on the PyPI project page (which renders the README outside the
   repository) and the internal doc links 404'd there. They are now absolute
   `raw.githubusercontent.com` / GitHub URLs.
+- Edge-level `get_scores_exact` (`method="exact"`) no longer raises `TypeError`: it
+  passed `pair_padding_side` to `evaluate_graph`, which does not accept it (the value
+  is read from the dataloader inside `evaluate_graph`).
 
 ## [Unreleased] (next release)
 
