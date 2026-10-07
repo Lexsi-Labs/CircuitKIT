@@ -15,6 +15,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `CohereLabs/aya-expanse-32b` registered alongside Aya Expanse 8B through the
+  same `cohere1` TransformerLens compatibility port (`_tl_compat/cohere.py`) —
+  no new converter code, only the repo ID added to `AYA_EXPANSE_MODEL_NAMES`.
+  Validated on the real checkpoint: registration, config conversion,
+  truncated-depth parity (first 4 of 40 layers; KL(HF‖TL) 6.5e-9 to 5.3e-7,
+  argmax agreement 4/4) and module resolution for pruning scores and
+  quantization targets. Full-depth parity, discovery, evaluation and weight
+  steering do **not** run yet: the full model does not fit one 48 GB GPU, and
+  transformer-lens 3.8.0's multi-GPU (`n_devices`) block placement is broken
+  (blocks are placed by free memory, activations are moved by block index).
+  Those tests are skipped unless `CIRCUITKIT_RUN_AYA_EXPANSE_32B_FULL=1` is set.
+  See [docs/advanced/experimental-models.md](docs/advanced/experimental-models.md#tests).
+
 ### Changed
 
 - Importing `transformer_lens` before `circuitkit` now raises `ImportError` instead
@@ -68,6 +83,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rendered blank on the PyPI project page (which renders the README outside the
   repository) and the internal doc links 404'd there. They are now absolute
   `raw.githubusercontent.com` / GitHub URLs.
+- **Behaviour change:** `ck.benchmark()` and the underlying `run_lm_eval` /
+  `export_and_benchmark` / `compare_base_vs_intervened` helpers default to
+  `dtype="float32"` again. The `bfloat16` default introduced under "VRAM policy
+  changes" below changed benchmark numbers (about 0.3-1% of predictions) and is
+  undone here; pass `dtype="bfloat16"` to keep the roughly halved benchmark VRAM.
+- `optimize_memory_usage`'s per-process VRAM cap folded other processes' usage
+  into the cap in a way that always landed back at `max_fraction` regardless
+  of how much was actually free on a shared GPU — the exact failure its own
+  comment claimed to fix. It now actually shrinks as other tenants' usage
+  grows, and never drops below this process's own already-reserved memory.
+  When under 5% of the device would be left for this process (the device is
+  all but full), no cap is set and a warning is logged, since the cap is
+  applied once and would otherwise outlive the other tenants.
+- `enable_expandable_segments()` is now also skipped on Windows, where PyTorch
+  does not support this allocator setting and warns if asked.
+- Un-gated 8 more fast-tier modules (`tests/apply/test_pruner.py`,
+  `tests/unit/test_api.py`, `test_pillars.py`, `test_quick_api.py`,
+  `test_quick_extensions.py`, `test_score_loader.py`, `test_end_to_end.py`,
+  `tests/test_custom_data.py`) and `tests/unit/test_finetune_utils.py` from
+  `_SLOW_MODULES`: each was marked `network`/`slow` at the directory or
+  module level even though its only gated behavior is an orthogonal
+  `skipif(not torch.cuda.is_available())`, confirmed via a full offline sweep.
+- `evaluation.hf_checkpoint._load_causal_lm` still passed the deprecated
+  `torch_dtype=` keyword to `AutoModelForCausalLM.from_pretrained`; replaced
+  with `dtype=`.
+- The IOI EAP-IG visualization pages (`docs/assets/ioi_eap-ig.html` and its
+  `examples/visualization/` duplicate) loaded `elkjs` from jsDelivr with no
+  pinned version and `d3` with no Subresource Integrity. Pinned `elkjs` to
+  `0.12.0` and added SRI (`integrity`/`crossorigin`) for both scripts.
 
 ## [Unreleased] (next release)
 
@@ -267,6 +311,8 @@ numeric output or example selection:
   `"float32"` (pass `dtype="float32"` for the old behavior). Measured on the
   first 300 ARC-Easy validation questions: benchmark model VRAM roughly
   halved, 99.0-99.7% of predictions unchanged across two models tested.
+  *Superseded:* the default is `"float32"` again (see the top `[Unreleased]`
+  section); `bfloat16` is opt-in.
 - `Pipeline.benchmark()` now moves its resident TransformerLens model(s) to
   CPU for the duration of the lm-eval/vLLM benchmark call, restoring them
   after — the benchmark loads its own copy and previously the two could

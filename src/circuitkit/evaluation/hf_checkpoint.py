@@ -156,7 +156,7 @@ def _load_causal_lm(model_name: str, dtype: Any = None) -> Any:
     """
     from transformers import AutoConfig, AutoModelForCausalLM
 
-    kw: Dict[str, Any] = {} if dtype is None else {"torch_dtype": dtype}
+    kw: Dict[str, Any] = {} if dtype is None else {"dtype": dtype}
     try:
         cfg = AutoConfig.from_pretrained(model_name)
     except Exception:  # noqa: BLE001 - let AutoModel surface the real error

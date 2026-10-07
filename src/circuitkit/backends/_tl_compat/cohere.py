@@ -1,5 +1,5 @@
 """The cohere port for TransformerLens 3.8: tiny-aya, Command R7B (cohere2)
-and Aya Expanse 8B (cohere1).
+and Aya Expanse 8B / 32B (cohere1).
 
 Registers the tiny-aya, Command R7B and Aya Expanse repo IDs as known
 TransformerLens models and teaches ``transformer_lens.loading_from_pretrained``
@@ -17,14 +17,16 @@ difference between them is ``logit_scale``: tiny-aya ships 1.0 (a no-op fold
 into ``W_U``), Command R7B ships 0.25 (a real fold) -- see
 ``convert_cohere2_weights``.
 
-Aya Expanse 8B is the plain ``CohereForCausalLM`` architecture ("cohere1") --
-a simplification of cohere2, not an extension: no sliding window, no
-per-layer ``attn_types``, and rotary applies to *every* layer (no NoPE at
-all). It is otherwise structurally identical (parallel attn+MLP block with a
-single input LayerNorm, GQA, tied embeddings, interleaved rotary, a
-post-unembed ``logit_scale`` fold -- here 0.125), so it reuses
-``convert_cohere2_weights`` unchanged for weight conversion; only the config
-converter and NoPE policy differ. See ``_convert_cohere1_config`` /
+Aya Expanse 8B / 32B are the plain ``CohereForCausalLM`` architecture
+("cohere1") -- a simplification of cohere2, not an extension: no sliding
+window, no per-layer ``attn_types``, and rotary applies to *every* layer (no
+NoPE at all). Both sizes are otherwise structurally identical (parallel
+attn+MLP block with a single input LayerNorm, GQA, tied embeddings,
+interleaved rotary, a post-unembed ``logit_scale`` fold -- 0.125 for 8B,
+0.0625 for 32B), so both reuse ``convert_cohere2_weights`` unchanged for
+weight conversion; only the config converter and NoPE policy differ (and
+only the config *values* differ between the two sizes -- same converter
+code, same policy). See ``_convert_cohere1_config`` /
 ``_cohere1_should_skip_rotary``.
 
 Every design decision below is traceable to HF's ``transformers.models.cohere2``
@@ -116,11 +118,16 @@ COMMAND_R7B_MODEL_NAMES = [
     "CohereLabs/c4ai-command-r7b-12-2024",
 ]
 
-# Repo ID confirmed by the user. Public (unlike tiny-aya) but still flagged
+# Repo IDs confirmed by the user. Public (unlike tiny-aya) but still flagged
 # "gated=auto" on the Hub, same license click-through / _resolve_hf_token()
-# auth path as tiny-aya and Command R7B.
+# auth path as tiny-aya and Command R7B. 32B is the same CohereForCausalLM
+# architecture as 8B (same config converter, same NoPE policy, same shared
+# weight converter) -- only scale differs: 8:1 GQA (vs 8B's 4:1), rope_theta
+# 4e6 (vs 8B's 1e4), logit_scale 0.0625 (vs 8B's 0.125). See
+# docs/advanced/experimental-models.md for the full spec table.
 AYA_EXPANSE_MODEL_NAMES = [
     "CohereLabs/aya-expanse-8b",
+    "CohereLabs/aya-expanse-32b",
 ]
 
 _COHERE2_ARCHITECTURE = "Cohere2ForCausalLM"

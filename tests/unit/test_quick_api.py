@@ -506,6 +506,18 @@ def test_benchmark_rejects_empty_tasks():
         quick.benchmark("ckpt/x", [])
 
 
+def test_benchmark_defaults_to_float32_dtype():
+    """The undisclosed bfloat16 default (changed results, no docstring update)
+    is reverted. bfloat16 stays available as an explicit opt-in."""
+    with patch("circuitkit.evaluation.run_lm_eval", return_value={"boolq": {}}) as mock_le:
+        quick.benchmark("ckpt/x", "boolq", device="cpu")
+    assert mock_le.call_args.kwargs["dtype"] == "float32"
+
+    with patch("circuitkit.evaluation.run_lm_eval", return_value={"boolq": {}}) as mock_le:
+        quick.benchmark("ckpt/x", "boolq", device="cpu", dtype="bfloat16")
+    assert mock_le.call_args.kwargs["dtype"] == "bfloat16"
+
+
 # --------------------------------------------------------------------------- #
 # load_model                                                                  #
 # --------------------------------------------------------------------------- #

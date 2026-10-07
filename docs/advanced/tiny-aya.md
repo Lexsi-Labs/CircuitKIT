@@ -10,9 +10,14 @@ additively, without forking or pinning a different TL version.
     Tiny-aya was the first model this port supported, and the seam it
     established (`circuitkit.backends._tl_compat`) has since grown to also
     cover **Command R7B** (same `cohere2` architecture as tiny-aya),
-    **Aya Expanse 8B** (`cohere1`), and **SmolLM3-3B** (a new Llama-family
-    port) — all discovery/evaluation/intervention-capable through the same
-    seam. See [Experimental Models](experimental-models.md) for those three.
+    **Aya Expanse 8B** and **32B** (`cohere1`), and **SmolLM3-3B** (a new
+    Llama-family port) — all discovery/evaluation/intervention-capable
+    through the same seam, except Aya Expanse 32B, which is registered,
+    parity-validated (truncated depth), and validated for pruning/
+    quantization but not discovery/evaluation/weight-steering — those are
+    blocked by a confirmed transformer-lens multi-GPU bug, not left undone
+    for time (see [Experimental Models](experimental-models.md) for what
+    was and wasn't validated and why).
 
 !!! warning "Experimental & gated"
     tiny-aya is an **experimental** discovery target. The checkpoints are
@@ -182,7 +187,7 @@ CIRCUITKIT_RUN_TINY_AYA=1 HF_TOKEN=... \
 ## See also
 
 - [Experimental Models](experimental-models.md) — Command R7B, Aya Expanse
-  8B, and SmolLM3-3B, added through the same `_tl_compat` seam.
+  8B / 32B, and SmolLM3-3B, added through the same `_tl_compat` seam.
 - [Architecture Registry](architecture-registry.md) — the `cohere` family entry
   and `EXPERIMENTAL_FAMILIES`.
 - `circuitkit.backends._tl_compat` — the port source.

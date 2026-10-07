@@ -967,7 +967,7 @@ def benchmark(
     limit: Optional[int] = None,
     fewshot: int = 0,
     device: Optional[str] = None,
-    dtype: str = "bfloat16",
+    dtype: str = "float32",
     **kw: Any,
 ) -> Dict[str, Dict[str, float]]:
     """Run lm-evaluation-harness on a saved HF checkpoint.
@@ -984,9 +984,8 @@ def benchmark(
         limit: Cap examples per task — handy for quick smoke tests.
         fewshot: Few-shot example count.
         device: Torch device for the ``hf`` backend. ``None`` auto-selects.
-        dtype: Model dtype string. Defaults to ``"bfloat16"`` (half the VRAM of
-            float32, slightly different scores); pass ``"float32"`` to reproduce
-            earlier numbers.
+        dtype: Model dtype string. Defaults to ``"float32"``; pass ``"bfloat16"``
+            for roughly half the VRAM at the cost of slightly different scores.
         **kw: Extra keyword arguments forwarded to ``run_lm_eval`` (e.g.
             ``tokenizer``, ``batch_size``, ``apply_chat_template``).
 

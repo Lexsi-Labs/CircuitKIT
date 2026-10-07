@@ -222,7 +222,7 @@ benchmark(
     limit: Optional[int] = None,
     fewshot: int = 0,
     device: Optional[str] = None,
-    dtype: str = "bfloat16",
+    dtype: str = "float32",
     **kw,
 ) -> Dict[str, Dict[str, float]]
 ```
@@ -235,7 +235,7 @@ Run lm-evaluation-harness on a checkpoint. Returns `{task: {metric: value}}`.
 | `limit` | `None` | Cap examples per task — useful for smoke tests |
 | `fewshot` | `0` | Few-shot example count |
 | `device` | auto | Torch device for the `"hf"` backend |
-| `dtype` | `"bfloat16"` | Model dtype string for the `"hf"` backend. Pass `"float32"` to reproduce numbers from before this default changed |
+| `dtype` | `"float32"` | Model dtype string for the `"hf"` backend. Pass `"bfloat16"` to roughly halve benchmark VRAM; a small share of predictions (about 0.3-1% in our runs) changes |
 
 ```python
 scores = ck.benchmark("./checkpoints/pruned", tasks=["boolq", "winogrande"], limit=100)
