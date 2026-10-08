@@ -74,13 +74,12 @@ class TestPackageMetadata:
         assert isinstance(circuitkit.__version__, str)
 
     def test_version_matches_installed_metadata(self):
-        tomllib = pytest.importorskip("tomllib")  # stdlib only on Python 3.11+
-        from pathlib import Path
+        # pyproject.toml declares a dynamic version read from circuitkit.__version__,
+        # so the installed distribution must report the same string.
+        import importlib.metadata
 
         import circuitkit
-        pyproject = Path(__file__).parents[2] / "pyproject.toml"
-        metadata_version = tomllib.loads(pyproject.read_text(encoding="utf-8"))["project"]["version"]
-        assert circuitkit.__version__ == metadata_version
+        assert circuitkit.__version__ == importlib.metadata.version("circuitkit")
 
     def test_author_is_string(self):
         import circuitkit

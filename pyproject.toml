@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "circuitkit"
-version = "0.2.0"
+dynamic = ["version"]
 # Pratinav Seth, Hem Gosalia, and Aditya Kasliwal are equal co-first authors.
 # Pratinav Seth is the corresponding author. Author order is kept consistent
 # with src/circuitkit/__init__.py and CITATION.cff.
@@ -161,6 +161,12 @@ circuitkit = "circuitkit.cli.main:main"
 # In-package README.md files are developer docs and intentionally not shipped.
 [tool.setuptools]
 include-package-data = true
+
+# One source for the version: setuptools reads circuitkit.__version__, which the
+# release workflow rewrites (scripts/release.py set-version). Do not add a
+# `version = ...` line under [project].
+[tool.setuptools.dynamic]
+version = { attr = "circuitkit.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]

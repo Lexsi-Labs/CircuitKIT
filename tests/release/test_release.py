@@ -1,4 +1,5 @@
 import io
+import re
 import tarfile
 import zipfile
 from pathlib import Path
@@ -14,6 +15,7 @@ from scripts.release import (
     current_version,
     decide_action,
     next_patch,
+    release_version,
     parse_version,
     set_version,
     validate_distributions,
@@ -23,7 +25,7 @@ from scripts.release import (
 
 def _version_tree(root: Path, version: str = "1.0.0") -> Path:
     (root / "src/circuitkit").mkdir(parents=True)
-    (root / "pyproject.toml").write_text(f'[project]\nversion = "{version}"\n')
+    (root / "pyproject.toml").write_text('[project]\ndynamic = ["version"]\n')
     (root / "src/circuitkit/__init__.py").write_text(f'__version__ = "{version}"\n')
     (root / "CITATION.cff").write_text(f"version: {version}\n")
     return root
@@ -70,7 +72,8 @@ def test_set_version_updates_every_authoritative_location(tmp_path):
     root = _version_tree(tmp_path)
     set_version("1.0.1", root)
     assert current_version(root) == "1.0.1"
-    assert "1.0.1" in (root / "pyproject.toml").read_text()
+    # pyproject.toml reads circuitkit.__version__; the release must never write to it
+    assert (root / "pyproject.toml").read_text() == '[project]\ndynamic = ["version"]\n'
     assert "1.0.1" in (root / "src/circuitkit/__init__.py").read_text()
     assert "1.0.1" in (root / "CITATION.cff").read_text()
 
@@ -150,3 +153,32 @@ def test_distribution_metadata_must_match_requested_version(tmp_path):
     validate_distributions("1.0.0", _write_distributions(tmp_path, "1.0.0"))
     with pytest.raises(ReleaseError, match="expected exact version"):
         validate_distributions("1.0.1", list(tmp_path.iterdir()))
+
+
+@pytest.mark.parametrize(("current", "latest", "expected"), [
+    ("0.1.10", "0.1.10", "0.1.11"),  # no bump in the code: next patch
+    ("0.2.0", "0.1.10", "0.2.0"),    # a deliberate bump is released as is
+    ("0.2.0", "0.2.0", "0.2.1"),
+    ("0.2.0", "0.2.3", "0.2.4"),
+    ("0.1.10", "0.2.0", "0.2.1"),    # an older code version never moves the release backwards
+])
+def test_release_version_honours_a_bump_in_the_code(current, latest, expected):
+    assert release_version(current, latest) == expected
+
+
+def test_merges_after_the_bump_advance_patch_releases():
+    latest = "0.1.10"
+    released = []
+    for _ in range(3):
+        latest = release_version("0.2.0", latest)
+        released.append(latest)
+    assert released == ["0.2.0", "0.2.1", "0.2.2"]
+
+
+def test_pyproject_has_no_version_of_its_own():
+    """The package version has one source, circuitkit.__version__. A literal version in
+    pyproject.toml would be a third file for the release to keep in step."""
+    text = Path("pyproject.toml").read_text(encoding="utf-8")
+    assert not re.search(r'(?m)^version\s*=', text.split("[tool.", 1)[0])
+    assert re.search(r'(?m)^dynamic\s*=\s*\["version"\]', text)
+    assert re.search(r'(?m)^version\s*=\s*\{\s*attr\s*=\s*"circuitkit\.__version__"\s*\}', text)
