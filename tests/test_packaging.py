@@ -21,7 +21,7 @@ def test_top_level_import():
 
 
 def test_version_matches_pyproject():
-    # __version__ is read from the installed metadata, which pyproject.toml sets.
+    # pyproject.toml reads circuitkit.__version__, so the installed metadata must match it.
     import circuitkit
 
     assert circuitkit.__version__ == importlib.metadata.version("circuitkit")

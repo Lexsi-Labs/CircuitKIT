@@ -108,7 +108,7 @@ jobs:
             version_tree=$(mktemp -d)
             mkdir -p "$version_tree/src/circuitkit" "$version_tree/scripts"
             cp scripts/release.py "$version_tree/scripts/release.py"
-            for version_file in pyproject.toml src/circuitkit/__init__.py CITATION.cff; do
+            for version_file in src/circuitkit/__init__.py CITATION.cff; do
               git show "$requested_version:$version_file" > "$version_tree/$version_file"
             done
             if ! (cd "$version_tree" && python scripts/release.py validate-version "$requested_version"); then
@@ -218,7 +218,7 @@ jobs:
           current_version=$(python scripts/release.py current-version)
           if [[ "$current_version" != "$RELEASE_TAG" ]]; then
             python scripts/release.py set-version "$RELEASE_TAG"
-            expected_files=$'CITATION.cff\npyproject.toml\nsrc/circuitkit/__init__.py'
+            expected_files=$'CITATION.cff\nsrc/circuitkit/__init__.py'
             actual_files=$(git diff --name-only | sort)
             if [[ "$actual_files" != "$expected_files" ]]; then
               echo "::error::Version helper changed files outside the authoritative version set."
@@ -226,7 +226,7 @@ jobs:
             fi
             git config user.name github-actions[bot]
             git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-            git add CITATION.cff pyproject.toml src/circuitkit/__init__.py
+            git add CITATION.cff src/circuitkit/__init__.py
             git commit -m "Release $RELEASE_TAG"
           fi
           python scripts/release.py validate-version "$RELEASE_TAG"
