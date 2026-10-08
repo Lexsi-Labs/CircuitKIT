@@ -78,6 +78,17 @@ def next_patch(value: str) -> str:
     return f"{major}.{minor}.{patch + 1}"
 
 
+def release_version(current: str, latest: str) -> str:
+    """The version a merge should release, given the code's version and the latest public release.
+
+    A deliberate bump in the code (0.2.0 while the latest release is 0.1.10) is released as is;
+    otherwise the next patch of the latest release, so successive merges keep advancing.
+    """
+    if parse_version(current) > parse_version(latest):
+        return current
+    return next_patch(latest)
+
+
 def _single_match(pattern: re.Pattern[str], text: str, location: Path) -> str:
     matches = pattern.findall(text)
     if len(matches) != 1:

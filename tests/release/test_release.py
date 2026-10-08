@@ -14,6 +14,7 @@ from scripts.release import (
     current_version,
     decide_action,
     next_patch,
+    release_version,
     parse_version,
     set_version,
     validate_distributions,
@@ -150,3 +151,23 @@ def test_distribution_metadata_must_match_requested_version(tmp_path):
     validate_distributions("1.0.0", _write_distributions(tmp_path, "1.0.0"))
     with pytest.raises(ReleaseError, match="expected exact version"):
         validate_distributions("1.0.1", list(tmp_path.iterdir()))
+
+
+@pytest.mark.parametrize(("current", "latest", "expected"), [
+    ("0.1.10", "0.1.10", "0.1.11"),  # no bump in the code: next patch
+    ("0.2.0", "0.1.10", "0.2.0"),    # a deliberate bump is released as is
+    ("0.2.0", "0.2.0", "0.2.1"),
+    ("0.2.0", "0.2.3", "0.2.4"),
+    ("0.1.10", "0.2.0", "0.2.1"),    # an older code version never moves the release backwards
+])
+def test_release_version_honours_a_bump_in_the_code(current, latest, expected):
+    assert release_version(current, latest) == expected
+
+
+def test_merges_after_the_bump_advance_patch_releases():
+    latest = "0.1.10"
+    released = []
+    for _ in range(3):
+        latest = release_version("0.2.0", latest)
+        released.append(latest)
+    assert released == ["0.2.0", "0.2.1", "0.2.2"]
