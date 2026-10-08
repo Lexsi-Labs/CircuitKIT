@@ -11,6 +11,10 @@
 End-to-end validation scripts that run actual CircuitKIT pipelines on real
 models. Not unit tests — these verify features work on real hardware.
 
+The scripts use deliberately small `num_examples` (8 to 24) so they finish quickly. That is below
+the sensible minimum of 32, so CircuitKIT prints a `HyperparameterWarning` for them; this is expected
+and does not affect the result.
+
 ## Structure
 
 ```

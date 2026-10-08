@@ -32,7 +32,7 @@ CONFIG = {
         "level": "node",
         "batch_size": 2,
         "ig_steps": 2,
-        "data_params": {"num_examples": 16},
+        "data_params": {"num_examples": 32},
     },
     "pruning": {"target_sparsity": 0.2, "scope": "heads"},
     "output_path": "./results/example_eval_circuit.pt",
@@ -40,7 +40,7 @@ CONFIG = {
     "eval": {
         "full_faithfulness_eval": True,                      # 6-pillar report
         "pillars": ["patching", "ablation", "baselines", "stability"],
-        "n_stability_runs": 2,                               # keep small for the demo
+        "n_stability_runs": 3,                               # the default and the sensible minimum
     },
 }
 

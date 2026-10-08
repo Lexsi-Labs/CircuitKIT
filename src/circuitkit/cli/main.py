@@ -3,15 +3,19 @@ CircuitKIT CLI - Main entry point for command-line interface.
 """
 
 import os
+import warnings
 from pathlib import Path
 
 import click
+import yaml
 from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
+from rich.markup import escape
 from rich.table import Table
 
 from ..utils.device import get_device
 from ..utils.exceptions import DISCOVERY_ALGORITHMS
+from ..utils.hparams import HPARAMS, HyperparameterWarning, describe, render_markdown
 from ..utils.memory import (
     check_memory_requirements,
     get_available_memory,
@@ -73,7 +77,12 @@ def cli(ctx, verbose, config):
     "--level", "-l", type=click.Choice(["node", "neuron"]), default="node", help="Pruning level"
 )
 @click.option("--batch-size", "-b", type=int, default=4, help="Batch size")
-@click.option("--ig-steps", type=int, default=5, help="Integrated gradients steps (for EAP-IG)")
+@click.option(
+    "--ig-steps",
+    type=int,
+    default=None,
+    help="Integrated gradients steps (EAP-IG family only). Default: 3, or 5 for eap-gp.",
+)
 @click.option(
     "--scope", type=click.Choice(["heads", "mlp", "both"]), default="both", help="Pruning scope"
 )
@@ -158,7 +167,7 @@ def discover(
             "task": task,
             "level": level,
             "batch_size": batch_size,
-            "ig_steps": ig_steps,
+            **({} if ig_steps is None else {"ig_steps": ig_steps}),
             "evaluate": evaluate,
             "mlp_hook": mlp_hook,
             "data_params": {"num_examples": num_examples},
@@ -835,8 +844,21 @@ def discover_smart(
 
 @cli.command()
 @click.option("--config", "-c", help="Path to configuration file")
-def validate_config(config):
-    """Validate a configuration file"""
+@click.option(
+    "--strict",
+    is_flag=True,
+    help="Treat sensible-range warnings as errors (like validation.strict in the config).",
+)
+def validate_config(config, strict):
+    """Validate a configuration file.
+
+    Runs the same checks as ``discover`` and ``evaluate``: required keys, algorithm and
+    data options, and the hyperparameter ranges (see ``circuitkit hparams``). Values
+    outside a *valid* range are errors; values outside a *sensible* range are listed as
+    warnings, and fail the command with ``--strict``.
+    """
+    from ..utils.config import load_and_validate_config
+
     if not config:
         console.print("[red]Error:[/red] Configuration file path is required")
         raise click.Abort()
@@ -846,21 +868,78 @@ def validate_config(config):
         raise click.Abort()
 
     try:
-        config_manager = ConfigManager(config)
-        console.print("[bold green]✓ Configuration is valid![/bold green]")
-        console.print(f"Loaded from: {config}")
+        with open(config, "r") as f:
+            user_config = yaml.safe_load(f)
+        if not isinstance(user_config, dict):
+            raise ValueError("the configuration file must contain a mapping at the top level")
+        if isinstance(user_config.get("model"), str):
+            raise ValueError(
+                "this looks like a `circuitkit run` pipeline YAML (`model` is a string). "
+                "validate-config checks dict-config YAML (`model: {name: ...}`, the format "
+                "`discover_circuit` accepts); a pipeline YAML is validated when it runs."
+            )
+        if strict:
+            user_config["validation"] = {**(user_config.get("validation") or {}), "strict": True}
 
-        # Display configuration summary
-        config_data = config_manager.config
-        console.print("\n[bold]Configuration Summary:[/bold]")
-        console.print(f"Model: {config_data['model']['name']}")
-        console.print(f"Algorithm: {config_data['discovery']['algorithm']}")
-        console.print(f"Level: {config_data['discovery']['level']}")
-        console.print(f"Sparsity: {config_data['pruning']['target_sparsity']}")
-
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            config_data = load_and_validate_config(user_config)
+        hparam_warnings = [w for w in caught if issubclass(w.category, HyperparameterWarning)]
     except Exception as e:
-        console.print(f"[red]Error validating configuration:[/red] {str(e)}")
+        console.print(f"[red]Error validating configuration:[/red] {escape(str(e))}")
         raise click.Abort()
+
+    console.print("[bold green]✓ Configuration is valid![/bold green]")
+    console.print(f"Loaded from: {config}")
+
+    # Display configuration summary
+    console.print("\n[bold]Configuration Summary:[/bold]")
+    console.print(f"Model: {config_data['model']['name']}")
+    console.print(f"Algorithm: {config_data['discovery']['algorithm']}")
+    console.print(f"Level: {config_data['discovery']['level']}")
+    console.print(f"Sparsity: {config_data['pruning']['target_sparsity']}")
+
+    if hparam_warnings:
+        console.print(f"\n[bold yellow]Hyperparameter warnings ({len(hparam_warnings)}):[/bold yellow]")
+        for w in hparam_warnings:
+            console.print(f"  [yellow]![/yellow] {escape(str(w.message))}")
+        console.print("Run with --strict to fail on these, or see `circuitkit hparams` for the ranges.")
+
+
+@cli.command()
+@click.option(
+    "--markdown",
+    is_flag=True,
+    help="Print the Markdown tables used on the Hyperparameters docs page.",
+)
+def hparams(markdown):
+    """Show the valid and sensible range of each hyperparameter.
+
+    A value outside the *valid* range raises an error; a value outside the *sensible* range
+    (but inside the valid one) emits a warning. See docs/reference/hyperparameters.md.
+    """
+    if markdown:
+        click.echo(render_markdown(), nl=False)
+        return
+
+    table = Table(title="CircuitKIT hyperparameters", show_lines=False)
+    for column in ("Parameter", "Default", "Valid", "Sensible", "Checked by", "Confidence"):
+        table.add_column(column, no_wrap=(column == "Parameter"))
+    for key, spec in HPARAMS.items():
+        cells = describe(spec)
+        table.add_row(
+            escape(key),
+            escape(cells["default"]),
+            escape(cells["valid"]),
+            escape(cells["sensible"]),
+            escape(cells["checked_by"]),
+            escape(cells["confidence"]),
+        )
+    console.print(table)
+    console.print(
+        "Valid: outside it the value cannot work (error). Sensible: outside it earlier runs "
+        "or the literature show a risk (warning)."
+    )
 
 
 @cli.command()
@@ -2234,7 +2313,7 @@ def run(config_path):
             pipe.evaluate(
                 pillars=eval_cfg.get("pillars"),
                 n_examples=eval_cfg.get("n_examples", 256),
-                n_stability_runs=eval_cfg.get("n_stability_runs", 5),
+                n_stability_runs=eval_cfg.get("n_stability_runs", 3),
                 target_task=eval_cfg.get("target_task"),
             )
             # Machine-readable result next to the artifacts, so nothing has to

@@ -97,6 +97,11 @@ def get_memory_efficient_config(model_name: str, algorithm: str = "eap-ig") -> D
     return config
 
 
+# Below this share of the device, a per-process cap does more harm than good (see
+# optimize_memory_usage).
+_MIN_USEFUL_FRACTION = 0.05
+
+
 def optimize_memory_usage(device: Optional[int] = None, max_fraction: float = 0.8) -> None:
     """Apply memory optimization settings.
 
@@ -120,19 +125,36 @@ def optimize_memory_usage(device: Optional[int] = None, max_fraction: float = 0.
         # 60% of it, a flat 0.8 still lets this process try to claim up to 80%
         # of TOTAL memory -- colliding with those other tenants well before
         # hitting its own quota, while doing nothing useful on an idle GPU it
-        # has entirely to itself. Scale the cap by what is actually free right
-        # now (already-used memory plus a safety-margined slice of the rest),
-        # never exceeding max_fraction.
+        # has entirely to itself. The previous fix for this folded *other*
+        # processes' usage into the per-process cap in a way that always
+        # landed back at max_fraction regardless of how much was actually
+        # free (already_used_fraction + 0.9*free_fraction is always >= 0.9 -
+        # 0.1*already_used_fraction for any split between "used by others"
+        # and "free", since those two plus this process's own reservation
+        # always sum to 1) -- the exact failure its own comment claimed to
+        # fix. Bound the cap by this process's own reservation plus a
+        # safety-margined slice of what is actually free right now, which
+        # shrinks correctly as other tenants' usage grows.
         free_bytes, total_bytes = torch.cuda.mem_get_info(device)
         reserved_by_us = torch.cuda.memory_reserved(device)
-        already_used_fraction = max(0.0, (total_bytes - free_bytes - reserved_by_us) / total_bytes)
+        reserved_fraction = reserved_by_us / total_bytes
         # Never ask for less than what's already committed to this device --
-        # min() alone could undershoot already_used_fraction once it exceeds
+        # min() alone could undershoot reserved_fraction once it exceeds
         # max_fraction, which set_per_process_memory_fraction cannot honor.
         fraction = max(
-            already_used_fraction,
-            min(max_fraction, already_used_fraction + 0.9 * (free_bytes / total_bytes)),
+            reserved_fraction,
+            min(max_fraction, (0.9 * free_bytes + reserved_by_us) / total_bytes),
         )
+        # The cap is set once and not revisited. If the device is all but full right now
+        # (other tenants hold it), applying the cap would pin this process to almost nothing
+        # for the rest of its life, even after they exit -- and exactly 0.0 makes every later
+        # allocation fail. Leave the cap unset in that case and say so.
+        if fraction < _MIN_USEFUL_FRACTION:
+            logger.warning(
+                f"Only {free_bytes / 1024**3:.1f} GiB of {total_bytes / 1024**3:.1f} GiB is free on "
+                "the CUDA device; not setting a per-process memory cap."
+            )
+            return
         torch.cuda.set_per_process_memory_fraction(fraction, device)
         logger.info(f"Applied memory optimizations (per-process fraction capped at {fraction:.2f})")
     else:

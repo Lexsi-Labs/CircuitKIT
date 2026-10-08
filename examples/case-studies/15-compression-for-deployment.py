@@ -31,7 +31,7 @@ circuit = discover_circuit({
         "task": "ioi",
         "data_params": {"num_examples": 32},
     },
-    "pruning": {"target_sparsity": 0.5, "scope": "both"},
+    "pruning": {"target_sparsity": 0.5, "scope": "both"},  # above 0.4 CircuitKIT warns; pair this with recovery fine-tuning
     "output_path": "./results/compressed_circuit.pt",
 })
 
@@ -40,7 +40,7 @@ print("[2/4] Evaluating faithfulness …")
 results = evaluate_circuit({
     "model": {"name": MODEL_NAME},
     "discovery": {"algorithm": "eap-ig", "task": "ioi"},
-    "pruning": {"target_sparsity": 0.5, "scope": "both"},
+    "pruning": {"target_sparsity": 0.5, "scope": "both"},  # above 0.4 CircuitKIT warns; pair this with recovery fine-tuning
     "output_path": "./results/compressed_circuit.pt",
 })
 # evaluate_circuit returns a FaithfulnessReport; this audit reports the

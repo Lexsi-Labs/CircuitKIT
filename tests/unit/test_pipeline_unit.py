@@ -386,6 +386,44 @@ class TestModelSharing:
 
 
 # ---------------------------------------------------------------------------
+# evaluate() defaults: two basic pillars, three stability runs
+# ---------------------------------------------------------------------------
+
+class TestEvaluateDefaults:
+    @staticmethod
+    def _eval_cfg(pipe_with_circuit, **kw):
+        Path(pipe_with_circuit._artifact_path).touch()
+        with patch("circuitkit.api.evaluate_circuit") as ev:
+            pipe_with_circuit.evaluate(**kw)
+        return ev.call_args.args[0]["eval"]
+
+    def test_default_runs_the_two_basic_pillars(self, pipe_with_circuit):
+        cfg = self._eval_cfg(pipe_with_circuit)
+        assert cfg["pillars"] == ["patching", "ablation"]
+        assert cfg["full_faithfulness_eval"] is True
+
+    def test_all_runs_every_pillar(self, pipe_with_circuit):
+        """'all' leaves ``pillars`` unset so run_full_faithfulness runs every pillar."""
+        cfg = self._eval_cfg(pipe_with_circuit, pillars="all")
+        assert "pillars" not in cfg
+
+    def test_explicit_pillars_are_respected(self, pipe_with_circuit):
+        cfg = self._eval_cfg(pipe_with_circuit, pillars=[1, "stability"])
+        assert cfg["pillars"] == ["patching", "stability"]
+
+    def test_default_stability_runs_is_three(self, pipe_with_circuit):
+        assert self._eval_cfg(pipe_with_circuit)["n_stability_runs"] == 3
+        assert self._eval_cfg(pipe_with_circuit, n_stability_runs=7)["n_stability_runs"] == 7
+
+    def test_signature_default(self):
+        import inspect
+
+        params = inspect.signature(Pipeline.evaluate).parameters
+        assert params["n_stability_runs"].default == 3
+        assert params["pillars"].default is None
+
+
+# ---------------------------------------------------------------------------
 # evaluate() guards
 # ---------------------------------------------------------------------------
 

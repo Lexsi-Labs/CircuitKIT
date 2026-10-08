@@ -71,7 +71,7 @@ def _bootstrap_tasks():
 def run_discovery(
     model_name: str,
     task: str,
-    ig_steps: int = 5,
+    ig_steps: int = 3,
     num_examples: int = 200,
     batch_size: int = 4,
     device: Optional[str] = None,

@@ -138,7 +138,7 @@ register_task(NormalizedTaskSpec(ds, name="mmlu_hist"))
 
 # Now use it:
 import circuitkit as ck
-circuit = ck.discover(model, "mmlu_hist", n_examples=20)
+circuit = ck.discover(model, "mmlu_hist", n_examples=32)
 ```
 
 ---

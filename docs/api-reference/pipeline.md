@@ -135,13 +135,13 @@ evaluate(
     *,
     pillars: Optional[List[str]] = None,
     n_examples: int = 256,
-    n_stability_runs: int = 5,
+    n_stability_runs: int = 3,
     target_task: Optional[str] = None,
     **kw,
 ) -> Pipeline
 ```
 
-Run the 6-pillar faithfulness evaluation on the discovered circuit. `pillars` must be string names (e.g. `"patching"`) — see [Evaluation Framework](../evaluation/framework.md) for the full list. `n_stability_runs` controls the stability-pillar rediscovery count; `target_task` overrides the task used by the cross-task generalization pillar. Returns `self`.
+Run the faithfulness evaluation on the discovered circuit. By default it runs the two basic pillars, `patching` and `ablation`; pass `pillars="all"` for every pillar, including the expensive ones (stability and generalization re-run discovery). `pillars` must be string names (e.g. `"patching"`) — see [Evaluation Framework](../evaluation/framework.md) for the full list. `n_stability_runs` controls the stability-pillar rediscovery count; `target_task` overrides the task used by the cross-task generalization pillar. Returns `self`.
 
 ```python
 pipe.evaluate(pillars=["patching", "ablation"])

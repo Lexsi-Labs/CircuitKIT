@@ -117,7 +117,8 @@ circuitkit evaluate --model gpt2 --artifact ./circuit.pt
 circuitkit prune --model gpt2 --artifact ./circuit.pt --sparsity 0.3 --output ./pruned
 circuitkit benchmark --models gpt2 --tasks ioi --algorithms eap-ig
 circuitkit list-models
-circuitkit validate-config --config my_config.yaml
+circuitkit validate-config --config my_config.yaml   # checks keys and hyperparameter ranges
+circuitkit hparams                                   # valid and sensible ranges
 ```
 
 ## Interface 5: YAML config

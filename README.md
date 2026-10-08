@@ -20,6 +20,15 @@
   <a href="https://circuitkit.lexsi.ai/"><img src="https://img.shields.io/badge/docs-mkdocs%20material-FF4B0A.svg" alt="Docs"></a>
 </p>
 
+<p align="center">
+  <a href="https://discord.gg/MhVUGVYE8q"><img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
+  <a href="https://github.com/Lexsi-Labs"><img src="https://img.shields.io/badge/GitHub-Lexsi--Labs-171515?logo=github&logoColor=white" alt="Lexsi Labs on GitHub"></a>
+  <a href="https://x.com/Lexsi_labs"><img src="https://img.shields.io/badge/X-Follow-000000?logo=x&logoColor=white" alt="Follow on X"></a>
+  <a href="https://www.linkedin.com/company/lexsi-labs/"><img src="https://img.shields.io/badge/LinkedIn-Lexsi%20Labs-0A66C2?logo=linkedin&logoColor=white" alt="Lexsi Labs on LinkedIn"></a>
+  <a href="https://huggingface.co/Lexsi"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Lexsi-FFD21E" alt="Lexsi on Hugging Face"></a>
+  <a href="https://lexsi.ai"><img src="https://img.shields.io/badge/Website-lexsi.ai-FF4B0A.svg" alt="lexsi.ai"></a>
+</p>
+
 ---
 
 CircuitKIT is a framework for mechanistic interpretability. Given a model and a task, it discovers the circuit driving that behaviour, evaluates how faithful it is, and lets you act on it (prune, quantize, edit, steer, or fine-tune), then export a reloadable HuggingFace checkpoint.
@@ -92,19 +101,33 @@ A **circuit** is the minimal set of attention heads and MLP layers in a transfor
 
 Production support covers Llama-3, Gemma/Gemma-3, Qwen, Mistral, Phi, Falcon,
 and GPT-2 (see [Architecture Registry](https://circuitkit.lexsi.ai/advanced/architecture-registry/)).
-CircuitKIT also supports four cohere-family and Llama-family models that
-TransformerLens doesn't natively support, across all three surfaces —
-discovery, evaluation, and interventions:
+CircuitKIT also supports five cohere-family and Llama-family models that
+TransformerLens doesn't natively support. Four of them (Tiny Aya, Command
+R7B, Aya Expanse 8B, SmolLM3-3B) are validated across all three surfaces —
+discovery, evaluation, and interventions. The fifth, Aya Expanse 32B, is
+registered, parity-validated (truncated depth), and checked for pruning and
+quantization module resolution (see below):
 
 | Model | Arch | HF repo |
 |---|---|---|
 | Tiny Aya | `cohere2` | `CohereLabs/tiny-aya-*` (gated) |
 | Command R7B | `cohere2` | `CohereLabs/c4ai-command-r7b-12-2024` |
 | Aya Expanse 8B | `cohere1` | `CohereLabs/aya-expanse-8b` |
+| Aya Expanse 32B | `cohere1` | `CohereLabs/aya-expanse-32b` |
 | SmolLM3-3B | `smollm3` | `HuggingFaceTB/SmolLM3-3B` |
 
-All four support discovery (5/6 stable algorithms plus parity), faithfulness
-evaluation, and interventions (pruning, quant resolution, steering).
+All of them except Aya Expanse 32B support
+discovery (5/6 stable algorithms plus parity), faithfulness evaluation, and
+interventions (pruning, quant resolution, steering), validated on real
+weights. **Aya Expanse 32B** is registered, with config conversion checked
+against the real checkpoint (truncated-depth parity) and module resolution
+for pruning scores and quantization targets checked on the full checkpoint.
+Full-depth parity, discovery, evaluation and weight steering do not run yet:
+the full 40-layer model needs about 64 GiB for weights alone, so it does not
+fit on most single GPUs, and transformer-lens 3.8.0's multi-GPU (`n_devices`)
+block placement is broken. See
+[Experimental Models](https://circuitkit.lexsi.ai/advanced/experimental-models/)
+for what was and wasn't validated, and the details of the transformer-lens bug.
 
 Two caveats on that support. `acdc` is excluded from the standard gate as
 impractically slow on 3–8B models — its test lives behind an opt-in flag — so
@@ -118,7 +141,7 @@ TransformerLens ports; this is not a claim of end-to-end CircuitKIT support.
 Their hardware and Sarvam loading requirements are documented in
 [Experimental Models](https://github.com/Lexsi-Labs/CircuitKIT/blob/main/docs/advanced/experimental-models.md#gemma-4-and-sarvam-moe-discovery-only-transformerlens-ports).
 
-All four are **experimental** — see [Tiny Aya](https://circuitkit.lexsi.ai/advanced/tiny-aya/)
+All five are **experimental** — see [Tiny Aya](https://circuitkit.lexsi.ai/advanced/tiny-aya/)
 and [Experimental Models](https://circuitkit.lexsi.ai/advanced/experimental-models/)
 for architecture details, config mapping, and the full opt-in test matrix.
 Aya Expanse and Tiny Aya also load from local checkpoint directories and

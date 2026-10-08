@@ -25,23 +25,20 @@ import circuitkit  # noqa: F401  - installs the TransformerLens patch hook first
 #               guard below protects against (a stalled download can't hang CI).
 # `slow`     -> heavy compute (real training / discovery / transfer), offline-safe.
 _NETWORK_MODULES = (
-    # real HF model / dataset downloads
+    # real HF model / dataset downloads (confirmed via an offline sweep:
+    # `pytest <targets> -m "" --timeout=120` fully offline, no CUDA -- a
+    # module stays here only if that run produced a genuine network
+    # failure, not just a `skipif(not torch.cuda.is_available())`, which is
+    # an orthogonal GPU gate and no reason by itself to deselect in the
+    # offline CPU fast tier)
     "tests/apply/test_covariance.py",
     "tests/apply/test_knowledge_editing_pipeline.py",
-    "tests/apply/test_pruner.py",
     "tests/apply/test_steering.py",
     "tests/apply/test_tokenization.py",
     "tests/apply/test_weight_steering.py",
-    "tests/unit/test_api.py",
     "tests/unit/test_hf_checkpoint.py",
-    "tests/unit/test_pillars.py",
-    "tests/unit/test_quick_api.py",
-    "tests/unit/test_quick_extensions.py",
-    "tests/unit/test_score_loader.py",
     "tests/unit/test_selector_bugs.py",
-    "tests/unit/test_end_to_end.py",
     "tests/unit/test_pipeline_smoke.py",
-    "tests/test_custom_data.py",
     # The integration suite mixes offline CPU tests with tests that load real
     # Hub models. Keep only the network-backed modules here; notably,
     # test_tl3_interop.py builds tiny random checkpoints locally and belongs in
@@ -57,13 +54,20 @@ _NETWORK_MODULES = (
 _SLOW_MODULES = (
     # heavy compute without a guaranteed download
     "tests/unit/test_soft_healing.py",
-    "tests/unit/test_finetune_utils.py",
 )
 _GATED_MODULES = (
     # need a gated 3.35B checkpoint + HF_TOKEN + explicit opt-in env; already
     # self-skip, but tag them so `-m "slow and not gated"` excludes them cleanly
     "tests/backends/tl_compat/test_cohere_parity.py",
     "tests/regression/test_cohere_discovery.py",
+    # Aya Expanse 32B: a gated ~60 GB checkpoint + HF_TOKEN + opt-in env, like
+    # the two above. The regression files are also `network` through the
+    # "tests/regression/" prefix; listing them here keeps them out of
+    # `-m "slow and not gated"` as well.
+    "tests/backends/tl_compat/test_aya_expanse_32b_parity.py",
+    "tests/regression/test_aya_expanse_32b_discovery.py",
+    "tests/regression/test_aya_expanse_32b_evaluation.py",
+    "tests/regression/test_aya_expanse_32b_interventions.py",
 )
 
 

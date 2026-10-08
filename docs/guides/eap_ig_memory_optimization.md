@@ -17,7 +17,7 @@ This document explains the memory optimizations that actually exist for EAP-IG d
 ```python
 config = {
     'discovery': {
-        'ig_steps': 3,  # minimum for reasonable results; default is 5
+        'ig_steps': 3,  # the default; 2 is faster but unfaithful on some tasks
         ...
     }
 }
@@ -95,7 +95,7 @@ config = {
         'task': 'mmlu',
         'algorithm': 'eap-ig',
         'level': 'node',
-        'ig_steps': 5,              # reduced steps
+        'ig_steps': 3,              # the default
         'batch_size': 1,            # small batches, top-level key
         'samples_per_subject': 10,  # fewer samples (mmlu/wmdp only)
     },

@@ -9,14 +9,14 @@ EAP-IG can be memory-intensive, especially for large models. This page covers al
 Peak VRAM after the `perf/vram-optimizations` fixes (qkv-flag lifecycle,
 per-batch buffer release, embedding-only gradients — see the changelog):
 
-| Model | EAP-IG default (measured) | With all optimizations (measured) |
+| Model | Previous default (measured) | With all optimizations (measured) |
 |-------|----------------------------|-------------------------------------|
 | GPT-2 (124M) | 1.0 GB | 0.5 GB |
 | Llama-3.2-1B-Instruct | 8.7 GB | 4.1 GB |
 | Llama-3B | not re-measured — order-of-magnitude only | not re-measured |
 | Gemma-4B | not re-measured — order-of-magnitude only | not re-measured |
 
-"EAP-IG default" is `ig_steps=5`, `batch_size=4`, `num_examples=128`. "With
+"Previous default" is `ig_steps=5`, `batch_size=4`, `num_examples=128` (`ig_steps` now defaults to 3). "With
 all optimizations" is `ig_steps=3`, `batch_size=1`, `num_examples=64` (the
 combined strategy below), both bf16. (The config key is `num_examples`, under
 `data_params`; prose sometimes calls it `n_examples` — it is the same knob.)
@@ -43,13 +43,13 @@ discover_circuit({
 
 ### 2. Reduce `ig_steps` (linear savings)
 
-`ig_steps` is the number of Integrated Gradients integration steps. The config default (`utils/config.py`) is 5. The EAP-IG backend falls back to 30 only when `ig_steps` is left unset (`ig_steps is None`), but the default config always supplies 5, so that fallback does not apply through `discover_circuit`.
+`ig_steps` is the number of Integrated Gradients integration steps. The default is 3 (`utils/config.py`), which is enough for EAP-IG: the EAP-IG paper (Hanna et al., 2024) finds every value above 2 similarly faithful, and 2 unfaithful on some tasks. Cost grows linearly with the step count, so the previous default of 5 takes about 1.7x as long. The backends fall back to 3 as well when `ig_steps` is left unset (`None`).
 
 ```python
-"discovery": {"algorithm": "eap-ig", "ig_steps": 3, ...}  # 3 is minimum
+"discovery": {"algorithm": "eap-ig", "ig_steps": 3, ...}  # the default; 2 is faster but unfaithful on some tasks
 ```
 
-**Savings:** Linear with step reduction. `ig_steps=3` is ~40% faster and ~30% less memory than `ig_steps=5`.
+**Savings:** Linear with step reduction. `ig_steps=3` (the default) is ~40% faster and ~30% less memory than the previous default of `ig_steps=5`.
 
 ### 3. Reduce `batch_size` (linear savings)
 
@@ -77,7 +77,7 @@ discover_circuit({
         "algorithm": "eap-ig",
         "task": "mmlu",
         "level": "node",
-        "ig_steps": 3,                   # 2. fewer IG steps
+        "ig_steps": 3,                   # 2. IG steps (the default)
         "batch_size": 1,                 # 3. batch size 1 (top-level, not under data_params)
         "data_params": {
             "num_examples": 64,          # 4. fewer examples
@@ -97,7 +97,7 @@ discover_circuit({
 | Baseline — float32 (reference only; not the default) | 0% |
 | Model bfloat16 | ~50% |
 | + Batch size 1 | ~70–75% |
-| + Reduced ig_steps (3) | ~75–80% |
+| + ig_steps 3 (now the default; was 5) | ~75–80% |
 | **All combined** | **~80%** |
 
 There are no `memory_efficient` or `use_half_precision_activations` config keys — neither is read anywhere in the discovery backend, so setting them silently does nothing. The levers above (model precision, `batch_size`, `ig_steps`, `n_examples`) are the only ones that actually affect memory.
@@ -141,7 +141,7 @@ All optimizations have negligible impact on circuit quality:
 
 | Optimization | Speed impact | Circuit quality impact |
 |-------------|-------------|----------------------|
-| `ig_steps=3` | ~40% faster | < 0.5% score diff |
+| `ig_steps=3` (now the default; was 5) | ~40% faster | < 0.5% score diff |
 | `batch_size=1` | ~50% slower | None |
 | `bfloat16` model | Same or faster | < 0.1% score diff |
 

@@ -15,6 +15,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Hyperparameter ranges** (`circuitkit.utils.hparams`). Each hyperparameter now has a *valid*
+  range (outside it the value cannot work: `HyperparameterError`, a `ValueError`) and a *sensible*
+  range (inside valid, but earlier runs or the literature show it is risky: `HyperparameterWarning`).
+  `HyperparameterWarning` derives from `Warning`, not `UserWarning`, because importing
+  `circuitkit.api` ignores every `UserWarning`. Integer parameters must be integers (`ig_steps: 3.0`
+  is rejected instead of failing later in the backend). Only values you set explicitly are warned
+  about, so defaults never warn. `validation: {strict: true}` in a dict/YAML config, or
+  `CIRCUITKIT_STRICT_HPARAMS=1`, turns the warnings into errors (`ck.prune`, `ck.quantize` and
+  `ck.faithfulness` have no config, so only the environment variable applies to them). Checked in
+  `load_and_validate_config` (so `discover_circuit`, `evaluate_circuit`, the flat API, `Pipeline` and
+  the CLI), and in `ck.prune`, `ck.quantize` and `ck.faithfulness`. Parameters an algorithm does not
+  read are not checked (`ig_steps` is ignored by `eap`), and an unknown pillar name now fails before
+  any discovery work instead of after it. `eval.pillars: all` is accepted in a config. A
+  `HyperparameterError` keeps its type through the `@handle_errors` wrapper of `discover_circuit`,
+  `evaluate_circuit` and `benchmark_circuit`, which turns other `ValueError`s into `ValidationError`.
+  Only ranges with a citable basis are listed; the reference is generated into
+  `docs/reference/hyperparameters.md`.
+- `circuitkit hparams` prints the table of ranges (`--markdown` for the docs tables).
+- `CohereLabs/aya-expanse-32b` registered alongside Aya Expanse 8B through the
+  same `cohere1` TransformerLens compatibility port (`_tl_compat/cohere.py`) —
+  no new converter code, only the repo ID added to `AYA_EXPANSE_MODEL_NAMES`.
+  Validated on the real checkpoint: registration, config conversion,
+  truncated-depth parity (first 4 of 40 layers; KL(HF‖TL) 6.5e-9 to 5.3e-7,
+  argmax agreement 4/4) and module resolution for pruning scores and
+  quantization targets. Full-depth parity, discovery, evaluation and weight
+  steering do **not** run yet: the full model needs about 64 GiB for weights
+  alone, so it does not fit on most single GPUs, and transformer-lens 3.8.0's
+  multi-GPU (`n_devices`) block placement is broken
+  (blocks are placed by free memory, activations are moved by block index).
+  Those tests are skipped unless `CIRCUITKIT_RUN_AYA_EXPANSE_32B_FULL=1` is set.
+  See [docs/advanced/experimental-models.md](docs/advanced/experimental-models.md#tests).
+
 ### Changed
 
 - Importing `transformer_lens` before `circuitkit` now raises `ImportError` instead
@@ -43,9 +77,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `*-v3` bipartite-graph assets were removed.
 - Docs accent colour is now the logo orange `#FF4B0A` (links, buttons, landing animation, glows, docs badge); it was `#EC5A2C`.
 - Docs site now builds with a small template override (`overrides/main.html`) for the SVG favicon, ICO fallback and iOS icon.
+- **Defaults.** `discovery.ig_steps` now defaults to 3 (it was 5, and the EAP-IG backends
+  fell back to 30 when it was unset). It only affects the EAP-IG family, and the EAP-IG paper
+  (Hanna et al., 2024) finds every value above 2 similarly faithful (the authors used 5 to
+  leave a margin). `eval.n_stability_runs`
+  and the stability pillar now default to 3 (was 5). `Pipeline.evaluate` and `ck.faithfulness`
+  now run only the two basic pillars (`patching`, `ablation`) by default; pass `pillars="all"`
+  for every pillar (what `pillars=None` used to mean). `run_full_faithfulness(pillars=None)`
+  is unchanged and still runs every pillar, and so does a dict-config run with
+  `full_faithfulness_eval: true`. EAP-GP reads the same `ig_steps` key but keeps its paper
+  default of 5 when the key is not set, on every route (dict config, flat API, Pipeline,
+  CLI); `circuitkit discover --ig-steps` is unset by default for the same reason.
+  `circuitkit run` follows `Pipeline.evaluate`: an `evaluate:` block without `pillars:` now runs
+  the two basic pillars instead of all of them; list `pillars:` (or `pillars: all`) for more.
 
 ### Fixed
 
+- Hyperparameter checks: `eval.pillars: []` is now an error (it would run nothing), and an
+  ACDC grid point too large to compute (`tao_exps: [400]`) is reported as tau >= 1 instead of
+  being skipped.
 - The EAP qkv activation-memory preflight now estimates activation storage from
   batch size, sequence length, model dimensions and dtype, and uses CUDA's
   actual free-memory query. It emits an advisory `RuntimeWarning` instead of
@@ -68,6 +118,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rendered blank on the PyPI project page (which renders the README outside the
   repository) and the internal doc links 404'd there. They are now absolute
   `raw.githubusercontent.com` / GitHub URLs.
+- The ACDC docs and a code comment gave the default threshold grid as `tao_bases=[1, 3, 5, 7, 9]`
+  (20 sweeps); the backend default is `[1, 5]` (8 sweeps). The docs now match the code.
+- The edge-level `attribute()` passed `steps=None` to the EAP-IG scorers when `ig_steps` was
+  unset, which raised a `TypeError` in `range(1, steps + 1)`; it now uses 3 like the node-level path.
+- `circuitkit validate-config` only parsed the YAML and printed "Configuration is valid" without
+  running any check. It now runs the same validation as `discover` and `evaluate` (including the
+  hyperparameter ranges) and exits non-zero on an invalid config; `--strict` also fails on
+  warnings. A `circuitkit run` pipeline YAML gets an explicit message instead of a misleading error.
+- **Behaviour change:** `ck.benchmark()` and the underlying `run_lm_eval` /
+  `export_and_benchmark` / `compare_base_vs_intervened` helpers default to
+  `dtype="float32"` again. The `bfloat16` default introduced under "VRAM policy
+  changes" below changed benchmark numbers (about 0.3-1% of predictions) and is
+  undone here; pass `dtype="bfloat16"` to keep the roughly halved benchmark VRAM.
+- `optimize_memory_usage`'s per-process VRAM cap folded other processes' usage
+  into the cap in a way that always landed back at `max_fraction` regardless
+  of how much was actually free on a shared GPU — the exact failure its own
+  comment claimed to fix. It now actually shrinks as other tenants' usage
+  grows, and never drops below this process's own already-reserved memory.
+  When under 5% of the device would be left for this process (the device is
+  all but full), no cap is set and a warning is logged, since the cap is
+  applied once and would otherwise outlive the other tenants.
+- `enable_expandable_segments()` is now also skipped on Windows, where PyTorch
+  does not support this allocator setting and warns if asked.
+- Un-gated 8 more fast-tier modules (`tests/apply/test_pruner.py`,
+  `tests/unit/test_api.py`, `test_pillars.py`, `test_quick_api.py`,
+  `test_quick_extensions.py`, `test_score_loader.py`, `test_end_to_end.py`,
+  `tests/test_custom_data.py`) and `tests/unit/test_finetune_utils.py` from
+  `_SLOW_MODULES`: each was marked `network`/`slow` at the directory or
+  module level even though its only gated behavior is an orthogonal
+  `skipif(not torch.cuda.is_available())`, confirmed via a full offline sweep.
+- `evaluation.hf_checkpoint._load_causal_lm` still passed the deprecated
+  `torch_dtype=` keyword to `AutoModelForCausalLM.from_pretrained`; replaced
+  with `dtype=`.
+- The IOI EAP-IG visualization pages (`docs/assets/ioi_eap-ig.html` and its
+  `examples/visualization/` duplicate) loaded `elkjs` from jsDelivr with no
+  pinned version and `d3` with no Subresource Integrity. Pinned `elkjs` to
+  `0.12.0` and added SRI (`integrity`/`crossorigin`) for both scripts.
 
 ## [Unreleased] (next release)
 
@@ -267,6 +354,8 @@ numeric output or example selection:
   `"float32"` (pass `dtype="float32"` for the old behavior). Measured on the
   first 300 ARC-Easy validation questions: benchmark model VRAM roughly
   halved, 99.0-99.7% of predictions unchanged across two models tested.
+  *Superseded:* the default is `"float32"` again (see the top `[Unreleased]`
+  section); `bfloat16` is opt-in.
 - `Pipeline.benchmark()` now moves its resident TransformerLens model(s) to
   CPU for the duration of the lm-eval/vLLM benchmark call, restoring them
   after — the benchmark loads its own copy and previously the two could

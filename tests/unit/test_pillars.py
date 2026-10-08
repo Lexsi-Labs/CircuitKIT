@@ -2465,6 +2465,15 @@ class TestRunFullFaithfulness:
                     pillars=None,  # should default to all 6
                 )
 
+    def test_low_level_defaults(self):
+        """The low-level function keeps "all pillars" and defaults to 3 stability runs."""
+        import inspect
+
+        params = inspect.signature(run_full_faithfulness).parameters
+        assert params["pillars"].default is None
+        assert params["n_stability_runs"].default == 3
+        assert inspect.signature(Pillar3_Stability.run).parameters["n_runs"].default == 3
+
     def test_no_dataloader_falls_back_to_task_spec_build(self):
         """When dataloader=None, task_spec.build_dataloader is called."""
         model = _make_mock_model()

@@ -192,7 +192,7 @@ def get_scores_eap_ig(
     graph: Graph,
     dataloader: DataLoader,
     metric: Callable[[Tensor], Tensor],
-    steps=30,
+    steps=3,
     quiet=False,
 ):
     """
@@ -208,7 +208,7 @@ def get_scores_eap_ig(
         graph (Graph): Graph whose edge scores will be computed.
         dataloader (DataLoader): Data to attribute over.
         metric (Callable[[Tensor], Tensor]): Performance metric callable.
-        steps (int): Number of integration steps. Defaults to 30.
+        steps (int): Number of integration steps. Defaults to 3.
         quiet (bool): Suppress tqdm progress bar. Defaults to False.
 
     Returns:
@@ -308,7 +308,7 @@ def get_scores_ig_activations(
     dataloader: DataLoader,
     metric: Callable[[Tensor], Tensor],
     intervention: Literal["patching", "zero", "mean", "mean-positional"] = "patching",
-    steps=30,
+    steps=3,
     intervention_dataloader: Optional[DataLoader] = None,
     quiet=False,
 ):
@@ -327,7 +327,7 @@ def get_scores_ig_activations(
         intervention (Literal['patching', 'zero', 'mean', 'mean-positional']):
             Reference activations used to build the activation difference.
             Defaults to 'patching'.
-        steps (int): Number of integration steps per node. Defaults to 30.
+        steps (int): Number of integration steps per node. Defaults to 3.
         intervention_dataloader (Optional[DataLoader]): Required when
             intervention is 'mean' or 'mean-positional'. Defaults to None.
         quiet (bool): Suppress tqdm progress bar. Defaults to False.
@@ -710,8 +710,8 @@ def attribute(
             edge. 'sum' keeps raw sums; 'mean' divides by d_model.
             Defaults to 'sum'.
         ig_steps (Optional[int]): Number of integration steps for IG-based
-            methods ('EAP-IG-inputs', 'EAP-IG-activations'). Defaults to None
-            (each function uses its own default of 30).
+            methods ('EAP-IG-inputs', 'EAP-IG-activations'). Defaults to None,
+            which uses 3 steps.
         intervention_dataloader (Optional[DataLoader]): Required when
             intervention is 'mean' or 'mean-positional'. Defaults to None.
         quiet (bool): Suppress tqdm progress bar. Defaults to False.
@@ -770,7 +770,9 @@ def attribute(
             raise ValueError(
                 f"intervention must be 'patching' for EAP-IG-inputs, but got {intervention}"
             )
-        scores = get_scores_eap_ig(model, graph, dataloader, metric, steps=ig_steps, quiet=quiet)
+        scores = get_scores_eap_ig(
+            model, graph, dataloader, metric, steps=3 if ig_steps is None else ig_steps, quiet=quiet
+        )
     elif method == "clean-corrupted":
         if intervention != "patching":
             raise ValueError(
@@ -783,7 +785,7 @@ def attribute(
             graph,
             dataloader,
             metric,
-            steps=ig_steps,
+            steps=3 if ig_steps is None else ig_steps,
             intervention=intervention,
             intervention_dataloader=intervention_dataloader,
             quiet=quiet,

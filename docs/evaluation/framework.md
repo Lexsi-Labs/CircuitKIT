@@ -95,7 +95,7 @@ results = evaluate_circuit({
 With Pipeline:
 ```python
 pipe.evaluate(pillars=["patching", "ablation", "baselines"], n_examples=256)    # fast subset
-pipe.evaluate(pillars=None, n_examples=512,          # full audit
+pipe.evaluate(pillars="all", n_examples=512,         # full audit
               n_stability_runs=5, target_task="sva")
 ```
 

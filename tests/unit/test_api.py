@@ -1278,6 +1278,38 @@ class TestDiscoverCircuitConfigValidation:
         merged = load_and_validate_config(cfg)  # must not raise
         assert "task" not in merged["discovery"]
 
+    def test_out_of_range_hyperparameter_keeps_its_type(self):
+        """discover_circuit is wrapped by handle_errors, which turns a ValueError into a
+        ValidationError. A HyperparameterError must come through as itself so callers can
+        catch HyperparameterError or ValueError."""
+        from circuitkit.api import discover_circuit
+        from circuitkit.utils.hparams import HyperparameterError
+
+        cfg = self._minimal_config(algo="eap-ig")
+        cfg["discovery"]["ig_steps"] = 0
+        with pytest.raises(HyperparameterError, match="discovery.ig_steps"):
+            discover_circuit(cfg)
+
+    def test_sensible_range_warning_survives_importing_the_api(self):
+        """circuitkit.api runs warnings.filterwarnings("ignore", category=UserWarning) at import.
+        pytest discards filters installed during collection, so this has to run in a fresh
+        interpreter to see the real effect: the warning must still be delivered."""
+        import subprocess
+        import sys
+
+        code = """
+import warnings
+warnings.simplefilter('default')
+import circuitkit.api
+from circuitkit.utils.hparams import validate, HyperparameterWarning
+with warnings.catch_warnings(record=True) as caught:
+    validate({'pruning.target_sparsity': 0.9})
+print(sum(issubclass(w.category, HyperparameterWarning) for w in caught))
+"""
+        done = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=600)
+        assert done.returncode == 0, done.stderr[-800:]
+        assert done.stdout.strip().splitlines()[-1] == "1", done.stdout + done.stderr[-800:]
+
     def test_unknown_algorithm_raises(self):
         from circuitkit.api import discover_circuit
 

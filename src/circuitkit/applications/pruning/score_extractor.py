@@ -63,7 +63,7 @@ def _bootstrap_tasks():
 def run_discovery(
     model_name: str,
     task: str,
-    ig_steps: int = 5,
+    ig_steps: int = 3,
     num_examples: int = 200,
     batch_size: int = 4,
     device: Optional[str] = None,
@@ -83,7 +83,7 @@ def run_discovery(
     model_name   : HuggingFace / TransformerLens model identifier.
     task         : Registered circuitkit task name (e.g. "ioi", "mmlu").
     ig_steps     : Number of Integrated Gradients steps (higher = more accurate,
-                   slower).  5 is a reasonable default; use 2 for quick tests.
+                   slower).  3 is enough for EAP-IG (Hanna et al., 2024); use 2 for quick tests.
     num_examples : Number of task examples for computing attribution.
     batch_size   : Dataloader batch size.
     device       : "cuda" or "cpu".  Auto-detects if None.

@@ -16,10 +16,25 @@ CircuitKIT's **architecture registry** provides a unified interface for pruning 
 | `phi` | Ready | `microsoft/Phi-3-mini-4k-instruct` |
 | `falcon` | Ready | `tiiuae/falcon-7b` |
 | `gpt2` | Ready | `gpt2`, `gpt2-xl` |
-| `cohere` | Experimental | `CohereLabs/tiny-aya-base`, `CohereLabs/c4ai-command-r7b-12-2024` (`cohere2`); `CohereLabs/aya-expanse-8b` (`cohere1`) |
+| `cohere` | Experimental | `CohereLabs/tiny-aya-base`, `CohereLabs/c4ai-command-r7b-12-2024` (`cohere2`); `CohereLabs/aya-expanse-8b`, `CohereLabs/aya-expanse-32b` (`cohere1`) |
 | `smollm3` | Experimental | `HuggingFaceTB/SmolLM3-3B` |
 
-**Production** = validated in the CircuitKIT paper audit. **Ready** = registry entry exists, high confidence, not in the audit. **Experimental** = discovery, evaluation, and interventions supported via the circuitkit TransformerLens port (`circuitkit.backends._tl_compat`), validated on real weights (see below for exactly what "validated" means for each surface). The `cohere` family now covers three checkpoints across two HF architectures — Tiny Aya and Command R7B (`Cohere2ForCausalLM`, `model_type="cohere2"`) and Aya Expanse (`CohereForCausalLM`, `model_type="cohere"`) — sharing one weight converter and one registry entry, since the pruning/quantization/steering module layout (`self_attn.{q,k,v,o}_proj`, `mlp.{gate,up,down}_proj`) is identical across all three. `smollm3` is a separate, Llama-shaped family (new in this stage). See [Tiny Aya (Cohere2)](tiny-aya.md) and [Experimental Models](experimental-models.md).
+**Production** = validated in the CircuitKIT paper audit. **Ready** = registry entry exists, high confidence, not in the audit. **Experimental** = discovery, evaluation, and interventions supported via the circuitkit TransformerLens port (`circuitkit.backends._tl_compat`), validated on real weights (see below for exactly what "validated" means for each surface — Aya Expanse 32B is a partial exception, noted below). The `cohere` family now covers four checkpoints across two HF architectures — Tiny Aya and Command R7B (`Cohere2ForCausalLM`, `model_type="cohere2"`) and Aya Expanse 8B / 32B (`CohereForCausalLM`, `model_type="cohere"`) — sharing one weight converter and one registry entry, since the pruning/quantization/steering module layout (`self_attn.{q,k,v,o}_proj`, `mlp.{gate,up,down}_proj`) is identical across all four. `smollm3` is a separate, Llama-shaped family (new in this stage). See [Tiny Aya (Cohere2)](tiny-aya.md) and [Experimental Models](experimental-models.md).
+
+**Aya Expanse 32B is only partially validated.** Registration, real-weight
+config conversion (at a truncated depth), and — of the registry-entry
+resolution this page documents — **pruning score extraction and
+quantization pattern matching** are confirmed on the real 32B checkpoint;
+see [Experimental Models](experimental-models.md#tests) for the actual
+numbers. **Weight-steering slices** have not: weight steering needs the
+full 40-layer model loaded through TransformerLens, which needs about
+64 GiB for weights alone and so multi-GPU (`n_devices`) loading, and that
+is broken in transformer-lens==3.8.0. See the warning in
+[Experimental Models](experimental-models.md#tests) for the mechanism.
+Everywhere below that says "all four real loaded
+models" for the `cohere` family, that means Tiny Aya, Command R7B, Aya
+Expanse 8B and SmolLM3-3B — Aya Expanse 32B's coverage is pruning and
+quantization only, not weight steering.
 
 ### Two honest caveats (apply to `cohere` and `smollm3` alike)
 

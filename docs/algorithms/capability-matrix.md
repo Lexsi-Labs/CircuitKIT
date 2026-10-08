@@ -29,7 +29,7 @@ All runtimes: `n_examples=128`, `batch_size=4`, `level="node"`, A100 40GB.
 | Gemma-4B | ~10 GB | ~16 GB | — | ❌ OOM |
 | Llama-7B | ~18 GB | ~30 GB | — | ❌ OOM |
 
-`bfloat16`, `ig_steps=5`, `batch_size=4`. Reduce batch_size or ig_steps if you hit OOM.
+Measured at `bfloat16`, `ig_steps=5` (the previous default), `batch_size=4`. Reduce `batch_size` if you hit OOM; `ig_steps` now defaults to 3.
 
 ## Task compatibility
 

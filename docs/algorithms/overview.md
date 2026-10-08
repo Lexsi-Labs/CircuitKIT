@@ -116,8 +116,8 @@ Caveats: `acdc` is slow above GPT-2 scale, `ibcircuit` has a memory ceiling on m
 
 | Algorithm | Key | Default | Description |
 |---|---|---|---|
-| `eap-ig` | `ig_steps` | `5` | Integration steps for IG |
-| `acdc` | `tao_bases` | `[1, 3, 5, 7, 9]` | Bases for the tao threshold sweep |
+| `eap-ig` | `ig_steps` | `3` | Integration steps for IG |
+| `acdc` | `tao_bases` | `[1, 5]` | Bases for the tao threshold sweep |
 | `acdc` | `tao_exps` | `[-5, -4, -3, -2]` | Exponents for the tao threshold sweep |
 | `acdc` | `faithfulness_target` | `kl_div` | Metric optimized during pruning (`kl_div` or `mse`) |
 | `ibcircuit` | `num_epochs` | `1000` | Training epochs for noise model |

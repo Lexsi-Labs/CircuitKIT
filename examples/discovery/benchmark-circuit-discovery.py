@@ -144,13 +144,13 @@ def parse_args():
     parser.add_argument("--log-interval", type=int, default=100)
 
     # ── EAP-IG hyperparameters ────────────────────────────────────────────────
-    parser.add_argument("--ig-steps", type=int, default=5)
+    parser.add_argument("--ig-steps", type=int, default=3)
 
     # ── Faithfulness eval ─────────────────────────────────────────────────────
     parser.add_argument("--pillars", type=str, nargs="+", default=None,
                         choices=["patching", "ablation", "baselines",
                                  "robustness", "stability", "generalization"])
-    parser.add_argument("--n-stability-runs", type=int, default=5)
+    parser.add_argument("--n-stability-runs", type=int, default=3)
 
     # ── Output ────────────────────────────────────────────────────────────────
     parser.add_argument("--results-dir", type=str, default=default_results_dir)

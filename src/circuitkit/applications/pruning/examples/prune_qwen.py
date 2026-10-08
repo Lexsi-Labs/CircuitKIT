@@ -533,7 +533,7 @@ def parse_args():
             "capital_country",
         ],
     )
-    p.add_argument("--ig-steps", type=int, default=5)
+    p.add_argument("--ig-steps", type=int, default=3)
     p.add_argument("--num-examples", type=int, default=200)
     p.add_argument("--batch-size", type=int, default=4)
     p.add_argument(

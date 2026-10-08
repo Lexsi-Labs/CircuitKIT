@@ -17,6 +17,7 @@ behind importorskip + gpt2.
 """
 
 import json
+import warnings
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -24,6 +25,7 @@ import pytest
 import circuitkit as ck
 from circuitkit import quick
 from circuitkit.circuit import Circuit
+from circuitkit.utils.hparams import HyperparameterError, HyperparameterWarning
 
 
 # --------------------------------------------------------------------------- #
@@ -291,6 +293,61 @@ def test_faithfulness_calls_run_full_faithfulness():
     assert kwargs["device"] == "cpu"
 
 
+def _pillars_passed_to_run_full_faithfulness(**kw):
+    c = Circuit(["A0.1"], {"A0.1": 0.5}, algorithm="eap-ig", task="ioi")
+    with (
+        patch("circuitkit.tasks.bootstrap._bootstrap_builtin_tasks"),
+        patch("circuitkit.tasks.registry.get_task", return_value=MagicMock()),
+        patch("circuitkit.api._reconstruct_circuit_graph", return_value=MagicMock()),
+        patch("circuitkit.evaluation.run_full_faithfulness", return_value=MagicMock()) as mock_rff,
+    ):
+        quick.faithfulness(_fake_model(), c, "ioi", device="cpu", **kw)
+    return mock_rff.call_args.kwargs["pillars"]
+
+
+def test_faithfulness_defaults_to_the_two_basic_pillars():
+    assert _pillars_passed_to_run_full_faithfulness() == ["patching", "ablation"]
+
+
+def test_faithfulness_all_runs_every_pillar():
+    """'all' maps to run_full_faithfulness's own default (None = every pillar)."""
+    assert _pillars_passed_to_run_full_faithfulness(pillars="all") is None
+
+
+def test_faithfulness_explicit_pillars_are_unchanged():
+    assert _pillars_passed_to_run_full_faithfulness(pillars=["baselines"]) == ["baselines"]
+
+
+def test_faithfulness_warns_on_very_few_examples():
+    c = Circuit(["A0.1"], {"A0.1": 0.5}, algorithm="eap-ig", task="ioi")
+    with (
+        patch("circuitkit.tasks.bootstrap._bootstrap_builtin_tasks"),
+        patch("circuitkit.tasks.registry.get_task", return_value=MagicMock()),
+        patch("circuitkit.api._reconstruct_circuit_graph", return_value=MagicMock()),
+        patch("circuitkit.evaluation.run_full_faithfulness", return_value=MagicMock()),
+        warnings.catch_warnings(record=True) as caught,
+    ):
+        warnings.simplefilter("always")
+        quick.faithfulness(_fake_model(), c, "ioi", n_examples=8, device="cpu")
+    assert any(
+        issubclass(w.category, HyperparameterWarning) and "eval.num_examples=8" in str(w.message)
+        for w in caught
+    )
+
+
+def test_faithfulness_rejects_unknown_pillar_before_any_work():
+    c = Circuit(["A0.1"], {"A0.1": 0.5}, algorithm="eap-ig", task="ioi")
+    with (
+        patch("circuitkit.tasks.bootstrap._bootstrap_builtin_tasks"),
+        patch("circuitkit.tasks.registry.get_task", return_value=MagicMock()),
+        patch("circuitkit.api._reconstruct_circuit_graph", return_value=MagicMock()),
+        patch("circuitkit.evaluation.run_full_faithfulness", return_value=MagicMock()) as mock_rff,
+    ):
+        with pytest.raises(HyperparameterError, match="patchng"):
+            quick.faithfulness(_fake_model(), c, "ioi", pillars=["patchng"], device="cpu")
+    mock_rff.assert_not_called()
+
+
 def test_faithfulness_reconstructs_at_circuit_sparsity():
     """faithfulness must reconstruct at the circuit's ACTUAL sparsity, not 0.0.
 
@@ -440,6 +497,36 @@ def test_quantize_derives_scores_and_calls_circuit_quantize():
     assert kwargs["protect_layers"] is None
 
 
+def test_quantize_warns_for_3bit_with_few_protected_layers():
+    c = Circuit(["A0.1"])  # no scores: quantize stops right after the range checks
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        with pytest.raises(ValueError, match="no node scores"):
+            quick.quantize(
+                MagicMock(), c, n_layers=4, backend="llmcompressor", bits=3, high_fraction=0.05
+            )
+    assert any(issubclass(w.category, HyperparameterWarning) for w in caught)
+
+
+def test_quantize_rejects_bits_llmcompressor_does_not_support():
+    c = Circuit(["A0.1"], {"A0.1": 0.5})
+    with pytest.raises(HyperparameterError, match="quantization.bits"):
+        quick.quantize(MagicMock(), c, n_layers=4, backend="llmcompressor", bits=5)
+
+
+def test_quantize_quanto_ignores_bits():
+    """quanto uses qint tiers, so `bits` is not range-checked for it."""
+    c = Circuit(["A0.1"])  # no scores: stops after the range checks
+    with pytest.raises(ValueError, match="no node scores"):
+        quick.quantize(MagicMock(), c, n_layers=4, backend="quanto", bits=5)
+
+
+def test_quantize_rejects_out_of_range_high_fraction():
+    c = Circuit(["A0.1"], {"A0.1": 0.5})
+    with pytest.raises(HyperparameterError, match="quantization.high_fraction"):
+        quick.quantize(MagicMock(), c, n_layers=4, high_fraction=1.5)
+
+
 def test_quantize_protect_layers_passthrough():
     """protect_layers is forwarded to circuit_quantize."""
     c = Circuit(["A0.1", "MLP 2"], {"A0.1": 0.8, "MLP 2": 0.5})
@@ -504,6 +591,18 @@ def test_benchmark_accepts_string_task():
 def test_benchmark_rejects_empty_tasks():
     with pytest.raises(ValueError, match="at least one"):
         quick.benchmark("ckpt/x", [])
+
+
+def test_benchmark_defaults_to_float32_dtype():
+    """The undisclosed bfloat16 default (changed results, no docstring update)
+    is reverted. bfloat16 stays available as an explicit opt-in."""
+    with patch("circuitkit.evaluation.run_lm_eval", return_value={"boolq": {}}) as mock_le:
+        quick.benchmark("ckpt/x", "boolq", device="cpu")
+    assert mock_le.call_args.kwargs["dtype"] == "float32"
+
+    with patch("circuitkit.evaluation.run_lm_eval", return_value={"boolq": {}}) as mock_le:
+        quick.benchmark("ckpt/x", "boolq", device="cpu", dtype="bfloat16")
+    assert mock_le.call_args.kwargs["dtype"] == "bfloat16"
 
 
 # --------------------------------------------------------------------------- #

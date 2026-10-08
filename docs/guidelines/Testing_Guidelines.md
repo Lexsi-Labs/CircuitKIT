@@ -30,7 +30,7 @@ Configuration can be provided as a dict or YAML. Defaults are merged automatical
   - For `eap`/`eap-ig` and most algorithms:
     - `data_path` (required): path to CSV used by EAP datasets
     - `batch_size` (default `4`)
-    - `ig_steps` (default `5`, for `eap-ig`)
+    - `ig_steps` (default `3`, for `eap-ig`)
     - `method` (default `EAP-IG-inputs`)
 - `pruning`
   - `target_sparsity` (required): `0.0–1.0`
@@ -137,11 +137,11 @@ Test the LM evaluation functionality with these commands:
 
 ```bash
 # Test basic LM evaluation (enabled by default)
-circuitkit evaluate --model gpt2 --artifact results.pt --num-examples 5
+circuitkit evaluate --model gpt2 --artifact results.pt --num-examples 100
 
 # Test the faithfulness report path
 circuitkit evaluate --model gpt2 --artifact results.pt \
-  --num-examples 5 \
+  --num-examples 100 \
   --report-path ./report.json
 
 # Test API configuration

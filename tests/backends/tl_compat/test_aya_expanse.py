@@ -99,7 +99,10 @@ class TestAyaExpanseRegistration:
         assert tl_loading.get_official_model_name(MODEL_NAME) == MODEL_NAME
 
     def test_repo_id_is_in_aya_expanse_model_names(self):
-        assert cohere_patch.AYA_EXPANSE_MODEL_NAMES == [MODEL_NAME]
+        assert cohere_patch.AYA_EXPANSE_MODEL_NAMES == [
+            MODEL_NAME,
+            "CohereLabs/aya-expanse-32b",
+        ]
 
     def test_other_cohere_family_registrations_unaffected(self):
         """Registering cohere1 must not disturb cohere2's own lists."""

@@ -174,7 +174,15 @@ MODEL_ARCH_REGISTRY = {
             "('a{layer}.h{head}') -- a pre-existing property of the module, "
             "not something this family's registry entry controls. See "
             "tests/regression/test_{cohere,command_r7b,aya_expanse}_"
-            "{evaluation,interventions}.py."
+            "{evaluation,interventions}.py.\n"
+            "Aya Expanse 32B (CohereLabs/aya-expanse-32b, same cohere1 "
+            "architecture and converter as 8B): registration, config conversion "
+            "and truncated-depth parity are validated on real weights, as is "
+            "module resolution for pruning scores and quantization patterns. "
+            "Weight steering is not: the full model needs transformer-lens's "
+            "n_devices multi-GPU placement, which is broken in "
+            "transformer-lens==3.8.0. 'All three' above does not include 32B. "
+            "See docs/advanced/experimental-models.md."
         ),
     },
     "smollm3": {

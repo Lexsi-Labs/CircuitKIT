@@ -81,7 +81,7 @@ import pytest
 def test_discover_returns_circuit():
     import circuitkit as ck
     model = ck.load_model("gpt2", dtype="float32")
-    circuit = ck.discover(model, "ioi", n_examples=8)
+    circuit = ck.discover(model, "ioi", n_examples=32)
     assert len(circuit) > 0
 ```
 

@@ -25,6 +25,7 @@ from transformer_lens import HookedTransformer
 
 from ..backends.eap.graph import Graph
 from ..tasks.specs import TaskSpec
+from ..utils.hparams import PILLARS_VALID
 from .pillars import (
     Pillar1_CausalPatching,
     Pillar2_Ablation,
@@ -70,7 +71,7 @@ def run_full_faithfulness(  # noqa: C901 - complex function, refactor out of sco
     discovery_cfg: Dict[str, Any],
     device: str = "auto",
     pillars: Optional[List[str]] = None,
-    n_stability_runs: int = 5,
+    n_stability_runs: int = 3,
     metric_fn: Optional[Callable] = None,
     dataloader: Optional[DataLoader] = None,
     intervention_dataloader: Optional[DataLoader] = None,
@@ -101,11 +102,17 @@ def run_full_faithfulness(  # noqa: C901 - complex function, refactor out of sco
         discovery_cfg: Discovery configuration dict containing algorithm,
             task, level, scope, and other discovery parameters.
         device: Target device ("cuda" or "cpu"). Defaults to "cuda".
-        pillars: Which pillars to compute. Defaults to all:
-            ["patching", "ablation", "baselines", "robustness", "stability", "generalization"]
-            Pass a subset to skip expensive pillars, e.g., ["patching", "ablation"].
+        pillars: Which pillars to compute. ``None`` runs every pillar (see
+            ``circuitkit.utils.hparams.PILLARS_VALID``): ["patching", "ablation",
+            "baselines", "robustness", "stability", "generalization",
+            "intervention_reliability"]. Pass a subset to skip expensive pillars,
+            e.g., ["patching", "ablation"]. Note that the user-facing entry points
+            (``Pipeline.evaluate``, ``ck.faithfulness``) default to just the two
+            basic pillars; this function keeps "all" as its own default.
         n_stability_runs: Number of discovery runs for Pillar 3 (Stability).
-            Defaults to 5. More runs = better stability estimate but slower.
+            Defaults to 3 (the sensible minimum: one run reports a trivial overlap of
+            1.0, two give a single pairwise overlap). More runs = better stability
+            estimate but slower, since every run repeats discovery.
         metric_fn: Optional custom metric function. If None, uses task_spec.metric_fn.
         dataloader: Evaluation dataloader yielding (clean, corrupted, label) batches.
             If None, built from task_spec and discovery_cfg.
@@ -154,25 +161,9 @@ def run_full_faithfulness(  # noqa: C901 - complex function, refactor out of sco
     # ────────────────────────────────────────────────────────────────────────
 
     if pillars is None:
-        pillars = [
-            "patching",
-            "ablation",
-            "baselines",
-            "robustness",
-            "stability",
-            "generalization",
-            "intervention_reliability",
-        ]
+        pillars = list(PILLARS_VALID)
 
-    valid_pillars = {
-        "patching",
-        "ablation",
-        "baselines",
-        "robustness",
-        "stability",
-        "generalization",
-        "intervention_reliability",
-    }
+    valid_pillars = set(PILLARS_VALID)
     invalid = set(pillars) - valid_pillars
     if invalid:
         raise ValueError(f"Invalid pillars: {invalid}. Valid: {valid_pillars}")

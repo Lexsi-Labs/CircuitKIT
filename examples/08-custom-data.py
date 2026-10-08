@@ -48,7 +48,7 @@ def section_a_paired() -> None:
     )
     pipe.discover(
         algorithm="eap-ig", level="node",
-        sparsity=0.2, n_examples=8, batch_size=2, ig_steps=2,
+        sparsity=0.2, n_examples=32, batch_size=2, ig_steps=2,
     )
     print(f"Discovered {len(pipe.circuit)} nodes. "
           f"Top 3: {pipe.circuit.top_nodes(3)}")
@@ -67,7 +67,7 @@ def section_b_clean_only() -> None:
     )
     pipe.discover(
         algorithm="ibcircuit", level="node",
-        sparsity=0.2, n_examples=8, batch_size=2,
+        sparsity=0.2, n_examples=32, batch_size=2,
         num_epochs=200, scope="heads",
         # Note: scope= here sets pruning.scope. If IBCircuit needs
         # discovery.scope set explicitly too (see
@@ -102,7 +102,7 @@ def section_c_dict_config() -> None:
         "discovery": {
             "algorithm": "eap-ig", "task": "",
             "level": "node", "batch_size": 2, "ig_steps": 2,
-            "data_params": {"num_examples": 8},
+            "data_params": {"num_examples": 32},
         },
         "pruning": {"target_sparsity": 0.2, "scope": "both"},
         "output_path": os.path.join(OUTPUT_DIR, "custom_dict_config.pt"),

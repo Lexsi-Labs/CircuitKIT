@@ -4,7 +4,9 @@ Custom exceptions for CircuitKIT with enhanced error handling.
 
 import traceback
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
+
+from .hparams import HyperparameterError, HyperparameterWarning
 
 
 class CircuitKitError(Exception):
@@ -140,9 +142,16 @@ class DependencyVersionError(DependencyError):
 # Error handling utilities
 def handle_exception(
     exception: Exception, context: Optional[Dict[str, Any]] = None
-) -> CircuitKitError:
-    """Convert a generic exception to a CircuitKitError with context."""
-    if isinstance(exception, CircuitKitError):
+) -> Union[CircuitKitError, HyperparameterError, HyperparameterWarning]:
+    """Convert a generic exception to a CircuitKitError with context.
+
+    A ``HyperparameterError`` is returned unchanged. It is already precise (parameter, allowed
+    range, value) and it is a ``ValueError``; wrapping it in ``ValidationError`` would make
+    ``except HyperparameterError`` and ``except ValueError`` miss it at the flat-API entry points.
+    The same holds for a ``HyperparameterWarning`` that the user escalated with
+    ``warnings.filterwarnings("error", category=HyperparameterWarning)``.
+    """
+    if isinstance(exception, (CircuitKitError, HyperparameterError, HyperparameterWarning)):
         return exception
 
     # Map common exceptions to CircuitKIT errors

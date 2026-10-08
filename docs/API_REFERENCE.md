@@ -175,9 +175,10 @@ Orchestrates the pillars end-to-end, ordered by cost (fast pillars first).
 
 Key parameters:
 
-- `pillars` (List[str], optional): Subset to run. Default: all of
-  `["patching", "ablation", "baselines", "robustness", "stability", "generalization", "intervention_reliability"]`.
-- `n_stability_runs` (int): Discovery runs for Pillar 3. Default 5.
+- `pillars` (List[str], optional): Subset to run. Default of this low-level function: all of
+  `["patching", "ablation", "baselines", "robustness", "stability", "generalization", "intervention_reliability"]`
+  (`Pipeline.evaluate` and `ck.faithfulness` default to `["patching", "ablation"]`).
+- `n_stability_runs` (int): Discovery runs for Pillar 3. Default 3.
 - `n_reliability_seeds` (int): Seeds for the optional intervention-reliability pillar.
   Default 3.
 - `target_task_spec` / `target_dataloader`: Required for Pillar 6; if omitted, Pillar 6

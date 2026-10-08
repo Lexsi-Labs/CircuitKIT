@@ -4,6 +4,8 @@ Stability tests whether the discovered circuit is consistent across re-discovery
 
 **Cost:** Expensive — Pillar 3 re-runs the full discovery algorithm `n_stability_runs` times.
 
+**Default:** `n_stability_runs=3`, the sensible minimum. With one run there is nothing to compare, so the pillar reports a perfect overlap of 1.0; two runs give a single pairwise overlap. Stability is also only computed when you ask for it: `Pipeline.evaluate` runs the two basic pillars (`patching`, `ablation`) unless you pass `pillars=["stability"]` or `pillars="all"`.
+
 ---
 
 ## The Measurement
@@ -24,7 +26,7 @@ $$\text{overlap} = \text{Jaccard}(A_i, A_j) = \frac{|A_i \cap A_j|}{|A_i \cup A_
 
 ```python
 # Via Pipeline
-pipe.evaluate(pillars=["stability"], n_examples=256, n_stability_runs=5)
+pipe.evaluate(pillars=["stability"], n_examples=256)   # n_stability_runs defaults to 3
 print(pipe.report.stability)
 # {
 #   "mean_spearman": 0.87,   # mean Spearman rho of score vectors across seed pairs
@@ -33,32 +35,32 @@ print(pipe.report.stability)
 #   "std_jaccard": 0.05,
 #   "mean_dice": 0.90,
 #   "n_stable_nodes": 24,    # nodes present in every run
-#   "n_runs": 5,
+#   "n_runs": 3,
 # }
 
 # Full audit with stability
-pipe.evaluate(pillars=None, n_stability_runs=5)
+pipe.evaluate(pillars="all")
 ```
 
 ---
 
 ## Cost Considerations
 
-Pillar 3 is the most expensive pillar. With `n_stability_runs=5`:
+Pillar 3 is the most expensive pillar. With the default `n_stability_runs=3`:
 
-| Model | Runtime per run | Total (5 runs) |
+| Model | Runtime per run | Total (3 runs) |
 |-------|----------------|----------------|
-| GPT-2 (128 examples) | ~2 min | ~10 min |
-| Llama-1B (128 examples) | ~8 min | ~40 min |
-| Gemma-4B (128 examples) | ~20 min | ~100 min |
+| GPT-2 (128 examples) | ~2 min | ~6 min |
+| Llama-1B (128 examples) | ~8 min | ~24 min |
+| Gemma-4B (128 examples) | ~20 min | ~60 min |
 
 **Optimization:** Reduce `n_examples` for the stability runs (they need fewer examples than initial discovery since you're measuring consistency, not accuracy):
 
 ```python
 pipe.evaluate(
     pillars=["stability"],
-    n_examples=64,      # fewer examples OK for stability check
-    n_stability_runs=3, # 3 runs is often sufficient
+    n_examples=100,     # fewer than the 256 default, and the sensible minimum for evaluation
+    n_stability_runs=3, # the default, and the sensible minimum
 )
 ```
 

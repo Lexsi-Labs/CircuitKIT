@@ -4,6 +4,7 @@ Unit tests for StructuralPruner (Workstream H).
 Tests real structural pruning using weight matrix manipulation.
 """
 
+import warnings
 from unittest.mock import Mock, patch
 
 import pytest
@@ -12,6 +13,7 @@ from transformer_lens import HookedTransformer
 
 from circuitkit.applications.pruning.pruner import StructuralPruner
 from circuitkit.artifacts.scores import CircuitScores
+from circuitkit.utils.hparams import HyperparameterWarning
 
 
 @pytest.fixture
@@ -58,6 +60,27 @@ class TestStructuralPrunerValidation:
 
         with pytest.raises(ValueError, match="sparsity must be in"):
             pruner.prune(model, scores, sparsity=-0.1)
+
+    def test_sparsity_above_the_sensible_range_warns(self, pruner):
+        """60% is valid but past where every selector collapsed in CircuitKIT's benchmarks."""
+        scores = CircuitScores(
+            task="ioi",
+            model="gpt2",
+            algorithm="eap",
+            level="node",
+            node_scores={"A0.0": 0.5},
+            timestamp="2025-04-13T12:00:00Z",
+        )
+        model = Mock(spec=HookedTransformer)
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            with pytest.raises(ValueError, match="scope must be"):  # stop before touching the model
+                pruner.prune(model, scores, sparsity=0.6, scope="nonsense")
+        assert any(
+            issubclass(w.category, HyperparameterWarning) and "target_sparsity" in str(w.message)
+            for w in caught
+        )
 
     def test_invalid_sparsity_too_high(self, pruner):
         """Test that sparsity > 1 is rejected."""

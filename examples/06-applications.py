@@ -35,7 +35,7 @@ CIRCUIT_CFG = {
         "level": "node",
         "batch_size": 2,
         "ig_steps": 2,
-        "data_params": {"num_examples": 16},
+        "data_params": {"num_examples": 32},
     },
     "pruning": {"target_sparsity": 0.2, "scope": "heads"},
     "output_path": "./results/example_apps_circuit.pt",

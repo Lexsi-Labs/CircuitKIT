@@ -34,6 +34,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from .circuit import Circuit
+from .utils.hparams import PILLARS_BASIC
+from .utils.hparams import validate as _validate_hparams
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from transformer_lens import HookedTransformer
@@ -257,7 +259,7 @@ def load_model(
     Example:
         >>> import circuitkit as ck
         >>> model = ck.load_model("gpt2", dtype="float32")
-        >>> circuit = ck.discover(model, "ioi", n_examples=16)
+        >>> circuit = ck.discover(model, "ioi", n_examples=32)
     """
     import torch
 
@@ -347,7 +349,7 @@ def build_discovery_config(
         keys — directly consumable by :func:`circuitkit.api.discover_circuit`.
 
     Example:
-        >>> cfg = build_discovery_config(model, "ioi", n_examples=16)
+        >>> cfg = build_discovery_config(model, "ioi", n_examples=32)
         >>> cfg["discovery"]["algorithm"]
         'eap-ig'
     """
@@ -442,7 +444,7 @@ def discover(
         output_path: Where the engine writes the ``.pt`` artifact and the
             ``_scores.json`` / ``_scores.pt`` side-cars.
         **kw: Extra keys forwarded into the ``discovery`` block (e.g.
-            ``ig_steps=5``, ``intervention="patching"``).
+            ``ig_steps=3``, ``intervention="patching"``).
 
     Returns:
         A :class:`Circuit` wrapping the discovered nodes and their scores.
@@ -454,7 +456,7 @@ def discover(
         >>> import circuitkit as ck
         >>> model = ck.load_model("gpt2", dtype="float32")
         >>> circuit = ck.discover(model, "ioi", algorithm="eap-ig",
-        ...                       n_examples=16, ig_steps=2)
+        ...                       n_examples=32, ig_steps=3)
         >>> print(circuit)
         Circuit(level=node, n_nodes=..., algorithm='eap-ig', task='ioi', ...)
         >>> circuit.top_nodes(3)
@@ -510,7 +512,7 @@ def faithfulness(
     circuit: Circuit,
     task: str,
     *,
-    pillars: Optional[List[str]] = None,
+    pillars: Optional[Union[List[str], str]] = None,
     n_examples: int = 256,
     batch_size: int = 16,
     device: Optional[str] = None,
@@ -534,8 +536,11 @@ def faithfulness(
         circuit: A :class:`Circuit` from :func:`discover`. It must carry node
             scores (run :func:`discover` with an ``output_path``).
         task: Registered task name the circuit was discovered for.
-        pillars: Which pillars to compute. ``None`` runs all. Pass a subset to
-            skip expensive pillars, e.g. ``["patching", "ablation"]``.
+        pillars: Which pillars to compute. ``None`` (the default) runs the two
+            basic pillars, ``"patching"`` and ``"ablation"``. ``"all"`` runs every
+            pillar, including the expensive ones (stability and generalization
+            re-run discovery); or pass a list of names, e.g.
+            ``["patching", "ablation", "baselines"]``.
         n_examples: Number of evaluation examples.
         batch_size: Evaluation batch size.
         device: Target device. ``None`` auto-selects.
@@ -572,6 +577,20 @@ def faithfulness(
             "Circuit has no node scores — faithfulness needs them. "
             "Re-run discover() with an output_path so scores are saved."
         )
+
+    # Default: the two basic pillars. "all" maps to run_full_faithfulness's own
+    # default (None = every pillar).
+    if pillars is None:
+        pillars = list(PILLARS_BASIC)
+    elif pillars == "all":
+        pillars = None
+
+    checks: Dict[str, Any] = {"eval.num_examples": n_examples}
+    if pillars is not None:
+        checks["eval.pillars"] = pillars
+    if kw.get("n_stability_runs") is not None:
+        checks["eval.n_stability_runs"] = kw["n_stability_runs"]
+    _validate_hparams(checks, stacklevel=2)
 
     from .api import _make_eval_metric
 
@@ -780,6 +799,16 @@ def quantize(
             f"backend must be 'quanto' or 'llmcompressor', got {backend!r}"
         )
 
+    # Range checks before any model work. `bits` is only read by llmcompressor (quanto uses
+    # qint tiers), so it is only checked there.
+    checks: Dict[str, Any] = {
+        "quantization.high_fraction": high_fraction,
+        "quantization.backend": backend,
+    }
+    if backend == "llmcompressor":
+        checks["quantization.bits"] = bits
+    _validate_hparams(checks, stacklevel=2)
+
     if not circuit.scores:
         raise ValueError(
             "Circuit has no node scores — quantize() needs them. "
@@ -967,7 +996,7 @@ def benchmark(
     limit: Optional[int] = None,
     fewshot: int = 0,
     device: Optional[str] = None,
-    dtype: str = "bfloat16",
+    dtype: str = "float32",
     **kw: Any,
 ) -> Dict[str, Dict[str, float]]:
     """Run lm-evaluation-harness on a saved HF checkpoint.
@@ -984,9 +1013,8 @@ def benchmark(
         limit: Cap examples per task — handy for quick smoke tests.
         fewshot: Few-shot example count.
         device: Torch device for the ``hf`` backend. ``None`` auto-selects.
-        dtype: Model dtype string. Defaults to ``"bfloat16"`` (half the VRAM of
-            float32, slightly different scores); pass ``"float32"`` to reproduce
-            earlier numbers.
+        dtype: Model dtype string. Defaults to ``"float32"``; pass ``"bfloat16"``
+            for roughly half the VRAM at the cost of slightly different scores.
         **kw: Extra keyword arguments forwarded to ``run_lm_eval`` (e.g.
             ``tokenizer``, ``batch_size``, ``apply_chat_template``).
 

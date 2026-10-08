@@ -143,10 +143,22 @@ Inspect a circuit artifact and print its contents: algorithm, scores, metadata.
 ## `circuitkit validate-config`
 
 ```bash
-circuitkit validate-config --config ./pipeline.yaml
+circuitkit validate-config --config ./my_config.yaml
+circuitkit validate-config --config ./my_config.yaml --strict
 ```
 
-Validate a discovery/evaluation config YAML without running it. The path is passed via `--config` / `-c`, not as a positional argument.
+Validate a dict-config YAML (the format `discover_circuit` accepts, with `model: {name: ...}`) without running it. It runs the same checks as `discover` and `evaluate`: required keys, algorithm and data options, and the hyperparameter ranges (see [Hyperparameters](../reference/hyperparameters.md)). A value outside a *valid* range is an error. A value outside a *sensible* range is listed as a warning, and fails the command with `--strict`. The path is passed via `--config` / `-c`, not as a positional argument.
+
+A `circuitkit run` pipeline YAML (where `model` is a plain string) is a different format. It is validated when it runs, and `validate-config` says so instead of guessing.
+
+---
+
+## `circuitkit hparams`
+
+```bash
+circuitkit hparams              # table of the valid and sensible range of each hyperparameter
+circuitkit hparams --markdown   # the tables used on the Hyperparameters docs page
+```
 
 ---
 

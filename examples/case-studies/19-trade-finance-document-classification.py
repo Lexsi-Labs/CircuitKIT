@@ -41,7 +41,7 @@ circuit = discover_circuit({
         "task": "ioi",
         "data_params": {"num_examples": 32},
     },
-    "pruning": {"target_sparsity": 0.6, "scope": "both"},
+    "pruning": {"target_sparsity": 0.6, "scope": "both"},  # above 0.4 CircuitKIT warns; pair this with recovery fine-tuning
     "output_path": "./results/fintra_circuit.pt",
 })
 
@@ -50,7 +50,7 @@ print("[2/4] Verifying faithfulness …")
 results = evaluate_circuit({
     "model": {"name": MODEL_NAME},
     "discovery": {"algorithm": "eap-ig", "task": "ioi"},
-    "pruning": {"target_sparsity": 0.6, "scope": "both"},
+    "pruning": {"target_sparsity": 0.6, "scope": "both"},  # above 0.4 CircuitKIT warns; pair this with recovery fine-tuning
     "output_path": "./results/fintra_circuit.pt",
 })
 

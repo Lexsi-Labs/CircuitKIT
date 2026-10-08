@@ -32,7 +32,7 @@ class ConfigManager:
                 "task": "ioi",  # Built-in task - data is auto-generated
                 "level": "node",
                 "batch_size": 4,
-                "ig_steps": 5,
+                "ig_steps": 3,
                 "data_params": {"num_examples": 128},
             },
             "pruning": {"target_sparsity": 0.3, "scope": "both"},

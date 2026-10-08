@@ -23,7 +23,7 @@ CONFIG = {
         "level": "node",                  # "node" (heads/MLPs) or "neuron"
         "batch_size": 2,
         "ig_steps": 2,                    # integrated-gradients steps (small for demo)
-        "data_params": {"num_examples": 16},
+        "data_params": {"num_examples": 32},
     },
     "pruning": {"target_sparsity": 0.2, "scope": "heads"},
     "output_path": "./results/example_circuit.pt",

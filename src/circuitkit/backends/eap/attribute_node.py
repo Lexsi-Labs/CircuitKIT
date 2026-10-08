@@ -1236,7 +1236,7 @@ def get_scores_eap_ig(
     graph: Graph,
     dataloader: DataLoader,
     metric: Callable[[Tensor], Tensor],
-    steps=30,
+    steps=3,
     quiet: bool = False,
     neuron: bool = False,
 ):
@@ -1255,7 +1255,7 @@ def get_scores_eap_ig(
         intervention (Literal['patching', 'zero', 'mean', 'mean-positional']):
             Reference activations for the activation difference.
             Defaults to 'patching'.
-        steps (int): Number of integration steps per node. Defaults to 30.
+        steps (int): Number of integration steps per node. Defaults to 3.
         intervention_dataloader (Optional[DataLoader]): Required when
             intervention is 'mean' or 'mean-positional'. Defaults to None.
         quiet (bool): Suppress tqdm progress bar. Defaults to False.
@@ -1366,7 +1366,7 @@ def get_scores_ig_activations(
     dataloader: DataLoader,
     metric: Callable[[Tensor], Tensor],
     intervention: Literal["patching", "zero", "mean", "mean-positional"] = "patching",
-    steps=30,
+    steps=3,
     intervention_dataloader: Optional[DataLoader] = None,
     quiet: bool = False,
     neuron: bool = False,
@@ -1386,7 +1386,7 @@ def get_scores_ig_activations(
         intervention (Literal['patching', 'zero', 'mean', 'mean-positional']):
             Reference activations for the activation difference.
             Defaults to 'patching'.
-        steps (int): Number of integration steps per node. Defaults to 30.
+        steps (int): Number of integration steps per node. Defaults to 3.
         intervention_dataloader (Optional[DataLoader]): Required when
             intervention is 'mean' or 'mean-positional'. Defaults to None.
         quiet (bool): Suppress tqdm progress bar. Defaults to False.
@@ -1665,7 +1665,9 @@ def attribute_node(
         aggregation (str): How to aggregate hidden-dim scores per node.
             'sum' keeps raw sums; 'mean' divides by d_model. Defaults to 'sum'.
         ig_steps (Optional[int]): Integration steps for IG-based methods.
-            Defaults to None (each function uses its own default of 30).
+            Defaults to None, which uses 3 steps for the EAP-IG methods and 5
+            for EAP-GP (its paper's value). The config default follows the same
+            split.
         intervention_dataloader (Optional[DataLoader]): Required when
             intervention is 'mean' or 'mean-positional'. Defaults to None.
         quiet (bool): Suppress tqdm progress bar. Defaults to False.
@@ -1726,12 +1728,12 @@ def attribute_node(
             raise ValueError(
                 f"intervention must be 'patching' for EAP-IG-inputs, but got {intervention}"
             )
-        _steps = ig_steps if ig_steps is not None else 30
+        _steps = ig_steps if ig_steps is not None else 3
         scores = get_scores_eap_ig(
             model, graph, dataloader, metric, steps=_steps, quiet=quiet, neuron=neuron
         )
     elif method == "EAP-IG-activations":
-        _steps = ig_steps if ig_steps is not None else 30
+        _steps = ig_steps if ig_steps is not None else 3
         scores = get_scores_ig_activations(
             model,
             graph,
@@ -1744,7 +1746,7 @@ def attribute_node(
             neuron=neuron,
         )
     elif method == "exact":
-        _steps = ig_steps if ig_steps is not None else 30
+        _steps = ig_steps if ig_steps is not None else 3
         scores = get_scores_exact(
             model,
             graph,

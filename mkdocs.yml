@@ -95,6 +95,12 @@ extra:
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/circuitkit/
       name: CircuitKIT on PyPI
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/MhVUGVYE8q
+      name: Lexsi Labs on Discord
+    - icon: fontawesome/brands/github
+      link: https://github.com/Lexsi-Labs
+      name: Lexsi Labs on GitHub
     - icon: fontawesome/brands/x-twitter
       link: https://x.com/Lexsi_labs
       name: Lexsi Labs on X
@@ -104,6 +110,9 @@ extra:
     - icon: simple/huggingface
       link: https://huggingface.co/Lexsi
       name: Lexsi Labs on Hugging Face
+    - icon: fontawesome/solid/globe
+      link: https://lexsi.ai
+      name: Lexsi Labs
 
 plugins:
   - search
@@ -176,6 +185,7 @@ nav:
           - Audit Results: trust/results.md
   - Reference:
       - reference/index.md
+      - Hyperparameters: reference/hyperparameters.md
       - API Reference:
           - Overview: api-reference/overview.md
           - Dict-Config API: api-reference/dict-config.md

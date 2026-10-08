@@ -3,3 +3,6 @@ contact_links:
   - name: Documentation
     url: https://circuitkit.lexsi.ai/
     about: View CircuitKIT documentation and guides
+  - name: Questions and discussion (Discord)
+    url: https://discord.gg/MhVUGVYE8q
+    about: Ask a question or chat with the Lexsi Labs team and other CircuitKIT users

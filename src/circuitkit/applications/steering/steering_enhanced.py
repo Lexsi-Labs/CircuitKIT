@@ -307,10 +307,13 @@ class SafetyDatasetSynthesis:
     def _add_noise_to_prompt(self, prompt: str) -> str:
         """Add random character-level noise."""
         chars = list(prompt)
-        noise_positions = np.random.choice(len(chars), size=max(1, len(chars) // 20), replace=False)
-        for pos in noise_positions:
-            if chars[pos].isalpha():
-                chars[pos] = chr(ord("a") + np.random.randint(26))
+        letters = [i for i, c in enumerate(chars) if c.isalpha()]
+        if not letters:
+            return prompt
+        size = min(len(letters), max(1, len(chars) // 20))
+        for pos in np.random.choice(letters, size=size, replace=False):
+            # Shift by 1-25 so the letter always changes.
+            chars[pos] = chr(ord("a") + (ord(chars[pos].lower()) - ord("a") + 1 + np.random.randint(25)) % 26)
         return "".join(chars)
 
     def _reorder_prompt(self, prompt: str) -> str:

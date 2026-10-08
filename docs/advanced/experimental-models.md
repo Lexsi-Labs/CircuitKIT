@@ -13,9 +13,20 @@ rotary (NoPE) policy. Three more model families now ride that seam:
 | [Tiny Aya](tiny-aya.md) | `Cohere2ForCausalLM` | `cohere2` | `_tl_compat/cohere.py` |
 | **Command R7B** | `Cohere2ForCausalLM` | `cohere2` | `_tl_compat/cohere.py` |
 | **Aya Expanse 8B** | `CohereForCausalLM` | `cohere` | `_tl_compat/cohere.py` |
+| **Aya Expanse 32B** | `CohereForCausalLM` | `cohere` | `_tl_compat/cohere.py` |
 | **SmolLM3-3B** | `SmolLM3ForCausalLM` | `smollm3` | `_tl_compat/smollm3.py` |
 
-All four are **experimental** discovery/evaluation/intervention targets:
+Aya Expanse 32B shares Aya Expanse 8B's config/weight converter unchanged —
+registration, real-weight config conversion, and **module resolution for
+pruning score extraction and quantization targets** are validated on the real
+checkpoint (see [Tests](#tests)).
+Full-depth bf16 parity, discovery, evaluation, and weight steering do
+**not** run yet. A loaded TransformerLens copy needs about 64 GiB for
+weights alone, so it does not fit on most single GPUs, and multi-GPU
+loading through `n_devices` is affected by a bug in transformer-lens==3.8.0
+(see the warning in [Tests](#tests)). The other four
+models on this page are **experimental** discovery/evaluation/intervention
+targets:
 TransformerLens 3.8.0 has no native support for any of `cohere`, `cohere2`, or
 `smollm3`; the port adds it additively, at import time, with every patch
 falling through to stock TL for any other architecture. Command R7B and Aya
@@ -56,31 +67,42 @@ support.
 
 - `CohereLabs/c4ai-command-r7b-12-2024` (Command R7B, `cohere2`)
 - `CohereLabs/aya-expanse-8b` (Aya Expanse 8B, `cohere1`/`cohere`)
+- `CohereLabs/aya-expanse-32b` (Aya Expanse 32B, `cohere1`/`cohere`) —
+  registration, config conversion, truncated-depth parity and pruning /
+  quantization module resolution validated on real weights; full-depth
+  parity, discovery, evaluation and weight steering do not run yet (see
+  [Tests](#tests))
 - `HuggingFaceTB/SmolLM3-3B` (SmolLM3-3B, `smollm3`)
 
 ---
 
 ## Architecture at a glance
 
-| Property | Command R7B | Aya Expanse 8B | SmolLM3-3B |
-|---|---|---|---|
-| HF architecture | `Cohere2ForCausalLM` | `CohereForCausalLM` | `SmolLM3ForCausalLM` |
-| Params | ~7B | ~8B | ~3B |
-| `d_model` / layers | 4096 / 32 | 4096 / 32 | 2048 / 36 |
-| Query / KV heads | 32 / 8 (GQA) | 32 / 8 (GQA) | 16 / 4 (GQA) |
-| `d_head` | 128 | 128 | 128 |
-| `d_mlp` (gated SiLU) | 14336 | 14336 | 11008 |
-| Normalization | LayerNorm (bias-less) | LayerNorm (bias-less) | **RMSNorm** |
-| Block topology | **parallel** attn+MLP, one input LN | **parallel** attn+MLP, one input LN | **sequential** (standard Llama) |
-| RoPE style | GPT-J interleaved (`rotary_adjacent_pairs=True`) | interleaved (`rotary_adjacent_pairs=True`) | **standard Llama**, non-interleaved (`rotary_adjacent_pairs=False`) |
-| `rope_theta` | 50000 | 10000 | 5000000 |
-| Attention pattern | **sliding-window (4096) ⨯ full**, interleaved | all full attention | all full attention |
-| NoPE (no rotary) layers | full-attention layers | **none** — rotary everywhere | **per-layer**, driven by config's `no_rope_layers` (every 4th layer on the real checkpoint) |
-| `logit_scale` | 0.25 (real fold) | 0.125 (real fold) | none (no post-multiply at all) |
-| Tied embeddings | yes | yes | yes |
-| Vocab | 256000 | 256000 | 128256 |
-| Max position embeddings (real ckpt) | 132096 (preserved) | 8192 | 65536 (preserved) |
-| Gated on the Hub? | `gated=auto` (license click-through) | `gated=auto` (license click-through) | fully public |
+| Property | Command R7B | Aya Expanse 8B | Aya Expanse 32B | SmolLM3-3B |
+|---|---|---|---|---|
+| HF architecture | `Cohere2ForCausalLM` | `CohereForCausalLM` | `CohereForCausalLM` | `SmolLM3ForCausalLM` |
+| Params | ~7B | ~8B | ~32B | ~3B |
+| `d_model` / layers | 4096 / 32 | 4096 / 32 | 8192 / 40 | 2048 / 36 |
+| Query / KV heads | 32 / 8 (GQA, 4:1) | 32 / 8 (GQA, 4:1) | 64 / 8 (GQA, **8:1**) | 16 / 4 (GQA) |
+| `d_head` | 128 | 128 | 128 (not an explicit config field; `hidden_size // n_heads`) | 128 |
+| `d_mlp` (gated SiLU) | 14336 | 14336 | 24576 | 11008 |
+| Normalization | LayerNorm (bias-less) | LayerNorm (bias-less) | LayerNorm (bias-less) | **RMSNorm** |
+| Block topology | **parallel** attn+MLP, one input LN | **parallel** attn+MLP, one input LN | **parallel** attn+MLP, one input LN | **sequential** (standard Llama) |
+| RoPE style | GPT-J interleaved (`rotary_adjacent_pairs=True`) | interleaved (`rotary_adjacent_pairs=True`) | interleaved (`rotary_adjacent_pairs=True`) | **standard Llama**, non-interleaved (`rotary_adjacent_pairs=False`) |
+| `rope_theta` | 50000 | 10000 | **4,000,000** | 5000000 |
+| Attention pattern | **sliding-window (4096) ⨯ full**, interleaved | all full attention | all full attention | all full attention |
+| NoPE (no rotary) layers | full-attention layers | **none** — rotary everywhere | **none** — rotary everywhere | **per-layer**, driven by config's `no_rope_layers` (every 4th layer on the real checkpoint) |
+| `logit_scale` | 0.25 (real fold) | 0.125 (real fold) | **0.0625** (real fold) | none (no post-multiply at all) |
+| Tied embeddings | yes | yes | yes | yes |
+| Vocab | 256000 | 256000 | 256000 | 128256 |
+| Max position embeddings (real ckpt) | 132096 (preserved) | 8192 | 8192 | 65536 (preserved) |
+| Checkpoint size | — | ~15 GiB (fp16, 4 shards) | ~60.2 GiB (fp16, 14 shards) | — |
+| Gated on the Hub? | `gated=auto` (license click-through) | `gated=auto` (license click-through) | `gated=auto` (license click-through) | fully public |
+
+Aya Expanse 32B's tokenizer is byte-identical to 8B's (confirmed via
+`tokenizer.json` SHA-256, both starting `c69a7ea6c0927dfa`), so the existing
+single-token task guards (`greater_than`'s own operand pool, `ioi`'s name
+check) behave the same way they do for 8B.
 
 For reference, [Tiny Aya](tiny-aya.md) is 36 layers / `d_model=2048` / 16:4
 GQA heads / `d_mlp=11008`, the same `cohere2` shape as Command R7B but with
@@ -144,6 +166,14 @@ explicit `head_dim`, so this is a separate function rather than a branch):
 | `head_dim` not always set | `getattr(hf_config, "head_dim", None) or (hidden_size // n_heads)` |
 | `logit_scale=0.125` | folded into `unembed.W_U` |
 | `use_qk_norm=True` (unused today) | raises `NotImplementedError` — the weight converter has no q/k-norm conversion path |
+
+**Aya Expanse 32B** uses the exact same `_convert_cohere1_config` function
+and `convert_cohere2_weights` weight converter as 8B — no new code, only a
+second repo ID in `AYA_EXPANSE_MODEL_NAMES`. Only the config *values* differ:
+`rope_theta=4,000,000`, `logit_scale=0.0625`, 64/8 GQA heads, `d_mlp=24576`,
+40 layers. Validated on real weights at a truncated depth (see
+[Tests](#tests)); the mapping table above is identical in structure to 8B's,
+just with 32B's numbers.
 
 **SmolLM3-3B** — a new Llama-family mapping, via `_convert_smollm3_config`:
 
@@ -245,6 +275,10 @@ Offline unit tests (no network, no GPU, no gated weights) run in ordinary CI:
 - `tests/backends/tl_compat/test_aya_expanse.py` — registration, the cohere1
   config converter (no sliding window / `attn_types`, `head_dim` fallback,
   `use_qk_norm` guard), rotary-everywhere NoPE policy.
+- `tests/backends/tl_compat/test_aya_expanse_32b.py` — the same coverage at
+  32B's real spec (40 layers, 8:1 GQA, `rope_theta=4e6`, `logit_scale=0.0625`),
+  plus a tiny random HF model built with those specific values matching
+  HookedTransformer logits to 1e-5.
 - `tests/backends/tl_compat/test_smollm3.py` (41 cases) — registration,
   config/weight conversion, **per-layer NoPE** (`TestSmolLM3PerLayerNoPE`,
   parametrized across NoPE and non-NoPE layer indices) and
@@ -287,6 +321,62 @@ CIRCUITKIT_RUN_AYA_EXPANSE=1 CIRCUITKIT_RUN_AYA_EXPANSE_ACDC=1 HF_TOKEN=... \
     python -m pytest tests/regression/test_aya_expanse_discovery.py -v -k acdc
 ```
 
+**Aya Expanse 32B** (`CIRCUITKIT_RUN_AYA_EXPANSE_32B=1`, needs `HF_TOKEN`,
+deliberately a separate flag from 8B's so an 8B opt-in never silently
+triggers a 60 GiB download):
+
+```bash
+CIRCUITKIT_RUN_AYA_EXPANSE_32B=1 HF_TOKEN=... python -m pytest \
+    tests/backends/tl_compat/test_aya_expanse_32b_parity.py \
+    tests/regression/test_aya_expanse_32b_interventions.py -v
+```
+
+This runs what passes today: truncated-depth parity and the pruning /
+quantization module-resolution checks. Everything that needs the full
+40-layer model through TransformerLens (full-depth parity, discovery,
+evaluation, weight steering) is skipped unless
+`CIRCUITKIT_RUN_AYA_EXPANSE_32B_FULL=1` is also set, because it fails on
+transformer-lens 3.8.0 (see below).
+
+!!! warning "32B: truncated-depth parity and pruning/quantization resolution pass; full-depth parity, discovery, evaluation, and weight steering are blocked by a transformer-lens bug"
+    Validated against the real checkpoint:
+
+    - **Registration** — the repo ID resolves to the same `cohere1`
+      `ArchPort` as 8B.
+    - **Config conversion** at 32B's real spec (40 layers, 8:1 GQA,
+      `rope_theta=4e6`, `logit_scale=0.0625`).
+    - **Truncated-depth parity** (first 4 of 40 real layers plus embeddings
+      and the final norm): KL(HF‖TL) 6.5e-9 to 5.3e-7, max log-prob
+      deviation 3.8e-6 to 7.6e-6, argmax agreement 4/4 on the same four
+      prompts the other models' gates use.
+    - **Pruning score extraction** (`build_importance_dict`) and
+      **quantization target resolution** — both resolve real modules
+      correctly on the full checkpoint (module-path resolution with
+      synthetic scores; no pruned or quantized model is evaluated)
+      (`tests/regression/test_aya_expanse_32b_interventions.py`).
+
+    What does **not** run yet, and why:
+
+    1. **The model does not fit on most single GPUs.** The weights are
+       about 60 GiB at fp16/bf16, and TransformerLens keeps a separate
+       `W_U` (~3.9 GiB more), so a loaded TransformerLens copy needs about
+       64 GiB for weights alone. Full-depth parity, discovery, evaluation,
+       and weight steering therefore need multi-GPU loading through
+       `n_devices`.
+    2. **`n_devices` loading is broken in transformer-lens==3.8.0.**
+       `HookedTransformer.move_model_modules_to_device` places each block
+       with `get_best_available_device(cfg)`, which picks the device with
+       the most free memory and ignores the block index. The forward pass
+       moves the residual stream per block with the index-based
+       `get_device_for_block_index(i, cfg)`. The two disagree. Symptoms:
+       `RuntimeError: Expected all tensors to be on the same device`
+       inside TransformerLens's `layer_norm.py`, or nearly the whole model
+       placed on one GPU followed by an out-of-memory error.
+
+    This is not a defect in the shared `cohere1` converter. Do not treat
+    32B as having the discovery, evaluation, or weight-steering coverage
+    the other four models on this page have.
+
 **SmolLM3-3B** (`CIRCUITKIT_RUN_SMOLLM3=1`, public repo, no `HF_TOKEN`
 needed):
 
@@ -317,6 +407,12 @@ CIRCUITKIT_RUN_SMOLLM3=1 CIRCUITKIT_RUN_SMOLLM3_ACDC=1 \
   and the exact per-layer NoPE mask (`{3, 7, 11, ..., 35}` skip rotary) both
   confirmed directly on the loaded model. These figures are from manual
   real-weight GPU runs; CI does not reproduce this parity measurement.
+  Aya Expanse 32B's parity gate is a **truncated-depth** variant of this
+  same check (first 4 of 40 real layers plus embeddings and the final norm,
+  built by reading only the safetensors shards those tensors live in):
+  KL(HF‖TL) 6.5e-9 to 5.3e-7, max log-prob deviation 3.8e-6 to 7.6e-6,
+  argmax agreement 4/4. See the warning above for what this covers and
+  why the full-depth variant is blocked.
 - **Discovery** (`test_*_discovery.py`) — end-to-end `discover_circuit` on
   `greater_than` for 5 of the 6 stable algorithms (`eap`, `eap-ig`,
   `eap-gp`, `ibcircuit`, `cdt`); asserts finite, non-degenerate node scores.
@@ -333,8 +429,12 @@ CIRCUITKIT_RUN_SMOLLM3=1 CIRCUITKIT_RUN_SMOLLM3_ACDC=1 \
   CPU fallback discovery needed.
 - **Interventions** (`test_*_interventions.py`) — pruning score extraction,
   quantization target-module resolution, and weight-steering setup, all on
-  real weights. See [Architecture Registry](architecture-registry.md) for
-  exactly what was and wasn't run.
+  real weights for Command R7B/8B/SmolLM3-3B. For Aya Expanse 32B, pruning
+  and quantization resolution also pass on the real checkpoint; weight
+  steering is blocked by the same confirmed transformer-lens multi-GPU bug
+  described in the 32B warning above. See
+  [Architecture Registry](architecture-registry.md) for exactly what was and
+  wasn't run per model.
 
 ### ACDC is excluded from the standard gate
 
@@ -360,6 +460,20 @@ exceed a single 47 GB GPU's headroom and need to run on CPU
 repo's own OOM preflight refuses the GPU attempt loudly rather than crashing
 mid-forward. `cdt` needs neither. SmolLM3-3B (~6 GB bf16) is small enough
 that its entire discovery gate ran on GPU with no CPU fallback.
+
+**Aya Expanse 32B** needs more memory than the rest of this page: about
+60 GiB of weights at fp16/bf16 (14 safetensors shards), and TransformerLens
+keeps a separate `W_U` (~3.9 GiB more), so a loaded TransformerLens copy
+needs about 64 GiB for weights alone. That does not fit on most single
+GPUs, and a full fp32 copy needs about 129 GiB. Multi-GPU loading through
+`n_devices` fails on transformer-lens==3.8.0 however much GPU memory is
+free (see the warning in [Tests](#tests)).
+The parity gate avoids the full load by never materializing more than 4
+real layers through TransformerLens. Pruning and quantization resolution
+load the HF copy directly with `device_map="auto"`, which the
+TransformerLens bug does not affect. Full-depth parity, discovery,
+evaluation, and weight steering need the `n_devices` path and do not run
+yet.
 
 ---
 

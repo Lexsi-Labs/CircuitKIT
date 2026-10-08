@@ -1,6 +1,7 @@
 """Device auto-detection: CUDA > MPS > CPU."""
 
 import os
+import sys
 from typing import Optional
 
 import torch
@@ -21,8 +22,9 @@ def enable_expandable_segments() -> bool:
     unavailable, falls back to ``PYTORCH_CUDA_ALLOC_CONF``, which only takes
     effect while CUDA has not allocated yet. Skipped when CUDA/ROCm is absent,
     when the user already set ``expandable_segments`` in
-    ``PYTORCH_CUDA_ALLOC_CONF``/``PYTORCH_ALLOC_CONF``, or when
-    ``CIRCUITKIT_NO_EXPANDABLE_SEGMENTS`` is set.
+    ``PYTORCH_CUDA_ALLOC_CONF``/``PYTORCH_ALLOC_CONF``, when
+    ``CIRCUITKIT_NO_EXPANDABLE_SEGMENTS`` is set, or on Windows (PyTorch does
+    not support this allocator setting there and warns if asked).
 
     Returns:
         True if CircuitKIT applied the setting, False otherwise.
@@ -40,6 +42,7 @@ def enable_expandable_segments() -> bool:
         or "expandable_segments" in user_conf
         or not torch.cuda.is_available()
         or torch.version.hip
+        or sys.platform == "win32"
     ):
         return False
     try:
