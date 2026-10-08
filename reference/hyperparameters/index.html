@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://circuitkit.lexsi.ai/cli/yaml-config/">
+        <link rel="canonical" href="https://circuitkit.lexsi.ai/reference/hyperparameters/">
       
       
-        <link rel="prev" href="../applications/">
+        <link rel="prev" href="../">
       
       
-        <link rel="next" href="../../references/">
+        <link rel="next" href="../../api-reference/overview/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>YAML Configuration - CircuitKIT</title>
+        <title>Hyperparameters - CircuitKIT</title>
       
     
     
@@ -85,7 +85,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#yaml-configuration" class="md-skip">
+        <a href="#hyperparameters" class="md-skip">
           Skip to content
         </a>
       
@@ -124,7 +124,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              YAML Configuration
+              Hyperparameters
             
           </span>
         </div>
@@ -303,7 +303,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../../reference/" class="md-tabs__link">
+        <a href="../" class="md-tabs__link">
           
   
   
@@ -627,7 +627,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../reference/" class="md-nav__link ">
+            <a href="../" class="md-nav__link ">
               
   
   
@@ -668,10 +668,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../reference/hyperparameters/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hyperparameters
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -687,6 +714,109 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-the-checks-behave" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How the checks behave
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-is-and-is-not-listed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is (and is not) listed
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What is (and is not) listed">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pruning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pruning
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#evaluation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evaluation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#benchmarking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Benchmarking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#quantization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quantization
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -768,41 +898,41 @@
                 
   
   
+  
+  
     
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
   
   
   
-    
-    
+    <a href="../../cli/overview/" class="md-nav__link">
       
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-      
-      
-    
-    
-      
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
-            
   
   
   <span class="md-ellipsis">
@@ -816,314 +946,12 @@
   
   
 
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_4_4">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    CLI Reference
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
   
 
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../overview/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Overview
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../discovery/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Discovery Commands
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../evaluation/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Evaluation Commands
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../applications/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Application Commands
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    YAML Configuration
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    YAML Configuration
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#discovery-config-yaml" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Discovery Config YAML
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#task-yaml-schema" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Task YAML Schema
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Task YAML Schema">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#minimal-task-yaml" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Minimal Task YAML
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#full-task-yaml" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Full Task YAML
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#source-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Source Types
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#corruption-strategies" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Corruption Strategies
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#schema-column-names" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Schema Column Names
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#pipeline-yaml" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Pipeline YAML
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Next Steps
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
       
     </li>
   
@@ -1344,10 +1172,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#discovery-config-yaml" class="md-nav__link">
+  <a href="#how-the-checks-behave" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Discovery Config YAML
+        How the checks behave
       
     </span>
   </a>
@@ -1355,22 +1183,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#task-yaml-schema" class="md-nav__link">
+  <a href="#what-is-and-is-not-listed" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Task YAML Schema
+        What is (and is not) listed
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Task YAML Schema">
+    <nav class="md-nav" aria-label="What is (and is not) listed">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#minimal-task-yaml" class="md-nav__link">
+  <a href="#discovery" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Minimal Task YAML
+        Discovery
       
     </span>
   </a>
@@ -1378,10 +1206,43 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#full-task-yaml" class="md-nav__link">
+  <a href="#pruning" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Full Task YAML
+        Pruning
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#evaluation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evaluation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#benchmarking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Benchmarking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#quantization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quantization
       
     </span>
   </a>
@@ -1390,61 +1251,6 @@
         
       </ul>
     </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#source-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Source Types
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#corruption-strategies" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Corruption Strategies
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#schema-column-names" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Schema Column Names
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#pipeline-yaml" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Pipeline YAML
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Next Steps
-      
-    </span>
-  </a>
   
 </li>
       
@@ -1465,7 +1271,7 @@
 
 
   
-    <a href="https://github.com/Lexsi-Labs/circuitkit/edit/main/docs/cli/yaml-config.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/Lexsi-Labs/circuitkit/edit/main/docs/reference/hyperparameters.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -1473,233 +1279,282 @@
   
 
 
-<h1 id="yaml-configuration">YAML Configuration<a class="headerlink" href="#yaml-configuration" title="Permanent link">&para;</a></h1>
-<p>CircuitKIT's dict-config API and CLI both accept YAML files. This page covers the full YAML schema for discovery configs and task files.</p>
-<hr />
-<h2 id="discovery-config-yaml">Discovery Config YAML<a class="headerlink" href="#discovery-config-yaml" title="Permanent link">&para;</a></h2>
-<p>A full YAML config for <code>discover_circuit("config.yaml")</code> or <code>circuitkit discover-yaml</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># config.yaml — full discovery config</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">model</span><span class="p">:</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">meta-llama/Llama-3.2-1B-Instruct</span><span class="w">   </span><span class="c1"># required</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">precision</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bfloat16</span><span class="w">                        </span><span class="c1"># optional, default: bfloat16</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nt">discovery</span><span class="p">:</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="nt">algorithm</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">eap-ig</span><span class="w">            </span><span class="c1"># required (one of 13 discovery algorithms)</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span><span class="nt">task</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mmlu</span><span class="w">                   </span><span class="c1"># required (built-in or registered task name)</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">  </span><span class="nt">level</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">node</span><span class="w">                  </span><span class="c1"># "node" or "neuron", default: node</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">  </span><span class="nt">chat_template_mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">auto</span><span class="w">     </span><span class="c1"># "auto", "on", "off" — optional</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">  </span><span class="nt">batch_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">  </span><span class="nt">ig_steps</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span><span class="w">                  </span><span class="c1"># EAP-IG family only (default 3)</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">  </span><span class="nt">data_params</span><span class="p">:</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">    </span><span class="nt">num_examples</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">128</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">    </span><span class="nt">batch_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="nt">pruning</span><span class="p">:</span>
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">  </span><span class="nt">target_sparsity</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.3</span><span class="w">         </span><span class="c1"># fraction [0.0, 1.0]</span>
-<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">  </span><span class="nt">scope</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">heads</span><span class="w">                 </span><span class="c1"># "heads", "mlp", "both"</span>
-<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>
-<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="nt">output_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./results/circuit.pt</span><span class="w">   </span><span class="c1"># optional; auto-named if omitted</span>
-</code></pre></div>
-<hr />
-<h2 id="task-yaml-schema">Task YAML Schema<a class="headerlink" href="#task-yaml-schema" title="Permanent link">&para;</a></h2>
-<p>A task YAML is used with <code>circuitkit discover-yaml --task-yaml task.yaml</code>.</p>
-<h3 id="minimal-task-yaml">Minimal Task YAML<a class="headerlink" href="#minimal-task-yaml" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my_task</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nt">source</span><span class="p">:</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">csv</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./data.csv</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nt">schema</span><span class="p">:</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span><span class="nt">prompt</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">prompt</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="nt">answer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">answer</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span><span class="nt">corrupted_prompt</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">corrupt_prompt</span>
-</code></pre></div>
-<h3 id="full-task-yaml">Full Task YAML<a class="headerlink" href="#full-task-yaml" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># task.yaml</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1"># --- Name (required) ---</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my_task</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="c1"># --- Source (required) ---</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="nt">source</span><span class="p">:</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">csv</span><span class="w">          </span><span class="c1"># "csv", "jsonl", or "hf"</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">  </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./data.csv</span><span class="w">   </span><span class="c1"># for csv/jsonl</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="c1"># For HuggingFace dataset:</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="c1"># source:</span>
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="c1">#   type: hf</span>
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="c1">#   dataset_id: cais/mmlu</span>
-<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="c1">#   split: test</span>
-<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>
-<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="c1"># --- Schema (required) ---</span>
-<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="nt">schema</span><span class="p">:</span>
-<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">  </span><span class="nt">prompt</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">prompt</span><span class="w">              </span><span class="c1"># column name for the clean prompt</span>
-<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="w">  </span><span class="nt">answer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">answer</span><span class="w">              </span><span class="c1"># column name for the expected answer</span>
-<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="w">  </span><span class="nt">corrupted_prompt</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">corrupt</span><span class="w">   </span><span class="c1"># column name for the corrupted prompt</span>
-<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>
-<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="c1"># --- Corruption (optional) ---</span>
-<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="nt">corruption</span><span class="p">:</span>
-<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">entity_swap</span><span class="w">       </span><span class="c1"># strategy name (see below)</span>
-<a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="w">  </span><span class="c1"># or:</span>
-<a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="w">  </span><span class="c1"># strategy: token_swap</span>
-<a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="w">  </span><span class="c1"># strategy: paraphrase</span>
-<a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="w">  </span><span class="c1"># strategy: distractor</span>
-<a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a><span class="w">  </span><span class="c1"># strategy: role_swap</span>
-<a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a><span class="w">  </span><span class="nt">config</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span><span class="w">                  </span><span class="c1"># strategy-specific keyword arguments</span>
-<a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a>
-<a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a><span class="c1"># --- Metric (optional, default: logit_diff) ---</span>
-<a id="__codelineno-2-34" name="__codelineno-2-34" href="#__codelineno-2-34"></a><span class="nt">metric</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">logit_diff</span>
-<a id="__codelineno-2-35" name="__codelineno-2-35" href="#__codelineno-2-35"></a><span class="c1"># or:</span>
-<a id="__codelineno-2-36" name="__codelineno-2-36" href="#__codelineno-2-36"></a><span class="c1"># metric: kl                  # differentiable KL divergence</span>
-<a id="__codelineno-2-37" name="__codelineno-2-37" href="#__codelineno-2-37"></a><span class="c1"># metric: accuracy            # non-differentiable; reporting only, not for discovery</span>
-<a id="__codelineno-2-38" name="__codelineno-2-38" href="#__codelineno-2-38"></a>
-<a id="__codelineno-2-39" name="__codelineno-2-39" href="#__codelineno-2-39"></a><span class="c1"># --- Chat template (optional) ---</span>
-<a id="__codelineno-2-40" name="__codelineno-2-40" href="#__codelineno-2-40"></a><span class="nt">chat_template_mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">auto</span><span class="w">      </span><span class="c1"># "auto", "on", "off"</span>
-</code></pre></div>
-<hr />
-<h2 id="source-types">Source Types<a class="headerlink" href="#source-types" title="Permanent link">&para;</a></h2>
+<h1 id="hyperparameters">Hyperparameters<a class="headerlink" href="#hyperparameters" title="Permanent link">&para;</a></h1>
+<p>Every tunable parameter has two ranges:</p>
 <table>
 <thead>
 <tr>
-<th><code>type</code></th>
-<th>Description</th>
-<th>Required fields</th>
+<th>Range</th>
+<th>Meaning</th>
+<th>What CircuitKIT does outside it</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>csv</code></td>
-<td>Local CSV file</td>
-<td><code>path</code></td>
+<td><strong>Valid</strong></td>
+<td>Values that can work at all.</td>
+<td>Raises <code>HyperparameterError</code> (a <code>ValueError</code>) naming the parameter and the allowed range.</td>
 </tr>
 <tr>
-<td><code>jsonl</code></td>
-<td>Local JSONL file</td>
-<td><code>path</code></td>
-</tr>
-<tr>
-<td><code>hf</code></td>
-<td>HuggingFace <code>datasets</code></td>
-<td><code>dataset_id</code>, optionally <code>split</code></td>
+<td><strong>Sensible</strong></td>
+<td>Values inside the valid range that earlier runs or the literature show to be risky.</td>
+<td>Emits a <code>HyperparameterWarning</code>.</td>
 </tr>
 </tbody>
 </table>
-<hr />
-<h2 id="corruption-strategies">Corruption Strategies<a class="headerlink" href="#corruption-strategies" title="Permanent link">&para;</a></h2>
-<p>These are the only strategy names the task-YAML loader accepts under <code>corruption.strategy</code>. Any other name raises <code>Unknown corruption strategy</code>.</p>
-<table>
-<thead>
-<tr>
-<th>Strategy</th>
-<th>Class</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>entity_swap</code></td>
-<td><code>EntitySwapCorruption</code></td>
-<td>Swap named entities</td>
-</tr>
-<tr>
-<td><code>token_swap</code></td>
-<td><code>TokenSwapCorruption</code></td>
-<td>Swap tokens at specific positions</td>
-</tr>
-<tr>
-<td><code>paraphrase</code></td>
-<td><code>ParaphraseCorruption</code></td>
-<td>Paraphrase the prompt</td>
-</tr>
-<tr>
-<td><code>distractor</code></td>
-<td><code>DistractorInjectionCorruption</code></td>
-<td>Inject a distracting element</td>
-</tr>
-<tr>
-<td><code>role_swap</code></td>
-<td><code>RoleSwapCorruption</code></td>
-<td>Swap subject/object roles</td>
-</tr>
-</tbody>
-</table>
-<p>See <a href="../../user-guide/data-corruption/">Corruption strategies</a> for when these apply and how to write your own.</p>
-<hr />
-<h2 id="schema-column-names">Schema Column Names<a class="headerlink" href="#schema-column-names" title="Permanent link">&para;</a></h2>
-<p>The <code>schema</code> block maps your CSV/JSONL column names to CircuitKIT's expected fields:</p>
-<table>
-<thead>
-<tr>
-<th>CircuitKIT field</th>
-<th>Description</th>
-<th>Required</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>prompt</code></td>
-<td>The clean (factual) prompt</td>
-<td>Yes</td>
-</tr>
-<tr>
-<td><code>answer</code></td>
-<td>The expected answer token/string</td>
-<td>Yes</td>
-</tr>
-<tr>
-<td><code>corrupted_prompt</code></td>
-<td>The corrupted (counterfactual) prompt</td>
-<td>Yes for discovery</td>
-</tr>
-</tbody>
-</table>
-<p>If your CSV has different column names, remap them:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">schema</span><span class="p">:</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">prompt</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my_clean_text_column</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">answer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">correct_label</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">corrupted_prompt</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my_corrupt_text_column</span>
-</code></pre></div>
-<hr />
-<h2 id="pipeline-yaml">Pipeline YAML<a class="headerlink" href="#pipeline-yaml" title="Permanent link">&para;</a></h2>
-<p>The <code>circuitkit run</code> command reads a flat top-level config. <code>model</code> and <code>task</code> sit at the top; each stage (<code>discovery</code>, <code>evaluate</code>, <code>applications</code>, <code>export</code>) is its own block:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># pipeline.yaml</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gpt2</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nt">task</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ioi</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="nt">precision</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bfloat16</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="nt">output_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./results</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="nt">discovery</span><span class="p">:</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">  </span><span class="nt">algorithm</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">eap-ig</span>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">  </span><span class="nt">level</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">node</span>
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">  </span><span class="nt">sparsity</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.3</span>
-<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">  </span><span class="nt">n_examples</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">128</span>
-<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">  </span><span class="nt">batch_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
-<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">  </span><span class="nt">scope</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">both</span>
-<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>
-<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="nt">evaluate</span><span class="p">:</span>
-<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="w">  </span><span class="nt">pillars</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">patching</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">ablation</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">baselines</span><span class="p p-Indicator">]</span>
-<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>
-<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="nt">applications</span><span class="p">:</span>
-<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">prune</span>
-<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a><span class="w">    </span><span class="nt">sparsity</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.3</span>
-<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a><span class="w">    </span><span class="nt">scope</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">heads</span>
-<a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>
-<a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a><span class="nt">export</span><span class="p">:</span>
-<a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a><span class="w">  </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./checkpoints/pruned</span>
-</code></pre></div>
-<p>In the <code>evaluate</code> block, <code>pillars</code> defaults to <code>[patching, ablation]</code> when omitted (list more
-names, or write <code>pillars: all</code>, for the others), <code>n_examples</code> to 256 and <code>n_stability_runs</code> to 3.</p>
-<p><code>Pipeline</code> has no <code>from_yaml()</code> classmethod or <code>.run()</code> method. Run a pipeline YAML file via the CLI instead:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>circuitkit<span class="w"> </span>run<span class="w"> </span>pipeline.yaml
-</code></pre></div>
-<hr />
-<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<p>Integer parameters (<code>ig_steps</code>, <code>n_examples</code>, ...) must be integers: <code>3.0</code> is rejected, as it
+would otherwise fail later inside the backend. A few older argument checks run before these
+(for example the flat API's <code>sparsity</code> check) and raise a plain <code>ValueError</code> with the same
+meaning, so <code>except ValueError</code> handles every route.</p>
+<p>A value outside the <em>sensible</em> range is not wrong. It is a prompt to check that you meant it:
+for example <code>n_examples=8</code> runs, but attribution scores from eight examples are noisy.</p>
+<h2 id="how-the-checks-behave">How the checks behave<a class="headerlink" href="#how-the-checks-behave" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../discovery/">Discovery Commands</a> — using YAML with the CLI</li>
-<li><a href="../../user-guide/data/">Data model</a> — what discovery needs</li>
-<li><a href="../../user-guide/custom-data/">Bring your own data</a> — creating custom tasks</li>
-<li><a href="../../user-guide/data-corruption/">Corruption strategies</a> — generating the corrupt half</li>
-<li><a href="../../api-reference/dict-config/">API Reference: Dict-Config</a> — Python equivalent</li>
+<li><strong>Only what you set is warned about.</strong> Defaults are always inside the sensible range, and a
+  default never produces a warning.</li>
+<li><strong>Checked before any expensive work.</strong> A bad value in a dict/YAML config fails in
+  <code>discover_circuit</code> / <code>evaluate_circuit</code> / <code>circuitkit validate-config</code>, not after discovery has run.
+  Parameters an algorithm does not read are not checked (<code>ig_steps</code> is ignored for <code>eap</code>).
+  The entry points that do not take a config check their own arguments: <code>ck.prune</code>,
+  <code>ck.quantize</code> and <code>ck.faithfulness</code>.</li>
+<li><strong>Warnings are standard Python warnings.</strong> <code>HyperparameterWarning</code> derives from <code>Warning</code>, not
+  <code>UserWarning</code>, because importing <code>circuitkit.api</code> ignores all <code>UserWarning</code>s. Silence or
+  escalate it with the <code>warnings</code> module:</li>
 </ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.utils.hparams</span><span class="w"> </span><span class="kn">import</span> <span class="n">HyperparameterWarning</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">"ignore"</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="n">HyperparameterWarning</span><span class="p">)</span>   <span class="c1"># silence</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">"error"</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="n">HyperparameterWarning</span><span class="p">)</span>    <span class="c1"># escalate</span>
+</code></pre></div>
+<ul>
+<li><strong>Strict mode</strong> turns every sensible-range warning into an error, which suits CI and
+  reproduction runs. Enable it in a dict/YAML config or with an environment variable:</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">validation</span><span class="p">:</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">strict</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">CIRCUITKIT_STRICT_HPARAMS</span><span class="o">=</span><span class="m">1</span>
+</code></pre></div>
+<p>The <code>validation.strict</code> key applies to dict/YAML configs only (<code>discover_circuit</code>,
+  <code>evaluate_circuit</code>, <code>Pipeline</code>, <code>circuitkit validate-config</code>). <code>ck.prune</code>, <code>ck.quantize</code> and
+  <code>ck.faithfulness</code> have no config, so for them only the environment variable turns strict
+  mode on. A quoted <code>strict: "false"</code> is read as false; an unrecognised value is an error.</p>
+<ul>
+<li><strong><code>eval.pillars</code></strong> takes a list of pillar names, or the string <code>"all"</code> for every pillar, in
+  a dict/YAML config as well as in <code>Pipeline.evaluate</code> and <code>ck.faithfulness</code>.</li>
+<li><strong><code>circuitkit validate-config --config my.yaml</code></strong> runs the same checks on a config file and
+  prints each problem; add <code>--strict</code> to fail on warnings. <strong><code>circuitkit hparams</code></strong> prints the
+  table below in the terminal.</li>
+</ul>
+<h2 id="what-is-and-is-not-listed">What is (and is not) listed<a class="headerlink" href="#what-is-and-is-not-listed" title="Permanent link">&para;</a></h2>
+<p>Each range comes from our own runs or from a cited paper, and the <strong>Confidence</strong> column says
+which kind of evidence it rests on. Ranges that have not been validated yet (activation steering,
+weight steering, knowledge editing, LoRA healing) are intentionally not listed and are not
+checked. "Checked by" tells you what enforces a row:</p>
+<ul>
+<li><em>valid-range error + sensible-range warning</em>: enforced by this module.</li>
+<li><em>valid-range error</em>: only the valid range is enforced; the sensible range is not warned on.</li>
+<li><em>existing check in code</em>: enforced by an older check elsewhere in the code base.</li>
+<li><em>documented only</em>: reference information; nothing enforces it.</li>
+</ul>
+<p>The tables below are generated from <code>circuitkit/utils/hparams.py</code>; do not edit them by hand
+(run <code>python -m circuitkit.utils.hparams --write docs/reference/hyperparameters.md</code>).</p>
+<!-- hparams:start -->
+
+<h3 id="discovery">Discovery<a class="headerlink" href="#discovery" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Default</th>
+<th>Valid</th>
+<th>Sensible</th>
+<th>Checked by</th>
+<th>Confidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>num_examples</code></td>
+<td><code>128</code></td>
+<td>&gt;= 1</td>
+<td>32 to 1024 (log scale)</td>
+<td>valid-range error + sensible-range warning</td>
+<td>medium</td>
+</tr>
+<tr>
+<td><code>batch_size</code></td>
+<td><code>4</code></td>
+<td>&gt;= 1</td>
+<td>—</td>
+<td>valid-range error</td>
+<td>medium</td>
+</tr>
+<tr>
+<td><code>ig_steps</code></td>
+<td>3 (5 for eap-gp)</td>
+<td>&gt;= 1</td>
+<td>—</td>
+<td>valid-range error</td>
+<td>high</td>
+</tr>
+<tr>
+<td><code>tao_bases</code></td>
+<td>[1, 5] (ACDC backend default)</td>
+<td>non-empty list, each &gt; 0</td>
+<td>—</td>
+<td>valid-range error</td>
+<td>medium</td>
+</tr>
+<tr>
+<td><code>tao_exps</code></td>
+<td>[-5, -4, -3, -2] (ACDC backend default)</td>
+<td>non-empty list of integers</td>
+<td>—</td>
+<td>valid-range error</td>
+<td>medium</td>
+</tr>
+<tr>
+<td><code>num_epochs</code></td>
+<td><code>1000</code></td>
+<td>&gt;= 1</td>
+<td>500 to 1500 (not warned on)</td>
+<td>valid-range error</td>
+<td>medium</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>num_examples</code></strong>: Examples used to estimate attribution scores. Set via dict <code>discovery.data_params.num_examples</code> · flat/Pipeline <code>n_examples</code> · CLI <code>--num-examples</code>. Scores from very few examples are noisy: in CircuitKIT's IOI benchmarks the top-30% node sets of three seeds overlapped only ~0.6-0.7 (Jaccard) at 128 examples, and the EAP-IG, ACDC and CD-T papers all work with ~100 examples. Cost grows linearly, so beyond ~1000 there is little to gain.</p>
+<p><strong><code>batch_size</code></strong>: Examples per attribution batch. Set via dict <code>discovery.batch_size</code> · flat/Pipeline <code>batch_size</code> · CLI <code>--batch-size</code>. Memory-scaled, so there is no fixed sensible range: in CircuitKIT's benchmarks 2 worked for 3-4B models and 16 for models up to 1.5B. <code>batch_size=1</code> is always safe, just slower.</p>
+<p><strong><code>ig_steps</code></strong>: Integration steps for the EAP-IG family (eap-ig, eap-ig-activations, eap-gp). Set via dict <code>discovery.ig_steps</code> · CLI <code>--ig-steps</code> · flat/Pipeline via <code>**kw</code>. Read by: eap-ig, eap-ig-activations, eap-gp. Ignored by every other algorithm. One step is plain EAP. The EAP-IG paper (Hanna et al., 2024) tested 2 to 50 steps: 2 is unfaithful on some tasks, every value above 2 is similarly faithful. The authors used 5 to leave a margin and tested GPT-2 small on three tasks. Cost grows linearly with steps. EAP-GP reads the same key and defaults to 5 (its paper's k) when the key is not set.</p>
+<p><strong><code>tao_bases</code></strong>: ACDC threshold grid: tau = base x 10^exp for every (base, exp) pair. Set via dict <code>discovery.tao_bases</code>. Read by: acdc. ACDC sweeps a log-spaced grid of thresholds and keeps one circuit per tau. Published ACDC circuits use tau between about 4e-3 and 1e-1 (KL divergence).</p>
+<p><strong><code>tao_exps</code></strong>: Exponents of the ACDC threshold grid (see <code>tao_bases</code>). Set via dict <code>discovery.tao_exps</code>. Read by: acdc. A threshold of 1 or more keeps almost every edge, so such a grid point is flagged.</p>
+<p><strong><code>num_epochs</code></strong>: Training epochs for the IBCircuit mask. Set via dict <code>discovery.num_epochs</code>. Read by: ibcircuit. IBCircuit learns its mask by gradient descent, so it needs a real training budget. The existing IBCircuit check still warns below 100 epochs; the upstream IBCircuit repo trains 1300 epochs and CircuitKIT's runs use 1000.</p>
+<h3 id="pruning">Pruning<a class="headerlink" href="#pruning" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Default</th>
+<th>Valid</th>
+<th>Sensible</th>
+<th>Checked by</th>
+<th>Confidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>target_sparsity</code></td>
+<td><code>0.3</code></td>
+<td>[0, 1]</td>
+<td>&lt;= 0.4</td>
+<td>valid-range error + sensible-range warning</td>
+<td>medium</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>target_sparsity</code></strong>: Fraction of heads/MLPs removed (the circuit keeps the rest). Set via dict <code>pruning.target_sparsity</code> · flat/Pipeline/CLI <code>sparsity</code>. At 30% sparsity accuracy retention ranged from 0.65 (random) to 0.99 (Taylor) on Llama-3.2-3B and Gemma-3-4B. At 50% every selector tried collapsed (perplexity 365 to 220,000) without recovery fine-tuning.</p>
+<h3 id="evaluation">Evaluation<a class="headerlink" href="#evaluation" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Default</th>
+<th>Valid</th>
+<th>Sensible</th>
+<th>Checked by</th>
+<th>Confidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>num_examples</code></td>
+<td><code>256</code></td>
+<td>&gt;= 1</td>
+<td>100 to 1000 (log scale)</td>
+<td>valid-range error + sensible-range warning</td>
+<td>medium</td>
+</tr>
+<tr>
+<td><code>n_stability_runs</code></td>
+<td><code>3</code></td>
+<td>&gt;= 1</td>
+<td>3 to 10</td>
+<td>valid-range error + sensible-range warning</td>
+<td>medium</td>
+</tr>
+<tr>
+<td><code>pillars</code></td>
+<td><code>patching</code> + <code>ablation</code> (Pipeline, flat API, <code>circuitkit run</code>); every pillar for a dict config with <code>full_faithfulness_eval: true</code>; <code>"all"</code> runs every pillar</td>
+<td><code>patching</code> | <code>ablation</code> | <code>baselines</code> | <code>robustness</code> | <code>stability</code> | <code>generalization</code> | <code>intervention_reliability</code></td>
+<td>—</td>
+<td>valid-range error</td>
+<td>high</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>num_examples</code></strong>: Held-out examples used by the faithfulness pillars. Set via dict <code>eval.num_examples</code> · flat <code>n_examples</code> · Pipeline.evaluate <code>n_examples</code>. Faithfulness is a ratio of two noisy averages. The EAP-IG paper evaluates on 100 examples; CircuitKIT's benchmarks use 300 held-out examples.</p>
+<p><strong><code>n_stability_runs</code></strong>: Independent re-discoveries compared by the stability pillar. Set via dict <code>eval.n_stability_runs</code> · Pipeline.evaluate <code>n_stability_runs</code>. Stability is the overlap between re-discovered circuits. With 1 run there is nothing to compare, so the pillar reports a perfect overlap of 1.0; 2 runs give a single pairwise overlap. Seed-to-seed variance is large: in a seed replicate of CircuitKIT's benchmarks, patch faithfulness flipped sign in 3 of 5 cells. Each run repeats discovery, so cost grows linearly.</p>
+<p><strong><code>pillars</code></strong>: Faithfulness pillars to compute. Set via dict <code>eval.pillars</code> · flat <code>pillars</code> · Pipeline.evaluate <code>pillars</code>. Names are checked up front so a typo fails before any discovery or evaluation work starts. Stability and generalization re-run discovery and are the expensive ones.</p>
+<h3 id="benchmarking">Benchmarking<a class="headerlink" href="#benchmarking" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Default</th>
+<th>Valid</th>
+<th>Sensible</th>
+<th>Checked by</th>
+<th>Confidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>limit</code></td>
+<td>unset (full task)</td>
+<td>&gt; 0</td>
+<td>—</td>
+<td>documented only</td>
+<td>medium</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>limit</code></strong>: Cap on examples per lm-eval task. Set via flat <code>benchmark(limit=...)</code> · Pipeline.benchmark <code>limit</code> · CLI <code>--limit</code>. lm-evaluation-harness documents <code>limit</code> as for testing (a value below 1 is a fraction of the task). Leave it unset for numbers you report.</p>
+<h3 id="quantization">Quantization<a class="headerlink" href="#quantization" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Default</th>
+<th>Valid</th>
+<th>Sensible</th>
+<th>Checked by</th>
+<th>Confidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bits</code></td>
+<td>4 (Pipeline, CLI) · 3 (flat <code>ck.quantize</code>)</td>
+<td><code>3</code> | <code>4</code> | <code>8</code></td>
+<td>—</td>
+<td>existing check in code</td>
+<td>medium</td>
+</tr>
+<tr>
+<td><code>high_fraction</code></td>
+<td>0.3 (code) · 0.05 in CircuitKIT's benchmarks</td>
+<td>[0, 1]</td>
+<td>0.05 to 0.3 (not warned on)</td>
+<td>valid-range error</td>
+<td>medium</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>bits</code></strong>: Bit-width of the quantized tier (llmcompressor backend). Set via flat <code>quantize(bits=...)</code> · Pipeline.quantize <code>bits</code> · CLI <code>--bits</code>. The llmcompressor backend accepts 3, 4 or 8 and raises otherwise. The quanto backend ignores <code>bits</code> (it uses qint2/qint4/qint8 tiers).</p>
+<p><strong><code>high_fraction</code></strong>: Fraction of layers kept at high precision. Set via flat <code>quantize(high_fraction=...)</code> · Pipeline.quantize · CLI <code>--high-fraction</code>. With a 4-bit base, protecting 5% of layers kept 0.98 accuracy retention for every selector. At a 3-bit base the choice of selector only started to matter at 15% protected. The range itself is not warned on; a warning is raised only when <code>bits &lt;= 3</code> and fewer than 15% of layers are protected (llmcompressor backend).</p>
+<!-- hparams:end -->
 
 
 
@@ -1737,7 +1592,7 @@ names, or write <code>pillars: all</code>, for the others), <code>n_examples</co
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../applications/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Application Commands">
+          <a href="../" class="md-footer__link md-footer__link--prev" aria-label="Previous: Reference">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -1747,20 +1602,20 @@ names, or write <code>pillars: all</code>, for the others), <code>n_examples</co
                 Previous
               </span>
               <div class="md-ellipsis">
-                Application Commands
+                Reference
               </div>
             </div>
           </a>
         
         
           
-          <a href="../../references/" class="md-footer__link md-footer__link--next" aria-label="Next: References">
+          <a href="../../api-reference/overview/" class="md-footer__link md-footer__link--next" aria-label="Next: Overview">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                References
+                Overview
               </div>
             </div>
             <div class="md-footer__button md-icon">

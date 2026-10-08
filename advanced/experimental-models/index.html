@@ -1554,6 +1554,8 @@
       
         
       
+        
+      
     
     
     
@@ -1982,6 +1984,12 @@ rotary (NoPE) policy. Three more model families now ride that seam:</p>
 <td><code>_tl_compat/cohere.py</code></td>
 </tr>
 <tr>
+<td><strong>Aya Expanse 32B</strong></td>
+<td><code>CohereForCausalLM</code></td>
+<td><code>cohere</code></td>
+<td><code>_tl_compat/cohere.py</code></td>
+</tr>
+<tr>
 <td><strong>SmolLM3-3B</strong></td>
 <td><code>SmolLM3ForCausalLM</code></td>
 <td><code>smollm3</code></td>
@@ -1989,7 +1997,17 @@ rotary (NoPE) policy. Three more model families now ride that seam:</p>
 </tr>
 </tbody>
 </table>
-<p>All four are <strong>experimental</strong> discovery/evaluation/intervention targets:
+<p>Aya Expanse 32B shares Aya Expanse 8B's config/weight converter unchanged —
+registration, real-weight config conversion, and <strong>module resolution for
+pruning score extraction and quantization targets</strong> are validated on the real
+checkpoint (see <a href="#tests">Tests</a>).
+Full-depth bf16 parity, discovery, evaluation, and weight steering do
+<strong>not</strong> run yet. A loaded TransformerLens copy needs about 64 GiB for
+weights alone, so it does not fit on most single GPUs, and multi-GPU
+loading through <code>n_devices</code> is affected by a bug in transformer-lens==3.8.0
+(see the warning in <a href="#tests">Tests</a>). The other four
+models on this page are <strong>experimental</strong> discovery/evaluation/intervention
+targets:
 TransformerLens 3.8.0 has no native support for any of <code>cohere</code>, <code>cohere2</code>, or
 <code>smollm3</code>; the port adds it additively, at import time, with every patch
 falling through to stock TL for any other architecture. Command R7B and Aya
@@ -2041,6 +2059,11 @@ support.</p>
 <ul>
 <li><code>CohereLabs/c4ai-command-r7b-12-2024</code> (Command R7B, <code>cohere2</code>)</li>
 <li><code>CohereLabs/aya-expanse-8b</code> (Aya Expanse 8B, <code>cohere1</code>/<code>cohere</code>)</li>
+<li><code>CohereLabs/aya-expanse-32b</code> (Aya Expanse 32B, <code>cohere1</code>/<code>cohere</code>) —
+  registration, config conversion, truncated-depth parity and pruning /
+  quantization module resolution validated on real weights; full-depth
+  parity, discovery, evaluation and weight steering do not run yet (see
+  <a href="#tests">Tests</a>)</li>
 <li><code>HuggingFaceTB/SmolLM3-3B</code> (SmolLM3-3B, <code>smollm3</code>)</li>
 </ul>
 <hr />
@@ -2051,6 +2074,7 @@ support.</p>
 <th>Property</th>
 <th>Command R7B</th>
 <th>Aya Expanse 8B</th>
+<th>Aya Expanse 32B</th>
 <th>SmolLM3-3B</th>
 </tr>
 </thead>
@@ -2059,40 +2083,47 @@ support.</p>
 <td>HF architecture</td>
 <td><code>Cohere2ForCausalLM</code></td>
 <td><code>CohereForCausalLM</code></td>
+<td><code>CohereForCausalLM</code></td>
 <td><code>SmolLM3ForCausalLM</code></td>
 </tr>
 <tr>
 <td>Params</td>
 <td>~7B</td>
 <td>~8B</td>
+<td>~32B</td>
 <td>~3B</td>
 </tr>
 <tr>
 <td><code>d_model</code> / layers</td>
 <td>4096 / 32</td>
 <td>4096 / 32</td>
+<td>8192 / 40</td>
 <td>2048 / 36</td>
 </tr>
 <tr>
 <td>Query / KV heads</td>
-<td>32 / 8 (GQA)</td>
-<td>32 / 8 (GQA)</td>
+<td>32 / 8 (GQA, 4:1)</td>
+<td>32 / 8 (GQA, 4:1)</td>
+<td>64 / 8 (GQA, <strong>8:1</strong>)</td>
 <td>16 / 4 (GQA)</td>
 </tr>
 <tr>
 <td><code>d_head</code></td>
 <td>128</td>
 <td>128</td>
+<td>128 (not an explicit config field; <code>hidden_size // n_heads</code>)</td>
 <td>128</td>
 </tr>
 <tr>
 <td><code>d_mlp</code> (gated SiLU)</td>
 <td>14336</td>
 <td>14336</td>
+<td>24576</td>
 <td>11008</td>
 </tr>
 <tr>
 <td>Normalization</td>
+<td>LayerNorm (bias-less)</td>
 <td>LayerNorm (bias-less)</td>
 <td>LayerNorm (bias-less)</td>
 <td><strong>RMSNorm</strong></td>
@@ -2101,11 +2132,13 @@ support.</p>
 <td>Block topology</td>
 <td><strong>parallel</strong> attn+MLP, one input LN</td>
 <td><strong>parallel</strong> attn+MLP, one input LN</td>
+<td><strong>parallel</strong> attn+MLP, one input LN</td>
 <td><strong>sequential</strong> (standard Llama)</td>
 </tr>
 <tr>
 <td>RoPE style</td>
 <td>GPT-J interleaved (<code>rotary_adjacent_pairs=True</code>)</td>
+<td>interleaved (<code>rotary_adjacent_pairs=True</code>)</td>
 <td>interleaved (<code>rotary_adjacent_pairs=True</code>)</td>
 <td><strong>standard Llama</strong>, non-interleaved (<code>rotary_adjacent_pairs=False</code>)</td>
 </tr>
@@ -2113,6 +2146,7 @@ support.</p>
 <td><code>rope_theta</code></td>
 <td>50000</td>
 <td>10000</td>
+<td><strong>4,000,000</strong></td>
 <td>5000000</td>
 </tr>
 <tr>
@@ -2120,10 +2154,12 @@ support.</p>
 <td><strong>sliding-window (4096) ⨯ full</strong>, interleaved</td>
 <td>all full attention</td>
 <td>all full attention</td>
+<td>all full attention</td>
 </tr>
 <tr>
 <td>NoPE (no rotary) layers</td>
 <td>full-attention layers</td>
+<td><strong>none</strong> — rotary everywhere</td>
 <td><strong>none</strong> — rotary everywhere</td>
 <td><strong>per-layer</strong>, driven by config's <code>no_rope_layers</code> (every 4th layer on the real checkpoint)</td>
 </tr>
@@ -2131,10 +2167,12 @@ support.</p>
 <td><code>logit_scale</code></td>
 <td>0.25 (real fold)</td>
 <td>0.125 (real fold)</td>
+<td><strong>0.0625</strong> (real fold)</td>
 <td>none (no post-multiply at all)</td>
 </tr>
 <tr>
 <td>Tied embeddings</td>
+<td>yes</td>
 <td>yes</td>
 <td>yes</td>
 <td>yes</td>
@@ -2143,22 +2181,36 @@ support.</p>
 <td>Vocab</td>
 <td>256000</td>
 <td>256000</td>
+<td>256000</td>
 <td>128256</td>
 </tr>
 <tr>
 <td>Max position embeddings (real ckpt)</td>
 <td>132096 (preserved)</td>
 <td>8192</td>
+<td>8192</td>
 <td>65536 (preserved)</td>
 </tr>
 <tr>
+<td>Checkpoint size</td>
+<td>—</td>
+<td>~15 GiB (fp16, 4 shards)</td>
+<td>~60.2 GiB (fp16, 14 shards)</td>
+<td>—</td>
+</tr>
+<tr>
 <td>Gated on the Hub?</td>
+<td><code>gated=auto</code> (license click-through)</td>
 <td><code>gated=auto</code> (license click-through)</td>
 <td><code>gated=auto</code> (license click-through)</td>
 <td>fully public</td>
 </tr>
 </tbody>
 </table>
+<p>Aya Expanse 32B's tokenizer is byte-identical to 8B's (confirmed via
+<code>tokenizer.json</code> SHA-256, both starting <code>c69a7ea6c0927dfa</code>), so the existing
+single-token task guards (<code>greater_than</code>'s own operand pool, <code>ioi</code>'s name
+check) behave the same way they do for 8B.</p>
 <p>For reference, <a href="../tiny-aya/">Tiny Aya</a> is 36 layers / <code>d_model=2048</code> / 16:4
 GQA heads / <code>d_mlp=11008</code>, the same <code>cohere2</code> shape as Command R7B but with
 <code>logit_scale=1.0</code> (a no-op fold) and a smaller, ~3.35B-parameter checkpoint.</p>
@@ -2270,6 +2322,13 @@ explicit <code>head_dim</code>, so this is a separate function rather than a bra
 </tr>
 </tbody>
 </table>
+<p><strong>Aya Expanse 32B</strong> uses the exact same <code>_convert_cohere1_config</code> function
+and <code>convert_cohere2_weights</code> weight converter as 8B — no new code, only a
+second repo ID in <code>AYA_EXPANSE_MODEL_NAMES</code>. Only the config <em>values</em> differ:
+<code>rope_theta=4,000,000</code>, <code>logit_scale=0.0625</code>, 64/8 GQA heads, <code>d_mlp=24576</code>,
+40 layers. Validated on real weights at a truncated depth (see
+<a href="#tests">Tests</a>); the mapping table above is identical in structure to 8B's,
+just with 32B's numbers.</p>
 <p><strong>SmolLM3-3B</strong> — a new Llama-family mapping, via <code>_convert_smollm3_config</code>:</p>
 <table>
 <thead>
@@ -2387,6 +2446,10 @@ ACDC has no built-in <code>greater_than</code> support.</p>
 <li><code>tests/backends/tl_compat/test_aya_expanse.py</code> — registration, the cohere1
   config converter (no sliding window / <code>attn_types</code>, <code>head_dim</code> fallback,
   <code>use_qk_norm</code> guard), rotary-everywhere NoPE policy.</li>
+<li><code>tests/backends/tl_compat/test_aya_expanse_32b.py</code> — the same coverage at
+  32B's real spec (40 layers, 8:1 GQA, <code>rope_theta=4e6</code>, <code>logit_scale=0.0625</code>),
+  plus a tiny random HF model built with those specific values matching
+  HookedTransformer logits to 1e-5.</li>
 <li><code>tests/backends/tl_compat/test_smollm3.py</code> (41 cases) — registration,
   config/weight conversion, <strong>per-layer NoPE</strong> (<code>TestSmolLM3PerLayerNoPE</code>,
   parametrized across NoPE and non-NoPE layer indices) and
@@ -2422,17 +2485,70 @@ Each family has four gates: <strong>parity</strong> (the numerical proof), <stro
 <a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="nv">CIRCUITKIT_RUN_AYA_EXPANSE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="nv">CIRCUITKIT_RUN_AYA_EXPANSE_ACDC</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="nv">HF_TOKEN</span><span class="o">=</span>...<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">    </span>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tests/regression/test_aya_expanse_discovery.py<span class="w"> </span>-v<span class="w"> </span>-k<span class="w"> </span>acdc
 </code></pre></div>
+<p><strong>Aya Expanse 32B</strong> (<code>CIRCUITKIT_RUN_AYA_EXPANSE_32B=1</code>, needs <code>HF_TOKEN</code>,
+deliberately a separate flag from 8B's so an 8B opt-in never silently
+triggers a 60 GiB download):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nv">CIRCUITKIT_RUN_AYA_EXPANSE_32B</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="nv">HF_TOKEN</span><span class="o">=</span>...<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span>tests/backends/tl_compat/test_aya_expanse_32b_parity.py<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span>tests/regression/test_aya_expanse_32b_interventions.py<span class="w"> </span>-v
+</code></pre></div>
+<p>This runs what passes today: truncated-depth parity and the pruning /
+quantization module-resolution checks. Everything that needs the full
+40-layer model through TransformerLens (full-depth parity, discovery,
+evaluation, weight steering) is skipped unless
+<code>CIRCUITKIT_RUN_AYA_EXPANSE_32B_FULL=1</code> is also set, because it fails on
+transformer-lens 3.8.0 (see below).</p>
+<div class="admonition warning">
+<p class="admonition-title">32B: truncated-depth parity and pruning/quantization resolution pass; full-depth parity, discovery, evaluation, and weight steering are blocked by a transformer-lens bug</p>
+<p>Validated against the real checkpoint:</p>
+<ul>
+<li><strong>Registration</strong> — the repo ID resolves to the same <code>cohere1</code>
+  <code>ArchPort</code> as 8B.</li>
+<li><strong>Config conversion</strong> at 32B's real spec (40 layers, 8:1 GQA,
+  <code>rope_theta=4e6</code>, <code>logit_scale=0.0625</code>).</li>
+<li><strong>Truncated-depth parity</strong> (first 4 of 40 real layers plus embeddings
+  and the final norm): KL(HF‖TL) 6.5e-9 to 5.3e-7, max log-prob
+  deviation 3.8e-6 to 7.6e-6, argmax agreement 4/4 on the same four
+  prompts the other models' gates use.</li>
+<li><strong>Pruning score extraction</strong> (<code>build_importance_dict</code>) and
+  <strong>quantization target resolution</strong> — both resolve real modules
+  correctly on the full checkpoint (module-path resolution with
+  synthetic scores; no pruned or quantized model is evaluated)
+  (<code>tests/regression/test_aya_expanse_32b_interventions.py</code>).</li>
+</ul>
+<p>What does <strong>not</strong> run yet, and why:</p>
+<ol>
+<li><strong>The model does not fit on most single GPUs.</strong> The weights are
+   about 60 GiB at fp16/bf16, and TransformerLens keeps a separate
+   <code>W_U</code> (~3.9 GiB more), so a loaded TransformerLens copy needs about
+   64 GiB for weights alone. Full-depth parity, discovery, evaluation,
+   and weight steering therefore need multi-GPU loading through
+   <code>n_devices</code>.</li>
+<li><strong><code>n_devices</code> loading is broken in transformer-lens==3.8.0.</strong>
+   <code>HookedTransformer.move_model_modules_to_device</code> places each block
+   with <code>get_best_available_device(cfg)</code>, which picks the device with
+   the most free memory and ignores the block index. The forward pass
+   moves the residual stream per block with the index-based
+   <code>get_device_for_block_index(i, cfg)</code>. The two disagree. Symptoms:
+   <code>RuntimeError: Expected all tensors to be on the same device</code>
+   inside TransformerLens's <code>layer_norm.py</code>, or nearly the whole model
+   placed on one GPU followed by an out-of-memory error.</li>
+</ol>
+<p>This is not a defect in the shared <code>cohere1</code> converter. Do not treat
+32B as having the discovery, evaluation, or weight-steering coverage
+the other four models on this page have.</p>
+</div>
 <p><strong>SmolLM3-3B</strong> (<code>CIRCUITKIT_RUN_SMOLLM3=1</code>, public repo, no <code>HF_TOKEN</code>
 needed):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nv">CIRCUITKIT_RUN_SMOLLM3</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span>tests/backends/tl_compat/test_smollm3_parity.py<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span>tests/regression/test_smollm3_discovery.py<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span>tests/regression/test_smollm3_evaluation.py<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span>tests/regression/test_smollm3_interventions.py<span class="w"> </span>-v
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># ACDC only:</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="nv">CIRCUITKIT_RUN_SMOLLM3</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="nv">CIRCUITKIT_RUN_SMOLLM3_ACDC</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">    </span>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tests/regression/test_smollm3_discovery.py<span class="w"> </span>-v<span class="w"> </span>-k<span class="w"> </span>acdc
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nv">CIRCUITKIT_RUN_SMOLLM3</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span>tests/backends/tl_compat/test_smollm3_parity.py<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span>tests/regression/test_smollm3_discovery.py<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span>tests/regression/test_smollm3_evaluation.py<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span>tests/regression/test_smollm3_interventions.py<span class="w"> </span>-v
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="c1"># ACDC only:</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="nv">CIRCUITKIT_RUN_SMOLLM3</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="nv">CIRCUITKIT_RUN_SMOLLM3_ACDC</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">    </span>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tests/regression/test_smollm3_discovery.py<span class="w"> </span>-v<span class="w"> </span>-k<span class="w"> </span>acdc
 </code></pre></div>
 <p>(Tiny Aya's own gates use <code>CIRCUITKIT_RUN_TINY_AYA=1</code> — see
 <a href="../tiny-aya/#tests">Tiny Aya's Tests section</a>.)</p>
@@ -2447,7 +2563,13 @@ needed):</p>
   (four to five orders of magnitude under the gate), with argmax agreement
   and the exact per-layer NoPE mask (<code>{3, 7, 11, ..., 35}</code> skip rotary) both
   confirmed directly on the loaded model. These figures are from manual
-  real-weight GPU runs; CI does not reproduce this parity measurement.</li>
+  real-weight GPU runs; CI does not reproduce this parity measurement.
+  Aya Expanse 32B's parity gate is a <strong>truncated-depth</strong> variant of this
+  same check (first 4 of 40 real layers plus embeddings and the final norm,
+  built by reading only the safetensors shards those tensors live in):
+  KL(HF‖TL) 6.5e-9 to 5.3e-7, max log-prob deviation 3.8e-6 to 7.6e-6,
+  argmax agreement 4/4. See the warning above for what this covers and
+  why the full-depth variant is blocked.</li>
 <li><strong>Discovery</strong> (<code>test_*_discovery.py</code>) — end-to-end <code>discover_circuit</code> on
   <code>greater_than</code> for 5 of the 6 stable algorithms (<code>eap</code>, <code>eap-ig</code>,
   <code>eap-gp</code>, <code>ibcircuit</code>, <code>cdt</code>); asserts finite, non-degenerate node scores.</li>
@@ -2464,8 +2586,12 @@ needed):</p>
   CPU fallback discovery needed.</li>
 <li><strong>Interventions</strong> (<code>test_*_interventions.py</code>) — pruning score extraction,
   quantization target-module resolution, and weight-steering setup, all on
-  real weights. See <a href="../architecture-registry/">Architecture Registry</a> for
-  exactly what was and wasn't run.</li>
+  real weights for Command R7B/8B/SmolLM3-3B. For Aya Expanse 32B, pruning
+  and quantization resolution also pass on the real checkpoint; weight
+  steering is blocked by the same confirmed transformer-lens multi-GPU bug
+  described in the 32B warning above. See
+  <a href="../architecture-registry/">Architecture Registry</a> for exactly what was and
+  wasn't run per model.</li>
 </ul>
 <h3 id="acdc-is-excluded-from-the-standard-gate">ACDC is excluded from the standard gate<a class="headerlink" href="#acdc-is-excluded-from-the-standard-gate" title="Permanent link">&para;</a></h3>
 <p><code>acdc</code> (the sixth stable algorithm) needs the same per-head qkv-flag
@@ -2488,6 +2614,19 @@ exceed a single 47 GB GPU's headroom and need to run on CPU
 repo's own OOM preflight refuses the GPU attempt loudly rather than crashing
 mid-forward. <code>cdt</code> needs neither. SmolLM3-3B (~6 GB bf16) is small enough
 that its entire discovery gate ran on GPU with no CPU fallback.</p>
+<p><strong>Aya Expanse 32B</strong> needs more memory than the rest of this page: about
+60 GiB of weights at fp16/bf16 (14 safetensors shards), and TransformerLens
+keeps a separate <code>W_U</code> (~3.9 GiB more), so a loaded TransformerLens copy
+needs about 64 GiB for weights alone. That does not fit on most single
+GPUs, and a full fp32 copy needs about 129 GiB. Multi-GPU loading through
+<code>n_devices</code> fails on transformer-lens==3.8.0 however much GPU memory is
+free (see the warning in <a href="#tests">Tests</a>).
+The parity gate avoids the full load by never materializing more than 4
+real layers through TransformerLens. Pruning and quantization resolution
+load the HF copy directly with <code>device_map="auto"</code>, which the
+TransformerLens bug does not affect. Full-depth parity, discovery,
+evaluation, and weight steering need the <code>n_devices</code> path and do not run
+yet.</p>
 <hr />
 <h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
@@ -2612,6 +2751,22 @@ that its entire discovery gate ran on GPU with no CPU fallback.</p>
     
     
     
+    <a href="https://discord.gg/MhVUGVYE8q" target="_blank" rel="noopener" title="Lexsi Labs on Discord" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M492.5 69.8c-.2-.3-.4-.6-.8-.7-38.1-17.5-78.4-30-119.7-37.1-.4-.1-.8 0-1.1.1s-.6.4-.8.8c-5.5 9.9-10.5 20.2-14.9 30.6-44.6-6.8-89.9-6.8-134.4 0-4.5-10.5-9.5-20.7-15.1-30.6-.2-.3-.5-.6-.8-.8s-.7-.2-1.1-.2C162.5 39 122.2 51.5 84.1 69c-.3.1-.6.4-.8.7C7.1 183.5-13.8 294.6-3.6 404.2c0 .3.1.5.2.8s.3.4.5.6c44.4 32.9 94 58 146.8 74.2.4.1.8.1 1.1 0s.7-.4.9-.7c11.3-15.4 21.4-31.8 30-48.8.1-.2.2-.5.2-.8s0-.5-.1-.8-.2-.5-.4-.6-.4-.3-.7-.4c-15.8-6.1-31.2-13.4-45.9-21.9-.3-.2-.5-.4-.7-.6s-.3-.6-.3-.9 0-.6.2-.9.3-.5.6-.7c3.1-2.3 6.2-4.7 9.1-7.1.3-.2.6-.4.9-.4s.7 0 1 .1c96.2 43.9 200.4 43.9 295.5 0 .3-.1.7-.2 1-.2s.7.2.9.4c2.9 2.4 6 4.9 9.1 7.2.2.2.4.4.6.7s.2.6.2.9-.1.6-.3.9-.4.5-.6.6c-14.7 8.6-30 15.9-45.9 21.8-.2.1-.5.2-.7.4s-.3.4-.4.7-.1.5-.1.8.1.5.2.8c8.8 17 18.8 33.3 30 48.8.2.3.6.6.9.7s.8.1 1.1 0c52.9-16.2 102.6-41.3 147.1-74.2.2-.2.4-.4.5-.6s.2-.5.2-.8c12.3-126.8-20.5-236.9-86.9-334.5zm-302 267.7c-29 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.4 59.2-52.8 59.2m195.4 0c-29 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.2 59.2-52.8 59.2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+    <a href="https://github.com/Lexsi-Labs" target="_blank" rel="noopener" title="Lexsi Labs on GitHub" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
     <a href="https://x.com/Lexsi_labs" target="_blank" rel="noopener" title="Lexsi Labs on X" class="md-social__link">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M357.2 48h70.6L273.6 224.2 455 464H313L201.7 318.6 74.5 464H3.8l164.9-188.5L-5.2 48h145.6l100.5 132.9zm-24.8 373.8h39.1L119.1 88h-42z"/></svg>
     </a>
@@ -2630,6 +2785,14 @@ that its entire discovery gate ran on GPU with no CPU fallback.</p>
     
     <a href="https://huggingface.co/Lexsi" target="_blank" rel="noopener" title="Lexsi Labs on Hugging Face" class="md-social__link">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12.025 1.13c-5.77 0-10.449 4.647-10.449 10.378 0 1.112.178 2.181.503 3.185.064-.222.203-.444.416-.577a.96.96 0 0 1 .524-.15c.293 0 .584.124.84.284.278.173.48.408.71.694.226.282.458.611.684.951v-.014c.017-.324.106-.622.264-.874s.403-.487.762-.543c.3-.047.596.06.787.203s.31.313.4.467c.15.257.212.468.233.542.01.026.653 1.552 1.657 2.54.616.605 1.01 1.223 1.082 1.912.055.537-.096 1.059-.38 1.572.637.121 1.294.187 1.967.187.657 0 1.298-.063 1.921-.178-.287-.517-.44-1.041-.384-1.581.07-.69.465-1.307 1.081-1.913 1.004-.987 1.647-2.513 1.657-2.539.021-.074.083-.285.233-.542.09-.154.208-.323.4-.467a1.08 1.08 0 0 1 .787-.203c.359.056.604.29.762.543s.247.55.265.874v.015c.225-.34.457-.67.683-.952.23-.286.432-.52.71-.694.257-.16.547-.284.84-.285a.97.97 0 0 1 .524.151c.228.143.373.388.43.625l.006.04a10.3 10.3 0 0 0 .534-3.273c0-5.731-4.678-10.378-10.449-10.378M8.327 6.583a1.5 1.5 0 0 1 .713.174 1.487 1.487 0 0 1 .617 2.013c-.183.343-.762-.214-1.102-.094-.38.134-.532.914-.917.71a1.487 1.487 0 0 1 .69-2.803m7.486 0a1.487 1.487 0 0 1 .689 2.803c-.385.204-.536-.576-.916-.71-.34-.12-.92.437-1.103.094a1.487 1.487 0 0 1 .617-2.013 1.5 1.5 0 0 1 .713-.174m-10.68 1.55a.96.96 0 1 1 0 1.921.96.96 0 0 1 0-1.92m13.838 0a.96.96 0 1 1 0 1.92.96.96 0 0 1 0-1.92M8.489 11.458c.588.01 1.965 1.157 3.572 1.164 1.607-.007 2.984-1.155 3.572-1.164.196-.003.305.12.305.454 0 .886-.424 2.328-1.563 3.202-.22-.756-1.396-1.366-1.63-1.32q-.011.001-.02.006l-.044.026-.01.008-.03.024q-.018.017-.035.036l-.032.04a1 1 0 0 0-.058.09l-.014.025q-.049.088-.11.19a1 1 0 0 1-.083.116 1.2 1.2 0 0 1-.173.18q-.035.029-.075.058a1.3 1.3 0 0 1-.251-.243 1 1 0 0 1-.076-.107c-.124-.193-.177-.363-.337-.444-.034-.016-.104-.008-.2.022q-.094.03-.216.087-.06.028-.125.063l-.13.074q-.067.04-.136.086a3 3 0 0 0-.135.096 3 3 0 0 0-.26.219 2 2 0 0 0-.12.121 2 2 0 0 0-.106.128l-.002.002a2 2 0 0 0-.09.132l-.001.001a1.2 1.2 0 0 0-.105.212q-.013.036-.024.073c-1.139-.875-1.563-2.317-1.563-3.203 0-.334.109-.457.305-.454m.836 10.354c.824-1.19.766-2.082-.365-3.194-1.13-1.112-1.789-2.738-1.789-2.738s-.246-.945-.806-.858-.97 1.499.202 2.362c1.173.864-.233 1.45-.685.64-.45-.812-1.683-2.896-2.322-3.295s-1.089-.175-.938.647 2.822 2.813 2.562 3.244-1.176-.506-1.176-.506-2.866-2.567-3.49-1.898.473 1.23 2.037 2.16c1.564.932 1.686 1.178 1.464 1.53s-3.675-2.511-4-1.297c-.323 1.214 3.524 1.567 3.287 2.405-.238.839-2.71-1.587-3.216-.642-.506.946 3.49 2.056 3.522 2.064 1.29.33 4.568 1.028 5.713-.624m5.349 0c-.824-1.19-.766-2.082.365-3.194 1.13-1.112 1.789-2.738 1.789-2.738s.246-.945.806-.858.97 1.499-.202 2.362c-1.173.864.233 1.45.685.64.451-.812 1.683-2.896 2.322-3.295s1.089-.175.938.647-2.822 2.813-2.562 3.244 1.176-.506 1.176-.506 2.866-2.567 3.49-1.898-.473 1.23-2.037 2.16c-1.564.932-1.686 1.178-1.464 1.53s3.675-2.511 4-1.297c.323 1.214-3.524 1.567-3.287 2.405.238.839 2.71-1.587 3.216-.642.506.946-3.49 2.056-3.522 2.064-1.29.33-4.568 1.028-5.713-.624"/></svg>
+    </a>
+  
+    
+    
+    
+    
+    <a href="https://lexsi.ai" target="_blank" rel="noopener" title="Lexsi Labs" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M351.9 280H161c2.9 64.5 17.2 123.9 37.5 167.4 11.4 24.5 23.7 41.8 35.1 52.4 11.2 10.5 18.9 12.2 22.9 12.2s11.7-1.7 22.9-12.2c11.4-10.6 23.7-28 35.1-52.4 20.3-43.5 34.6-102.9 37.5-167.4zm-191-48h190.9c-2.8-64.5-17.1-123.9-37.4-167.4-11.4-24.4-23.7-41.8-35.1-52.4C268.1 1.7 260.4 0 256.4 0s-11.7 1.7-22.9 12.2c-11.4 10.6-23.7 28-35.1 52.4-20.3 43.5-34.6 102.9-37.5 167.4m-48 0c3.5-85.6 25.6-165.1 57.9-217.3C78.7 47.3 10.9 131.2 1.5 232zM1.5 280c9.4 100.8 77.2 184.7 169.3 217.3-32.3-52.2-54.4-131.7-57.9-217.3zm398.4 0c-3.5 85.6-25.6 165.1-57.9 217.3 92.1-32.7 159.9-116.5 169.3-217.3zm111.4-48C501.9 131.2 434.1 47.3 342 14.7c32.3 52.2 54.4 131.7 57.9 217.3z"/></svg>
     </a>
   
 </div>
