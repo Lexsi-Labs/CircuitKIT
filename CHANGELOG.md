@@ -42,8 +42,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   truncated-depth parity (first 4 of 40 layers; KL(HF‖TL) 6.5e-9 to 5.3e-7,
   argmax agreement 4/4) and module resolution for pruning scores and
   quantization targets. Full-depth parity, discovery, evaluation and weight
-  steering do **not** run yet: the full model does not fit one 48 GB GPU, and
-  transformer-lens 3.8.0's multi-GPU (`n_devices`) block placement is broken
+  steering do **not** run yet: the full model needs about 64 GiB for weights
+  alone, so it does not fit on most single GPUs, and transformer-lens 3.8.0's
+  multi-GPU (`n_devices`) block placement is broken
   (blocks are placed by free memory, activations are moved by block index).
   Those tests are skipped unless `CIRCUITKIT_RUN_AYA_EXPANSE_32B_FULL=1` is set.
   See [docs/advanced/experimental-models.md](docs/advanced/experimental-models.md#tests).
@@ -78,18 +79,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docs site now builds with a small template override (`overrides/main.html`) for the SVG favicon, ICO fallback and iOS icon.
 - **Defaults.** `discovery.ig_steps` now defaults to 3 (it was 5, and the EAP-IG backends
   fell back to 30 when it was unset). It only affects the EAP-IG family, and the EAP-IG paper
-  (Hanna et al., 2024) finds every value above 2 similarly faithful. `eval.n_stability_runs`
+  (Hanna et al., 2024) finds every value above 2 similarly faithful (the authors used 5 to
+  leave a margin). `eval.n_stability_runs`
   and the stability pillar now default to 3 (was 5). `Pipeline.evaluate` and `ck.faithfulness`
   now run only the two basic pillars (`patching`, `ablation`) by default; pass `pillars="all"`
   for every pillar (what `pillars=None` used to mean). `run_full_faithfulness(pillars=None)`
   is unchanged and still runs every pillar, and so does a dict-config run with
-  `full_faithfulness_eval: true`. EAP-GP reads the same `ig_steps` key, so it now also
-  defaults to 3 steps (its paper uses 5; set `ig_steps=5` for a paper-faithful run).
+  `full_faithfulness_eval: true`. EAP-GP reads the same `ig_steps` key but keeps its paper
+  default of 5 when the key is not set, on every route (dict config, flat API, Pipeline,
+  CLI); `circuitkit discover --ig-steps` is unset by default for the same reason.
   `circuitkit run` follows `Pipeline.evaluate`: an `evaluate:` block without `pillars:` now runs
   the two basic pillars instead of all of them; list `pillars:` (or `pillars: all`) for more.
 
 ### Fixed
 
+- Hyperparameter checks: `eval.pillars: []` is now an error (it would run nothing), and an
+  ACDC grid point too large to compute (`tao_exps: [400]`) is reported as tau >= 1 instead of
+  being skipped.
 - The EAP qkv activation-memory preflight now estimates activation storage from
   batch size, sequence length, model dimensions and dtype, and uses CUDA's
   actual free-memory query. It emits an advisory `RuntimeWarning` instead of

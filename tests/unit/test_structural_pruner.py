@@ -62,7 +62,7 @@ class TestStructuralPrunerValidation:
             pruner.prune(model, scores, sparsity=-0.1)
 
     def test_sparsity_above_the_sensible_range_warns(self, pruner):
-        """60% is valid but past the point where every selector collapsed in our runs."""
+        """60% is valid but past where every selector collapsed in CircuitKIT's benchmarks."""
         scores = CircuitScores(
             task="ioi",
             model="gpt2",

@@ -9,7 +9,7 @@ and finite.
 
 Double-load avoidance: the model is loaded exactly ONCE via
 ``circuitkit.load_model`` (``n_devices=2`` -- see the discovery file's
-module docstring for the measured hardware this choice is based on) and the
+module docstring) and the
 same handle is threaded through both ``discover_circuit(..., _model=model)``
 and ``evaluate_circuit(..., _model=model)``.
 
@@ -19,11 +19,9 @@ Gating mirrors ``test_aya_expanse_32b_discovery.py``: opt in with
     CIRCUITKIT_RUN_AYA_EXPANSE_32B=1 HF_TOKEN=... \
         python -m pytest tests/regression/test_aya_expanse_32b_evaluation.py -v
 
-**Status as of this run: blocked at the same ``n_devices=2`` model load as
-discovery** -- see ``test_aya_expanse_32b_discovery.py``'s module docstring
-for the two confirmed, independent root causes (a transformer-lens==3.8.0
-multi-GPU block-placement bug, and this model's activation memory needs
-exceeding this run's hardware regardless). Not run to completion here.
+**Status: blocked at the same ``n_devices=2`` model load as discovery** --
+see ``test_aya_expanse_32b_discovery.py``'s module docstring for the
+transformer-lens==3.8.0 multi-GPU block-placement bug.
 """
 
 from __future__ import annotations
@@ -46,10 +44,10 @@ _HAS_TOKEN = bool(os.environ.get("HF_TOKEN"))
 _FULL_DEPTH_OPT_IN = os.environ.get(
     "CIRCUITKIT_RUN_AYA_EXPANSE_32B_FULL", ""
 ).strip().lower() not in ("", "0", "false", "no")
-# The full 40-layer model does not fit one 48 GiB GPU, and transformer-lens 3.8.0's multi-GPU
-# (n_devices) block placement is broken, so everything that loads it at full depth through
-# TransformerLens fails today. Kept behind a second flag so the documented opt-in runs only
-# what can pass. See docs/advanced/experimental-models.md#tests.
+# The full 40-layer model needs more memory than a single typical GPU provides, and
+# transformer-lens 3.8.0's multi-GPU (n_devices) block placement is broken, so everything that
+# loads it at full depth through TransformerLens fails. Kept behind a second flag so the
+# documented opt-in runs only what can pass. See docs/advanced/experimental-models.md#tests.
 _NEEDS_FULL_DEPTH = pytest.mark.skipif(
     not _FULL_DEPTH_OPT_IN,
     reason=(

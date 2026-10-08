@@ -259,7 +259,7 @@ def load_model(
     Example:
         >>> import circuitkit as ck
         >>> model = ck.load_model("gpt2", dtype="float32")
-        >>> circuit = ck.discover(model, "ioi", n_examples=16)
+        >>> circuit = ck.discover(model, "ioi", n_examples=32)
     """
     import torch
 
@@ -349,7 +349,7 @@ def build_discovery_config(
         keys — directly consumable by :func:`circuitkit.api.discover_circuit`.
 
     Example:
-        >>> cfg = build_discovery_config(model, "ioi", n_examples=16)
+        >>> cfg = build_discovery_config(model, "ioi", n_examples=32)
         >>> cfg["discovery"]["algorithm"]
         'eap-ig'
     """
@@ -456,7 +456,7 @@ def discover(
         >>> import circuitkit as ck
         >>> model = ck.load_model("gpt2", dtype="float32")
         >>> circuit = ck.discover(model, "ioi", algorithm="eap-ig",
-        ...                       n_examples=16, ig_steps=2)
+        ...                       n_examples=32, ig_steps=3)
         >>> print(circuit)
         Circuit(level=node, n_nodes=..., algorithm='eap-ig', task='ioi', ...)
         >>> circuit.top_nodes(3)

@@ -25,8 +25,7 @@ that coverage lives in ``test_aya_expanse_32b.py``'s offline tests):
 * **Tier B** (``TestTierBFullDepthBf16Sanity``): the full 40-layer checkpoint
   at bf16, one copy resident at a time (HF computes and saves log-probs to
   disk, frees, then TL loads and compares) -- a full fp32 double-copy would
-  need ~129 GiB each, which this run's measured host RAM/GPU budget does not
-  support at both copies simultaneously. bf16 cannot honestly hit the 1e-4
+  need ~129 GiB each. bf16 cannot honestly hit the 1e-4
   KL bar 8B's fp32 gate uses, so this tier measures its own noise floor
   (HF eager vs sdpa attention, same prompts, same bf16) and gates against
   that measured floor plus identical top-1 agreement, rather than importing
@@ -71,10 +70,10 @@ _HAS_TOKEN = bool(os.environ.get("HF_TOKEN"))
 _FULL_DEPTH_OPT_IN = os.environ.get(
     "CIRCUITKIT_RUN_AYA_EXPANSE_32B_FULL", ""
 ).strip().lower() not in ("", "0", "false", "no")
-# The full 40-layer model does not fit one 48 GiB GPU, and transformer-lens 3.8.0's multi-GPU
-# (n_devices) block placement is broken, so everything that loads it at full depth through
-# TransformerLens fails today. Kept behind a second flag so the documented opt-in runs only
-# what can pass. See docs/advanced/experimental-models.md#tests.
+# The full 40-layer model needs more memory than a single typical GPU provides, and
+# transformer-lens 3.8.0's multi-GPU (n_devices) block placement is broken, so everything that
+# loads it at full depth through TransformerLens fails. Kept behind a second flag so the
+# documented opt-in runs only what can pass. See docs/advanced/experimental-models.md#tests.
 _NEEDS_FULL_DEPTH = pytest.mark.skipif(
     not _FULL_DEPTH_OPT_IN,
     reason=(
@@ -313,30 +312,21 @@ class TestTierBFullDepthBf16Sanity:
     the TL-vs-HF numbers are asserted and printed (captured in -s runs / the
     final report) so the actual measured tolerance is on record, not assumed.
 
-    **Status: blocked, not by a cohere1/32B bug.** The full bf16 checkpoint
-    (~60.2 GiB weights, +TL's extra ``W_U``) does not fit one 48 GiB GPU, so
-    this tier needs TransformerLens's own ``n_devices`` multi-GPU sharding.
-    That path is broken in transformer-lens==3.8.0, independent of this
-    model: ``HookedTransformer.move_model_modules_to_device`` (called from
-    ``__init__``) places every block via
-    ``get_best_available_device(cfg)`` -- which, for ``n_devices > 1``, picks
-    whichever visible CUDA device currently has the most free memory, with
-    no awareness of the block's index -- while the forward pass moves the
-    *residual stream* per block via the index-based
-    ``get_device_for_block_index(i, cfg)``. The two placement strategies
-    disagree, so a block's weights and the activations arriving at it can
-    land on different devices (observed: ``RuntimeError: Expected all
-    tensors to be on the same device, but found at least two devices,
-    cuda:0 and cuda:1!`` inside ``layer_norm.py``'s ``x * self.w + self.b``).
-    Confirmed by reading both functions directly
-    (``transformer_lens/HookedTransformer.py::move_model_modules_to_device``
-    and ``transformer_lens/utilities/multi_gpu.py::get_best_available_device``
-    /``get_device_for_block_index``) -- this is a pre-existing upstream bug,
-    not something introduced by or fixable within this PR's scope. The HF
-    side alone loads fine with ``device_map="balanced"`` across 2 GPUs (see
-    the measured bf16 noise floor this run printed), so this tier is blocked
-    specifically on TL's load, which still needs a single GPU large enough
-    to hold the full bf16 model unprocessed.
+    **Status: blocked by a transformer-lens bug, not a cohere1/32B bug.**
+    The full bf16 checkpoint (~60 GiB of weights, plus TL's separate
+    ``W_U``, about 64 GiB in total) needs more memory than a single typical
+    GPU provides, so this tier needs TransformerLens's ``n_devices``
+    multi-GPU loading. That path is broken in transformer-lens==3.8.0:
+    ``HookedTransformer.move_model_modules_to_device`` places each block
+    with ``get_best_available_device(cfg)`` (the device with the most free
+    memory, ignoring the block index), while the forward pass moves the
+    residual stream per block with the index-based
+    ``get_device_for_block_index(i, cfg)``. The two disagree. Symptoms:
+    ``RuntimeError: Expected all tensors to be on the same device`` inside
+    ``layer_norm.py``, or nearly the whole model placed on one GPU followed
+    by an out-of-memory error. The HF side loads with
+    ``device_map="balanced"`` across GPUs; the TL load needs a single GPU
+    large enough to hold the full bf16 model unprocessed.
     """
 
     @pytest.fixture(scope="class")
@@ -348,7 +338,7 @@ class TestTierBFullDepthBf16Sanity:
     @classmethod
     def n_gpus(cls):
         # The full bf16 checkpoint (~60.2 GiB weights, +TL's extra W_U on the
-        # TL side) does not fit a single 48 GiB GPU -- see "GPU memory
+        # TL side) does not fit on most single GPUs -- see "GPU memory
         # reality" in docs/advanced/experimental-models.md. Shard across
         # however many CUDA devices this process can see (the caller controls
         # that via CUDA_VISIBLE_DEVICES, per CircuitKIT's own GPU-budget
@@ -422,12 +412,10 @@ class TestTierBFullDepthBf16Sanity:
         #
         # Deliberately NOT passing n_devices here: transformer-lens==3.8.0's
         # multi-GPU block placement is broken (see the class docstring for
-        # the confirmed root cause), so n_devices>1 fails with a device
-        # mismatch rather than actually sharding the model. A single GPU
-        # large enough to hold the full bf16 checkpoint unprocessed is
-        # required for this fixture to succeed; on this run's 48 GiB GPUs
-        # that means this fixture OOMs, which is the expected, accepted
-        # outcome -- not a bug in this PR's converter.
+        # the root cause), so n_devices>1 fails with a device mismatch
+        # rather than sharding the model. This fixture needs a single GPU
+        # large enough to hold the full bf16 checkpoint unprocessed, and
+        # runs out of memory on anything smaller.
         model = load_model(MODEL_NAME, dtype="bfloat16", device=device)
         model.eval()
         out = {}

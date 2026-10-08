@@ -25,7 +25,7 @@ def section_a_from_scratch() -> str:
     pipe = Pipeline("gpt2", task="ioi", output_dir=OUTPUT_DIR)
     pipe.discover(
         algorithm="eap-ig", level="node",
-        sparsity=0.3, n_examples=32, batch_size=2, ig_steps=2, scope="both",
+        sparsity=0.3, n_examples=32, batch_size=2, ig_steps=3, scope="both",
     )
     pipe.evaluate(pillars=["patching", "ablation"], n_examples=100)
     pipe.prune(sparsity=0.2, scope="both")

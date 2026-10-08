@@ -26,13 +26,12 @@ config conversion (at a truncated depth), and — of the registry-entry
 resolution this page documents — **pruning score extraction and
 quantization pattern matching** are confirmed on the real 32B checkpoint;
 see [Experimental Models](experimental-models.md#tests) for the actual
-numbers. **Weight-steering slices** have not: the full checkpoint
-downloaded and verified completely (it is not a download-time issue), but
-exercising weight steering needs TransformerLens's own multi-GPU
-(`n_devices`) support to fit the full 40-layer model in memory, and that
-support is confirmed broken in transformer-lens==3.8.0 — see the warning in
-[Experimental Models](experimental-models.md#tests) for the exact mechanism
-and how it was reproduced. Everywhere below that says "all four real loaded
+numbers. **Weight-steering slices** have not: weight steering needs the
+full 40-layer model loaded through TransformerLens, which needs about
+64 GiB for weights alone and so multi-GPU (`n_devices`) loading, and that
+is broken in transformer-lens==3.8.0. See the warning in
+[Experimental Models](experimental-models.md#tests) for the mechanism.
+Everywhere below that says "all four real loaded
 models" for the `cohere` family, that means Tiny Aya, Command R7B, Aya
 Expanse 8B and SmolLM3-3B — Aya Expanse 32B's coverage is pruning and
 quantization only, not weight steering.

@@ -8,6 +8,8 @@ from .hparams import validate_config_hparams
 
 # Define a dictionary of default values. This makes the tool easier to use
 # as users only need to specify what they want to change.
+EAP_GP_DEFAULT_IG_STEPS = 5  # the EAP-GP paper's k
+
 DEFAULT_CONFIG = {
     # ``trust_remote_code`` must stay opt-in and defaults to False: it makes
     # ``transformers`` execute modeling code shipped by the model repository.
@@ -20,7 +22,9 @@ DEFAULT_CONFIG = {
         "data_params": {"batch_size": 16, "num_examples": 128},
         "batch_size": 4,
         "method": "EAP-IG-inputs",
-        "ig_steps": 3,  # EAP-IG family only; 3 is enough (Hanna et al. 2024), cost is linear
+        # EAP-IG family only; cost is linear in steps. 3 is the smallest count Hanna et al.
+        # (2024) found faithful. EAP-GP uses 5 when unset (see load_and_validate_config).
+        "ig_steps": 3,
         "intervention": "patching",  # Discovery intervention mode
         # IBCircuit-specific defaults
         "num_epochs": 1000,
@@ -331,6 +335,15 @@ def load_and_validate_config(config_input: Union[str, Dict[str, Any]]) -> Dict[s
 
     # Merge the user's config on top of the defaults
     config = deep_merge(user_config, config)
+
+    # ``ig_steps`` is one key for the whole EAP-IG family, but the methods have different
+    # defaults: EAP-GP's paper uses 5. Apply that when the user did not set the key.
+    user_discovery = user_config.get("discovery") if isinstance(user_config, dict) else None
+    if (
+        config["discovery"].get("algorithm") == "eap-gp"
+        and (not isinstance(user_discovery, dict) or user_discovery.get("ig_steps") is None)
+    ):
+        config["discovery"]["ig_steps"] = EAP_GP_DEFAULT_IG_STEPS
 
     # Hyperparameter ranges first, so a bad value raises the same HyperparameterError (a
     # ValueError) whichever check would have caught it: ``_validate_config`` below still

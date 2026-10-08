@@ -123,8 +123,9 @@ weights. **Aya Expanse 32B** is registered, with config conversion checked
 against the real checkpoint (truncated-depth parity) and module resolution
 for pruning scores and quantization targets checked on the full checkpoint.
 Full-depth parity, discovery, evaluation and weight steering do not run yet:
-the full 40-layer model does not fit one 48 GB GPU, and transformer-lens
-3.8.0's multi-GPU (`n_devices`) block placement is broken. See
+the full 40-layer model needs about 64 GiB for weights alone, so it does not
+fit on most single GPUs, and transformer-lens 3.8.0's multi-GPU (`n_devices`)
+block placement is broken. See
 [Experimental Models](https://circuitkit.lexsi.ai/advanced/experimental-models/)
 for what was and wasn't validated, and the details of the transformer-lens bug.
 

@@ -14,7 +14,7 @@ Two tiers, borrowed from how mature libraries separate "wrong" from "unusual"
   ``CIRCUITKIT_STRICT_HPARAMS=1`` environment variable, to turn warnings into errors.
 
 Only values the caller set explicitly are warned about, so a default never triggers a
-warning. Only ranges backed by evidence (our own runs or a cited paper) are enforced
+warning. Only ranges backed by evidence (CircuitKIT's benchmarks or a cited paper) are enforced
 as warnings; each entry records its confidence and the reason, and the same registry
 renders the reference page ``docs/reference/hyperparameters.md``.
 
@@ -163,10 +163,10 @@ _SPECS: Tuple[HParam, ...] = (
         scale="log",
         checked_by="hparams",
         why=(
-            "Scores from very few examples are noisy: in our IOI runs the top-30% node sets "
-            "of three seeds overlapped only ~0.6-0.7 (Jaccard) at 128 examples, and the EAP-IG, "
-            "ACDC and CD-T papers all work with ~100 examples. Cost grows linearly, so beyond "
-            "~1000 there is little to gain."
+            "Scores from very few examples are noisy: in CircuitKIT's IOI benchmarks the top-30% "
+            "node sets of three seeds overlapped only ~0.6-0.7 (Jaccard) at 128 examples, and the "
+            "EAP-IG, ACDC and CD-T papers all work with ~100 examples. Cost grows linearly, so "
+            "beyond ~1000 there is little to gain."
         ),
     ),
     HParam(
@@ -179,8 +179,8 @@ _SPECS: Tuple[HParam, ...] = (
         valid_min=1,
         checked_by="hparams",
         why=(
-            "Memory-scaled, so there is no fixed sensible range: our runs used 2 for 3-4B "
-            "models and 16 for models up to 1.5B on 80-98 GB GPUs. `batch_size=1` is always safe, "
+            "Memory-scaled, so there is no fixed sensible range: in CircuitKIT's benchmarks 2 "
+            "worked for 3-4B models and 16 for models up to 1.5B. `batch_size=1` is always safe, "
             "just slower."
         ),
     ),
@@ -190,6 +190,7 @@ _SPECS: Tuple[HParam, ...] = (
         kind="int",
         surfaces="dict `discovery.ig_steps` · CLI `--ig-steps` · flat/Pipeline via `**kw`",
         default=3,
+        default_note="3 (5 for eap-gp)",
         config_path=("discovery", "ig_steps"),
         applies_to=_IG_ALGORITHMS,
         valid_min=1,
@@ -198,8 +199,9 @@ _SPECS: Tuple[HParam, ...] = (
         why=(
             "Ignored by every other algorithm. One step is plain EAP. The EAP-IG paper "
             "(Hanna et al., 2024) tested 2 to 50 steps: 2 is unfaithful on some tasks, every "
-            "value above 2 is similarly faithful. Cost grows linearly with steps. EAP-GP reads "
-            "the same key; its paper uses k=5."
+            "value above 2 is similarly faithful. The authors used 5 to leave a margin and tested "
+            "GPT-2 small on three tasks. Cost grows linearly with steps. EAP-GP reads "
+            "the same key and defaults to 5 (its paper's k) when the key is not set."
         ),
     ),
     HParam(
@@ -281,7 +283,7 @@ _SPECS: Tuple[HParam, ...] = (
         checked_by="hparams",
         why=(
             "Faithfulness is a ratio of two noisy averages. The EAP-IG paper evaluates on 100 "
-            "examples; our paper runs use 300 held-out examples."
+            "examples; CircuitKIT's benchmarks use 300 held-out examples."
         ),
     ),
     HParam(
@@ -298,9 +300,9 @@ _SPECS: Tuple[HParam, ...] = (
         why=(
             "Stability is the overlap between re-discovered circuits. With 1 run there is nothing "
             "to compare, so the pillar reports a perfect overlap of 1.0; 2 runs give a single "
-            "pairwise overlap. Seed-to-seed variance is large: in a replicate of our runs, patch "
-            "faithfulness flipped sign in 3 of 5 cells. Each run repeats discovery, so cost "
-            "grows linearly."
+            "pairwise overlap. Seed-to-seed variance is large: in a seed replicate of CircuitKIT's "
+            "benchmarks, patch faithfulness flipped sign in 3 of 5 cells. Each run repeats "
+            "discovery, so cost grows linearly."
         ),
     ),
     HParam(
@@ -308,7 +310,10 @@ _SPECS: Tuple[HParam, ...] = (
         summary="Faithfulness pillars to compute.",
         kind="list_enum",
         surfaces="dict `eval.pillars` · flat `pillars` · Pipeline.evaluate `pillars`",
-        default_note="`patching` + `ablation` (Pipeline, flat API); `\"all\"` runs every pillar",
+        default_note=(
+            "`patching` + `ablation` (Pipeline, flat API, `circuitkit run`); every pillar for a dict "
+            "config with `full_faithfulness_eval: true`; `\"all\"` runs every pillar"
+        ),
         config_path=("eval", "pillars"),
         valid_values=PILLARS_VALID,
         checked_by="hparams",
@@ -351,7 +356,7 @@ _SPECS: Tuple[HParam, ...] = (
         summary="Fraction of layers kept at high precision.",
         kind="float",
         surfaces="flat `quantize(high_fraction=...)` · Pipeline.quantize · CLI `--high-fraction`",
-        default_note="0.3 (code) · 0.05 in our runs",
+        default_note="0.3 (code) · 0.05 in CircuitKIT's benchmarks",
         valid_min=0.0,
         valid_max=1.0,
         sensible_min=0.05,
@@ -361,7 +366,8 @@ _SPECS: Tuple[HParam, ...] = (
         why=(
             "With a 4-bit base, protecting 5% of layers kept 0.98 accuracy retention for every "
             "selector. At a 3-bit base the choice of selector only started to matter at 15% "
-            "protected, so 3-bit with less than 15% is flagged."
+            "protected. The range itself is not warned on; a warning is raised only when "
+            "`bits <= 3` and fewer than 15% of layers are protected (llmcompressor backend)."
         ),
     ),
 )
@@ -507,9 +513,10 @@ def check_value(key: str, value: Any) -> List[HParamIssue]:
         if bad:
             allowed = ", ".join(spec.valid_values)
             return [HParamIssue(key, value, "error", f"{key} has unknown entries {bad!r}; valid: {allowed}, or \"all\".")]
-        return []
     if not items:
         return [HParamIssue(key, value, "error", f"{key} must be a non-empty list.")]
+    if spec.kind == "list_enum":
+        return []
     issues: List[HParamIssue] = []
     for item in items:
         issues.extend(_scalar_issues(spec, item, f"{key} entry"))
@@ -528,7 +535,9 @@ def check_rules(values: Mapping[str, Any]) -> List[HParamIssue]:
             base_list = list(_ACDC_DEFAULT_BASES if bases is None else bases)
             exp_list = list(_ACDC_DEFAULT_EXPS if exps is None else exps)
             taus = {float(b) * 10.0 ** int(e) for b in base_list for e in exp_list}
-        except (TypeError, ValueError, OverflowError):
+        except OverflowError:
+            taus = {math.inf}  # e.g. tao_exps: [400]; far above 1, so it is reported below
+        except (TypeError, ValueError):
             taus = set()  # malformed lists are reported by check_value
         big = sorted(t for t in taus if t >= 1)
         if big:
@@ -552,9 +561,9 @@ def check_rules(values: Mapping[str, Any]) -> List[HParamIssue]:
                 "quantization.high_fraction",
                 high,
                 "warning",
-                f"quantization.bits={bits} with only {high:.0%} of layers protected: in our "
-                "runs a 3-bit base only separated selectors once ~15% of layers stayed at high "
-                "precision (4-bit with 5% protected kept 0.98 accuracy retention).",
+                f"quantization.bits={bits} with only {high:.0%} of layers protected: in "
+                "CircuitKIT's benchmarks a 3-bit base only separated selectors once ~15% of layers "
+                "stayed at high precision (4-bit with 5% protected kept 0.98 accuracy retention).",
             )
         )
     return issues

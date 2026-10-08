@@ -106,7 +106,7 @@ The number of integration steps controls the accuracy vs. speed tradeoff:
 | 10 | High | ~7 min |
 | 20 | Very high | ~14 min |
 
-The default of 3 is enough. In the EAP-IG paper (Hanna et al., 2024) every step count above 2 gave similarly faithful circuits, 2 steps was unfaithful on some tasks, and 1 step is plain EAP. More steps cost proportionally more time without a measured gain, so raise `ig_steps` only to confirm that a result does not depend on it. `eap-gp` reads the same key; its paper uses 5, so set `ig_steps=5` for a paper-faithful EAP-GP run.
+The default of 3 is the smallest step count the EAP-IG paper (Hanna et al., 2024) found sufficient: 2 steps was unfaithful on some tasks, and every count above 2 gave similarly faithful circuits. The authors used 5 to leave a margin, and tested GPT-2 small on three tasks. More steps cost proportionally more time, so raise `ig_steps` to confirm that a result does not depend on it. `eap-gp` reads the same key and defaults to 5, its paper's value, when `ig_steps` is not set.
 
 ### `n_examples`
 

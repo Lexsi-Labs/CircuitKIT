@@ -20,14 +20,11 @@ Aya Expanse 32B shares Aya Expanse 8B's config/weight converter unchanged —
 registration, real-weight config conversion, and **module resolution for
 pruning score extraction and quantization targets** are validated on the real
 checkpoint (see [Tests](#tests)).
-Full-depth bf16 parity, discovery, evaluation, and weight steering have
-**not** been run to completion: not for lack of time (the 64.6 GB checkpoint
-downloaded and validated completely), but because of a confirmed bug in
-transformer-lens==3.8.0's own multi-GPU (`n_devices`) block placement — see
-the warning in [Tests](#tests) for the exact mechanism and how it was
-confirmed. 32B's weights alone (~60.2 GiB bf16) plus TL's extra `W_U` do not
-fit a single 48 GiB GPU, so those four surfaces need working multi-GPU
-support that this TL version does not actually provide. The other four
+Full-depth bf16 parity, discovery, evaluation, and weight steering do
+**not** run yet. A loaded TransformerLens copy needs about 64 GiB for
+weights alone, so it does not fit on most single GPUs, and multi-GPU
+loading through `n_devices` is affected by a bug in transformer-lens==3.8.0
+(see the warning in [Tests](#tests)). The other four
 models on this page are **experimental** discovery/evaluation/intervention
 targets:
 TransformerLens 3.8.0 has no native support for any of `cohere`, `cohere2`, or
@@ -341,10 +338,8 @@ evaluation, weight steering) is skipped unless
 `CIRCUITKIT_RUN_AYA_EXPANSE_32B_FULL=1` is also set, because it fails on
 transformer-lens 3.8.0 (see below).
 
-!!! warning "32B: parity (truncated-depth) + pruning/quantization pass; full-depth parity, discovery, evaluation, and weight steering are blocked by a transformer-lens bug, not by time"
-    The full 64.6 GB checkpoint was downloaded and verified completely (all
-    14 shards match their expected sizes exactly). What's validated against
-    the real checkpoint:
+!!! warning "32B: truncated-depth parity and pruning/quantization resolution pass; full-depth parity, discovery, evaluation, and weight steering are blocked by a transformer-lens bug"
+    Validated against the real checkpoint:
 
     - **Registration** — the repo ID resolves to the same `cohere1`
       `ArchPort` as 8B.
@@ -360,43 +355,27 @@ transformer-lens 3.8.0 (see below).
       synthetic scores; no pruned or quantized model is evaluated)
       (`tests/regression/test_aya_expanse_32b_interventions.py`).
 
-    What's **not** run to completion, and why — a hardware limit, and a bug in
-    transformer-lens==3.8.0 (not in this converter) that blocks the way around it:
+    What does **not** run yet, and why:
 
-    1. **Full bf16 weights (~60.2 GiB, +TL's extra `W_U`) do not fit one
-       48 GiB GPU**, so full-depth parity, discovery, evaluation, and
-       weight steering all need TL's multi-GPU `n_devices` support to even
-       load the model.
-    2. **That support is broken in transformer-lens==3.8.0.**
-       `HookedTransformer.move_model_modules_to_device` places each
-       transformer block via `get_best_available_device(cfg)` — which, for
-       `n_devices > 1`, just picks whichever visible CUDA device currently
-       has the most free memory, with no awareness of which block it's
-       placing — while the forward pass separately moves the *residual
-       stream* per block via the index-based `get_device_for_block_index(i,
-       cfg)`. The two disagree. This was reproduced three separate ways on
-       this run: a `RuntimeError: Expected all tensors to be on the same
-       device` crash inside TL's own `layer_norm.py` (parity and
-       discovery), and a severe placement imbalance — `get_best_available_
-       device` loading essentially the whole model onto one of two visible
-       GPUs (46.8 of 47.4 GiB on a single device) and OOMing — on a clean
-       retry of weight steering with both GPUs confirmed empty beforehand.
-       Confirmed by reading both functions directly in
-       `transformer_lens/HookedTransformer.py` and
-       `transformer_lens/utilities/multi_gpu.py`.
+    1. **The model does not fit on most single GPUs.** The weights are
+       about 60 GiB at fp16/bf16, and TransformerLens keeps a separate
+       `W_U` (~3.9 GiB more), so a loaded TransformerLens copy needs about
+       64 GiB for weights alone. Full-depth parity, discovery, evaluation,
+       and weight steering therefore need multi-GPU loading through
+       `n_devices`.
+    2. **`n_devices` loading is broken in transformer-lens==3.8.0.**
+       `HookedTransformer.move_model_modules_to_device` places each block
+       with `get_best_available_device(cfg)`, which picks the device with
+       the most free memory and ignores the block index. The forward pass
+       moves the residual stream per block with the index-based
+       `get_device_for_block_index(i, cfg)`. The two disagree. Symptoms:
+       `RuntimeError: Expected all tensors to be on the same device`
+       inside TransformerLens's `layer_norm.py`, or nearly the whole model
+       placed on one GPU followed by an out-of-memory error.
 
-    Independently, CircuitKIT's own memory guard estimated EAP-family
-    discovery's qkv-flag activations at ~1920 GB for this model's shape —
-    multiple orders of magnitude past this run's hardware regardless of (1)
-    and (2), so discovery is not just blocked, it is not feasible on this
-    class of hardware without a much smaller batch/sequence configuration
-    than the 8B gate uses.
-
-    None of this is a defect in the shared `cohere1` converter: the parity
-    numbers above are real evidence it is correct for 32B's distinguishing
-    values at the layers and intervention surfaces that could actually be
-    exercised. Do not treat 32B as having the same discovery/evaluation/
-    full-weight-steering coverage the other four models on this page have.
+    This is not a defect in the shared `cohere1` converter. Do not treat
+    32B as having the discovery, evaluation, or weight-steering coverage
+    the other four models on this page have.
 
 **SmolLM3-3B** (`CIRCUITKIT_RUN_SMOLLM3=1`, public repo, no `HF_TOKEN`
 needed):
@@ -430,13 +409,10 @@ CIRCUITKIT_RUN_SMOLLM3=1 CIRCUITKIT_RUN_SMOLLM3_ACDC=1 \
   real-weight GPU runs; CI does not reproduce this parity measurement.
   Aya Expanse 32B's parity gate is a **truncated-depth** variant of this
   same check (first 4 of 40 real layers plus embeddings and the final norm,
-  built by reading only the specific safetensors shards those tensors live
-  in, which this test still does even though the full 64.6 GB checkpoint
-  has since been downloaded and verified complete): KL(HF‖TL) 6.5e-9
-  to 5.3e-7, max log-prob deviation 3.8e-6 to 7.6e-6, argmax agreement 4/4 —
-  see the warning above for exactly what this does and doesn't cover, and
-  why the full-depth variant is blocked on a confirmed transformer-lens bug
-  rather than on the download.
+  built by reading only the safetensors shards those tensors live in):
+  KL(HF‖TL) 6.5e-9 to 5.3e-7, max log-prob deviation 3.8e-6 to 7.6e-6,
+  argmax agreement 4/4. See the warning above for what this covers and
+  why the full-depth variant is blocked.
 - **Discovery** (`test_*_discovery.py`) — end-to-end `discover_circuit` on
   `greater_than` for 5 of the 6 stable algorithms (`eap`, `eap-ig`,
   `eap-gp`, `ibcircuit`, `cdt`); asserts finite, non-degenerate node scores.
@@ -485,23 +461,19 @@ repo's own OOM preflight refuses the GPU attempt loudly rather than crashing
 mid-forward. `cdt` needs neither. SmolLM3-3B (~6 GB bf16) is small enough
 that its entire discovery gate ran on GPU with no CPU fallback.
 
-**Aya Expanse 32B** is a different scale class from the rest of this page:
-~60.2 GiB of weights at fp16/bf16 (14 safetensors shards, downloaded and
-verified in full on this run), and TransformerLens keeps a separate `W_U`
-on top of that (~+3.9 GiB), so a loaded TL copy is ~64 GiB — more than a
-single 48 GB-class GPU can hold at all, let alone with qkv-flag activation
-headroom. Three 48 GB GPUs and ~490 GB of host RAM would on paper support `n_devices=2` sharding
-across two GPUs for a full load — but transformer-lens==3.8.0's `n_devices`
-support turned out to be broken (see the warning in [Tests](#tests) for the
-confirmed mechanism and the three ways this was reproduced), so that full
-load never actually succeeds regardless of how much GPU memory is free.
-The parity gate above sidesteps this entirely by never materializing more
-than 4 real layers via TL. Pruning and quantization resolution sidestep it
-differently: they load the HF copy directly with `device_map="auto"`,
-which works fine (HF's own device-map sharding is not affected by TL's
-bug). Full-depth parity, discovery, evaluation, and weight steering all
-need TL's own `n_devices` path and have not been run to completion — see
-the warning in [Tests](#tests).
+**Aya Expanse 32B** needs more memory than the rest of this page: about
+60 GiB of weights at fp16/bf16 (14 safetensors shards), and TransformerLens
+keeps a separate `W_U` (~3.9 GiB more), so a loaded TransformerLens copy
+needs about 64 GiB for weights alone. That does not fit on most single
+GPUs, and a full fp32 copy needs about 129 GiB. Multi-GPU loading through
+`n_devices` fails on transformer-lens==3.8.0 however much GPU memory is
+free (see the warning in [Tests](#tests)).
+The parity gate avoids the full load by never materializing more than 4
+real layers through TransformerLens. Pruning and quantization resolution
+load the HF copy directly with `device_map="auto"`, which the
+TransformerLens bug does not affect. Full-depth parity, discovery,
+evaluation, and weight steering need the `n_devices` path and do not run
+yet.
 
 ---
 

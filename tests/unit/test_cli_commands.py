@@ -194,9 +194,10 @@ class TestTopLevelHelp:
 # ---------------------------------------------------------------------------
 
 class TestCliDefaults:
-    def test_discover_ig_steps_default_is_three(self):
+    def test_discover_ig_steps_is_unset_by_default(self):
+        """Unset on the CLI, so the config default applies: 3, or 5 for eap-gp."""
         option = next(p for p in cli.commands["discover"].params if p.name == "ig_steps")
-        assert option.default == 3
+        assert option.default is None
 
 
 class TestValidateConfigCommand:

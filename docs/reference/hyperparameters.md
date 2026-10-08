@@ -82,16 +82,16 @@ The tables below are generated from `circuitkit/utils/hparams.py`; do not edit t
 |---|---|---|---|---|---|
 | `num_examples` | `128` | >= 1 | 32 to 1024 (log scale) | valid-range error + sensible-range warning | medium |
 | `batch_size` | `4` | >= 1 | — | valid-range error | medium |
-| `ig_steps` | `3` | >= 1 | — | valid-range error | high |
+| `ig_steps` | 3 (5 for eap-gp) | >= 1 | — | valid-range error | high |
 | `tao_bases` | [1, 5] (ACDC backend default) | non-empty list, each > 0 | — | valid-range error | medium |
 | `tao_exps` | [-5, -4, -3, -2] (ACDC backend default) | non-empty list of integers | — | valid-range error | medium |
 | `num_epochs` | `1000` | >= 1 | 500 to 1500 (not warned on) | valid-range error | medium |
 
-**`num_examples`**: Examples used to estimate attribution scores. Set via dict `discovery.data_params.num_examples` · flat/Pipeline `n_examples` · CLI `--num-examples`. Scores from very few examples are noisy: in our IOI runs the top-30% node sets of three seeds overlapped only ~0.6-0.7 (Jaccard) at 128 examples, and the EAP-IG, ACDC and CD-T papers all work with ~100 examples. Cost grows linearly, so beyond ~1000 there is little to gain.
+**`num_examples`**: Examples used to estimate attribution scores. Set via dict `discovery.data_params.num_examples` · flat/Pipeline `n_examples` · CLI `--num-examples`. Scores from very few examples are noisy: in CircuitKIT's IOI benchmarks the top-30% node sets of three seeds overlapped only ~0.6-0.7 (Jaccard) at 128 examples, and the EAP-IG, ACDC and CD-T papers all work with ~100 examples. Cost grows linearly, so beyond ~1000 there is little to gain.
 
-**`batch_size`**: Examples per attribution batch. Set via dict `discovery.batch_size` · flat/Pipeline `batch_size` · CLI `--batch-size`. Memory-scaled, so there is no fixed sensible range: our runs used 2 for 3-4B models and 16 for models up to 1.5B on 80-98 GB GPUs. `batch_size=1` is always safe, just slower.
+**`batch_size`**: Examples per attribution batch. Set via dict `discovery.batch_size` · flat/Pipeline `batch_size` · CLI `--batch-size`. Memory-scaled, so there is no fixed sensible range: in CircuitKIT's benchmarks 2 worked for 3-4B models and 16 for models up to 1.5B. `batch_size=1` is always safe, just slower.
 
-**`ig_steps`**: Integration steps for the EAP-IG family (eap-ig, eap-ig-activations, eap-gp). Set via dict `discovery.ig_steps` · CLI `--ig-steps` · flat/Pipeline via `**kw`. Read by: eap-ig, eap-ig-activations, eap-gp. Ignored by every other algorithm. One step is plain EAP. The EAP-IG paper (Hanna et al., 2024) tested 2 to 50 steps: 2 is unfaithful on some tasks, every value above 2 is similarly faithful. Cost grows linearly with steps. EAP-GP reads the same key; its paper uses k=5.
+**`ig_steps`**: Integration steps for the EAP-IG family (eap-ig, eap-ig-activations, eap-gp). Set via dict `discovery.ig_steps` · CLI `--ig-steps` · flat/Pipeline via `**kw`. Read by: eap-ig, eap-ig-activations, eap-gp. Ignored by every other algorithm. One step is plain EAP. The EAP-IG paper (Hanna et al., 2024) tested 2 to 50 steps: 2 is unfaithful on some tasks, every value above 2 is similarly faithful. The authors used 5 to leave a margin and tested GPT-2 small on three tasks. Cost grows linearly with steps. EAP-GP reads the same key and defaults to 5 (its paper's k) when the key is not set.
 
 **`tao_bases`**: ACDC threshold grid: tau = base x 10^exp for every (base, exp) pair. Set via dict `discovery.tao_bases`. Read by: acdc. ACDC sweeps a log-spaced grid of thresholds and keeps one circuit per tau. Published ACDC circuits use tau between about 4e-3 and 1e-1 (KL divergence).
 
@@ -113,11 +113,11 @@ The tables below are generated from `circuitkit/utils/hparams.py`; do not edit t
 |---|---|---|---|---|---|
 | `num_examples` | `256` | >= 1 | 100 to 1000 (log scale) | valid-range error + sensible-range warning | medium |
 | `n_stability_runs` | `3` | >= 1 | 3 to 10 | valid-range error + sensible-range warning | medium |
-| `pillars` | `patching` + `ablation` (Pipeline, flat API); `"all"` runs every pillar | `patching` \| `ablation` \| `baselines` \| `robustness` \| `stability` \| `generalization` \| `intervention_reliability` | — | valid-range error | high |
+| `pillars` | `patching` + `ablation` (Pipeline, flat API, `circuitkit run`); every pillar for a dict config with `full_faithfulness_eval: true`; `"all"` runs every pillar | `patching` \| `ablation` \| `baselines` \| `robustness` \| `stability` \| `generalization` \| `intervention_reliability` | — | valid-range error | high |
 
-**`num_examples`**: Held-out examples used by the faithfulness pillars. Set via dict `eval.num_examples` · flat `n_examples` · Pipeline.evaluate `n_examples`. Faithfulness is a ratio of two noisy averages. The EAP-IG paper evaluates on 100 examples; our paper runs use 300 held-out examples.
+**`num_examples`**: Held-out examples used by the faithfulness pillars. Set via dict `eval.num_examples` · flat `n_examples` · Pipeline.evaluate `n_examples`. Faithfulness is a ratio of two noisy averages. The EAP-IG paper evaluates on 100 examples; CircuitKIT's benchmarks use 300 held-out examples.
 
-**`n_stability_runs`**: Independent re-discoveries compared by the stability pillar. Set via dict `eval.n_stability_runs` · Pipeline.evaluate `n_stability_runs`. Stability is the overlap between re-discovered circuits. With 1 run there is nothing to compare, so the pillar reports a perfect overlap of 1.0; 2 runs give a single pairwise overlap. Seed-to-seed variance is large: in a replicate of our runs, patch faithfulness flipped sign in 3 of 5 cells. Each run repeats discovery, so cost grows linearly.
+**`n_stability_runs`**: Independent re-discoveries compared by the stability pillar. Set via dict `eval.n_stability_runs` · Pipeline.evaluate `n_stability_runs`. Stability is the overlap between re-discovered circuits. With 1 run there is nothing to compare, so the pillar reports a perfect overlap of 1.0; 2 runs give a single pairwise overlap. Seed-to-seed variance is large: in a seed replicate of CircuitKIT's benchmarks, patch faithfulness flipped sign in 3 of 5 cells. Each run repeats discovery, so cost grows linearly.
 
 **`pillars`**: Faithfulness pillars to compute. Set via dict `eval.pillars` · flat `pillars` · Pipeline.evaluate `pillars`. Names are checked up front so a typo fails before any discovery or evaluation work starts. Stability and generalization re-run discovery and are the expensive ones.
 
@@ -134,10 +134,10 @@ The tables below are generated from `circuitkit/utils/hparams.py`; do not edit t
 | Parameter | Default | Valid | Sensible | Checked by | Confidence |
 |---|---|---|---|---|---|
 | `bits` | 4 (Pipeline, CLI) · 3 (flat `ck.quantize`) | `3` \| `4` \| `8` | — | existing check in code | medium |
-| `high_fraction` | 0.3 (code) · 0.05 in our runs | [0, 1] | 0.05 to 0.3 (not warned on) | valid-range error | medium |
+| `high_fraction` | 0.3 (code) · 0.05 in CircuitKIT's benchmarks | [0, 1] | 0.05 to 0.3 (not warned on) | valid-range error | medium |
 
 **`bits`**: Bit-width of the quantized tier (llmcompressor backend). Set via flat `quantize(bits=...)` · Pipeline.quantize `bits` · CLI `--bits`. The llmcompressor backend accepts 3, 4 or 8 and raises otherwise. The quanto backend ignores `bits` (it uses qint2/qint4/qint8 tiers).
 
-**`high_fraction`**: Fraction of layers kept at high precision. Set via flat `quantize(high_fraction=...)` · Pipeline.quantize · CLI `--high-fraction`. With a 4-bit base, protecting 5% of layers kept 0.98 accuracy retention for every selector. At a 3-bit base the choice of selector only started to matter at 15% protected, so 3-bit with less than 15% is flagged.
+**`high_fraction`**: Fraction of layers kept at high precision. Set via flat `quantize(high_fraction=...)` · Pipeline.quantize · CLI `--high-fraction`. With a 4-bit base, protecting 5% of layers kept 0.98 accuracy retention for every selector. At a 3-bit base the choice of selector only started to matter at 15% protected. The range itself is not warned on; a warning is raised only when `bits <= 3` and fewer than 15% of layers are protected (llmcompressor backend).
 
 <!-- hparams:end -->

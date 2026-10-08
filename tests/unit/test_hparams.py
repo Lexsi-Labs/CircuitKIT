@@ -150,6 +150,18 @@ class TestRules:
         assert [i.severity for i in issues] == ["warning"]
         assert "tau >= 1" in issues[0].message
 
+    def test_acdc_tau_too_large_to_compute_still_warns(self):
+        """10.0 ** 400 overflows; the grid point is far above 1 and must not be skipped."""
+        issues = check_rules({"discovery.tao_bases": [1], "discovery.tao_exps": [400]})
+        assert [i.severity for i in issues] == ["warning"]
+        assert "tau >= 1" in issues[0].message
+
+    def test_empty_pillar_list_is_an_error(self):
+        """``pillars: []`` would run nothing."""
+        issues = hp.check_value("eval.pillars", [])
+        assert [i.severity for i in issues] == ["error"]
+        assert "non-empty" in issues[0].message
+
     def test_acdc_default_grid_is_fine(self):
         assert check_rules({"discovery.tao_bases": [1, 5], "discovery.tao_exps": [-5, -4, -3, -2]}) == []
 

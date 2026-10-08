@@ -14,15 +14,11 @@ as 8B / Command R7B / tiny-aya:
    slices, exercising 32B's 8:1 GQA query-head -> kv-head floor-div mapping
    (vs. 8B's 4:1), and a still-finite forward pass after steering.
 
-A single bf16 copy of 32B (~60GB weights + TL's separate W_U -- see the
-parity file's module docstring) does not fit this run's 48GB GPUs singly,
-unlike 8B/Command R7B's pattern of pinning one GPU per copy. Per explicit
-instruction, no special effort was spent engineering around this: the HF
-copy (pruning/quantization) loads via ``device_map="auto"`` (lets
-``accelerate`` place/shard it across whatever is free) and the TL copy
-(weight steering) loads via ``n_devices=2``. If either placement does not
-fit this run's actual free GPU state, that is reported as-is rather than
-worked around further.
+A single bf16 copy of 32B (~60 GiB of weights plus TL's separate W_U) needs
+more memory than a single typical GPU provides, unlike 8B/Command R7B's
+pattern of pinning one GPU per copy. The HF copy (pruning/quantization)
+loads via ``device_map="auto"`` (``accelerate`` shards it across the
+visible GPUs) and the TL copy (weight steering) loads via ``n_devices=2``.
 
 Gating mirrors ``test_aya_expanse_32b_discovery.py``: opt in with
 ``CIRCUITKIT_RUN_AYA_EXPANSE_32B=1`` and provide ``HF_TOKEN``. Marked ``slow``.
@@ -30,22 +26,12 @@ Gating mirrors ``test_aya_expanse_32b_discovery.py``: opt in with
     CIRCUITKIT_RUN_AYA_EXPANSE_32B=1 HF_TOKEN=... \
         python -m pytest tests/regression/test_aya_expanse_32b_interventions.py -v
 
-**Status as of this run: pruning and quantization-resolution PASS on the
-real checkpoint; weight steering is blocked.** Pruning (``device_map=
-"auto"`` on the HF side) and quantization target resolution both load and
-pass cleanly -- these two intervention surfaces are now genuinely validated
-on real Aya Expanse 32B weights, not just scaffolding. Weight steering
-(the TL side, ``n_devices=2``) hits the same confirmed transformer-
-lens==3.8.0 multi-GPU bug documented in ``test_aya_expanse_32b_discovery.
-py``'s module docstring, reproduced twice here in two different ways: once
-as the device-mismatch ``RuntimeError`` (when run after the pruning/
-quantization tests in the same process) and once, in a from-fresh retry
-with both GPUs confirmed empty beforehand, as a severe placement imbalance
--- ``get_best_available_device`` loaded essentially the entire model onto a
-single GPU (46.8 of 47.4 GiB used on just one of the two visible devices)
-and OOM'd, rather than splitting evenly. Reproducing under two different
-symptoms on a clean retry rules out a one-off transient cause; this is the
-same upstream bug, not fixable within this PR's scope.
+**Status: pruning and quantization resolution pass on the real checkpoint;
+weight steering is blocked.** Weight steering (the TL side,
+``n_devices=2``) hits the transformer-lens==3.8.0 multi-GPU bug described
+in ``test_aya_expanse_32b_discovery.py``'s module docstring. Symptoms: the
+device-mismatch ``RuntimeError``, or nearly the whole model placed on one
+GPU followed by an out-of-memory error.
 """
 
 from __future__ import annotations
@@ -69,10 +55,10 @@ _HAS_TOKEN = bool(os.environ.get("HF_TOKEN"))
 _FULL_DEPTH_OPT_IN = os.environ.get(
     "CIRCUITKIT_RUN_AYA_EXPANSE_32B_FULL", ""
 ).strip().lower() not in ("", "0", "false", "no")
-# The full 40-layer model does not fit one 48 GiB GPU, and transformer-lens 3.8.0's multi-GPU
-# (n_devices) block placement is broken, so everything that loads it at full depth through
-# TransformerLens fails today. Kept behind a second flag so the documented opt-in runs only
-# what can pass. See docs/advanced/experimental-models.md#tests.
+# The full 40-layer model needs more memory than a single typical GPU provides, and
+# transformer-lens 3.8.0's multi-GPU (n_devices) block placement is broken, so everything that
+# loads it at full depth through TransformerLens fails. Kept behind a second flag so the
+# documented opt-in runs only what can pass. See docs/advanced/experimental-models.md#tests.
 _NEEDS_FULL_DEPTH = pytest.mark.skipif(
     not _FULL_DEPTH_OPT_IN,
     reason=(

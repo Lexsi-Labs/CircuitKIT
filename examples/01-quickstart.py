@@ -29,7 +29,7 @@ def main():
     circuit = ck.discover(
         model, "ioi",
         algorithm="eap-ig", level="node",
-        n_examples=32, batch_size=2, ig_steps=2,
+        n_examples=32, batch_size=2, ig_steps=3,
         sparsity=0.2, scope="both",
         output_path=OUTPUT_PATH,
     )

@@ -9,24 +9,21 @@ covers (``eap``, ``eap-ig``, ``eap-gp``, ``ibcircuit``, ``cdt`` -- see
 ``acdc`` is excluded from the standard gate for the same reason the 8B gate
 documents (``test_aya_expanse_discovery.py``), only more so at 4x the
 parameter count: the CPU fallback was already impractically slow (2.5+
-hours, did not finish) on the smaller 7B Command R7B model. Per explicit
-instruction, ACDC is not run as part of any real discovery regression gate
-for a large model in this repo. The ``test_acdc_...`` case below is kept
+hours, did not finish) on the smaller 7B Command R7B model. ACDC is not run
+as part of any real discovery regression gate for a large model in this
+repo. The ``test_acdc_...`` case below is kept
 (structurally correct, same pattern as the other cohere-family files) but
 is launch-verified only -- started, confirmed alive/progressing for a
 bounded time-box, then terminated -- never run to completion, and even that
 bounded launch-verify stays behind its own separate opt-in so it never runs
 as a side effect of the standard gate.
 
-Memory strategy: this run's Stage 0 measured 3 free RTX 6000 Ada GPUs (48GB
-each) and ~490GB free host RAM, so the model loads once via
-``n_devices=2`` (bf16, ~32 GB/GPU) and the same handle is threaded through
-every case via ``discover_circuit(cfg, _model=model)`` -- never reloaded per
-algorithm. Per explicit instruction, no special effort was spent working
-around an OOM here beyond this one documented choice: if a given algorithm
-does not fit this placement, the fallback is CPU
-(``CUDA_VISIBLE_DEVICES=""``), documented per-case rather than engineered
-around.
+Memory strategy: the model needs more memory than a single typical GPU
+provides, so it loads once via ``n_devices=2`` (bf16, ~32 GB/GPU) and the
+same handle is threaded through every case via
+``discover_circuit(cfg, _model=model)`` -- never reloaded per algorithm. If
+an algorithm does not fit this placement, the fallback is CPU
+(``CUDA_VISIBLE_DEVICES=""``).
 
 Discovery mutates ``model.cfg`` (the qkv activation flags
 ``use_attn_result``/``use_split_qkv_input``/``use_hook_mlp_in``, and
@@ -42,34 +39,19 @@ one algorithm cannot leak a memory-heavy flag into the next.
     CIRCUITKIT_RUN_AYA_EXPANSE_32B=1 CIRCUITKIT_RUN_AYA_EXPANSE_32B_ACDC=1 HF_TOKEN=... \
         python -m pytest tests/regression/test_aya_expanse_32b_discovery.py -v -k acdc
 
-**Status as of this run: attempted against the real checkpoint, blocked --
-not by a cohere1/32B converter bug.** Two independent, confirmed blockers,
-neither fixable within this PR's scope:
+**Status: blocked by a transformer-lens bug, not a cohere1/32B converter
+bug.** The ``n_devices=2`` load does not work in transformer-lens==3.8.0:
+``HookedTransformer.move_model_modules_to_device`` places each block with
+``get_best_available_device(cfg)`` (the device with the most free memory,
+ignoring the block index), while the forward pass moves the residual stream
+per block with the index-based ``get_device_for_block_index(i, cfg)``. The
+two disagree. Symptoms: ``RuntimeError: Expected all tensors to be on the
+same device`` inside TransformerLens's ``layer_norm.py``, or nearly the
+whole model placed on one GPU followed by an out-of-memory error. Same root
+cause as Tier B in ``test_aya_expanse_32b_parity.py``.
 
-1. The ``n_devices=2`` placement this docstring describes above does not
-   actually work in transformer-lens==3.8.0: ``HookedTransformer.
-   move_model_modules_to_device`` places each block via
-   ``get_best_available_device(cfg)`` (picks whichever visible GPU has the
-   most free memory *right now*, with no per-block awareness), while the
-   forward pass moves the residual stream per block via the index-based
-   ``get_device_for_block_index(i, cfg)``. The two disagree, so this test
-   fails immediately with ``RuntimeError: Expected all tensors to be on the
-   same device, but found at least two devices, cuda:0 and cuda:1!`` --
-   confirmed by reading both functions directly (``transformer_lens/
-   HookedTransformer.py::move_model_modules_to_device`` and
-   ``transformer_lens/utilities/multi_gpu.py``). Same root cause as Tier B
-   in ``test_aya_expanse_32b_parity.py``.
-2. Independent of (1): even a correctly-placed load would likely still not
-   fit. CircuitKIT's own memory guard, running before (1) is reached,
-   estimated EAP's qkv-flag activations at ~1920 GB for this model's shape
-   (batch=2, seq=8192, 64 heads, d_model=8192, 40 layers, bf16) against
-   ~14.9 GB free at that point -- i.e. multiple orders of magnitude short on
-   this run's hardware (3x 48 GiB GPUs), not merely "didn't fit by a little."
-
-Given both, discovery was not run to completion for Aya Expanse 32B on this
-checkpoint; this file is real, working scaffolding for whoever has either a
-fixed transformer-lens multi-GPU path or enough aggregate GPU memory (or a
-much smaller EAP batch/seq-len configuration) to clear blocker (2).
+These tests need a fixed transformer-lens multi-GPU path, or a single GPU
+that holds the full model (about 64 GiB for weights alone).
 """
 
 from __future__ import annotations
@@ -94,10 +76,10 @@ _HAS_TOKEN = bool(os.environ.get("HF_TOKEN"))
 _FULL_DEPTH_OPT_IN = os.environ.get(
     "CIRCUITKIT_RUN_AYA_EXPANSE_32B_FULL", ""
 ).strip().lower() not in ("", "0", "false", "no")
-# The full 40-layer model does not fit one 48 GiB GPU, and transformer-lens 3.8.0's multi-GPU
-# (n_devices) block placement is broken, so everything that loads it at full depth through
-# TransformerLens fails today. Kept behind a second flag so the documented opt-in runs only
-# what can pass. See docs/advanced/experimental-models.md#tests.
+# The full 40-layer model needs more memory than a single typical GPU provides, and
+# transformer-lens 3.8.0's multi-GPU (n_devices) block placement is broken, so everything that
+# loads it at full depth through TransformerLens fails. Kept behind a second flag so the
+# documented opt-in runs only what can pass. See docs/advanced/experimental-models.md#tests.
 _NEEDS_FULL_DEPTH = pytest.mark.skipif(
     not _FULL_DEPTH_OPT_IN,
     reason=(

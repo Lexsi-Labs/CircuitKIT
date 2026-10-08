@@ -77,7 +77,12 @@ def cli(ctx, verbose, config):
     "--level", "-l", type=click.Choice(["node", "neuron"]), default="node", help="Pruning level"
 )
 @click.option("--batch-size", "-b", type=int, default=4, help="Batch size")
-@click.option("--ig-steps", type=int, default=3, help="Integrated gradients steps (EAP-IG family only)")
+@click.option(
+    "--ig-steps",
+    type=int,
+    default=None,
+    help="Integrated gradients steps (EAP-IG family only). Default: 3, or 5 for eap-gp.",
+)
 @click.option(
     "--scope", type=click.Choice(["heads", "mlp", "both"]), default="both", help="Pruning scope"
 )
@@ -162,7 +167,7 @@ def discover(
             "task": task,
             "level": level,
             "batch_size": batch_size,
-            "ig_steps": ig_steps,
+            **({} if ig_steps is None else {"ig_steps": ig_steps}),
             "evaluate": evaluate,
             "mlp_hook": mlp_hook,
             "data_params": {"num_examples": num_examples},

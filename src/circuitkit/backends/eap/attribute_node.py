@@ -1665,8 +1665,9 @@ def attribute_node(
         aggregation (str): How to aggregate hidden-dim scores per node.
             'sum' keeps raw sums; 'mean' divides by d_model. Defaults to 'sum'.
         ig_steps (Optional[int]): Integration steps for IG-based methods.
-            Defaults to None, which uses 3 steps for the EAP-IG methods
-            (EAP-GP keeps its paper default of 5).
+            Defaults to None, which uses 3 steps for the EAP-IG methods and 5
+            for EAP-GP (its paper's value). The config default follows the same
+            split.
         intervention_dataloader (Optional[DataLoader]): Required when
             intervention is 'mean' or 'mean-positional'. Defaults to None.
         quiet (bool): Suppress tqdm progress bar. Defaults to False.

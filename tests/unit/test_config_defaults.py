@@ -174,6 +174,22 @@ class TestConfigDefaults:
         )
         assert config["discovery"]["ig_steps"] == 3
 
+    def test_eap_gp_keeps_its_paper_default_of_five(self):
+        """One key serves the whole EAP-IG family, but EAP-GP's paper uses k=5."""
+        config = load_and_validate_config(
+            {"model": {"name": "gpt2"}, "discovery": {"algorithm": "eap-gp", "task": "ioi"}}
+        )
+        assert config["discovery"]["ig_steps"] == 5
+
+    def test_eap_gp_respects_an_explicit_ig_steps(self):
+        config = load_and_validate_config(
+            {
+                "model": {"name": "gpt2"},
+                "discovery": {"algorithm": "eap-gp", "task": "ioi", "ig_steps": 3},
+            }
+        )
+        assert config["discovery"]["ig_steps"] == 3
+
     def test_ig_steps_can_still_be_overridden(self):
         config = load_and_validate_config(
             {
