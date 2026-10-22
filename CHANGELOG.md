@@ -90,6 +90,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   CLI); `circuitkit discover --ig-steps` is unset by default for the same reason.
   `circuitkit run` follows `Pipeline.evaluate`: an `evaluate:` block without `pillars:` now runs
   the two basic pillars instead of all of them; list `pillars:` (or `pillars: all`) for more.
+- **Circuit graph export edges are labelled** (CK-25). The graph payload (`CircuitGraphVisualizer.to_json`,
+  `export_graph_data` and the data embedded in the HTML) now carries `metadata["edge_kind"] = "layer_adjacent"`,
+  and the HTML legend says that edges join circuit nodes of adjacent layers, weighted by node importance, and are not
+  measured connections. Docstrings no longer imply that edges are attributions. Real edge attributions are not part
+  of this change.
+- The exported HTML pins its scripts: elkjs to `0.12.0`, loaded as the package's own `lib/elk.bundled.js` (it was
+  unversioned, so a new release changed every page already written, and the package ships no `.min.js`) and both elkjs and D3 carry `integrity`/`crossorigin`. The docstrings no longer claim "no external
+  dependencies": the page loads D3 (cdnjs) and elkjs (jsDelivr).
 
 ### Fixed
 
@@ -166,6 +174,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `examples/visualization/` duplicate) loaded `elkjs` from jsDelivr with no
   pinned version and `d3` with no Subresource Integrity. Pinned `elkjs` to
   `0.12.0` and added SRI (`integrity`/`crossorigin`) for both scripts.
+- `Circuit.plot()` without the visualisation dependencies (or any other failure to build the graph) only logged at
+  `INFO`, so a caller who asked for a file got nothing and no notice (CK-25). It now emits a `RuntimeWarning`
+  (not a `UserWarning`, which importing `circuitkit.api` ignores) and still returns `None`.
+- `circuitkit run <yaml>` with a failing `visualize:` step printed a warning and then "Pipeline complete" as if nothing
+  had gone wrong (CK-25). The closing line now names the failed step with its error type and message. In graph mode a
+  step that wrote no file (`Circuit.plot()` returned `None`) counts as failed. The exit code is unchanged.
+
+### Security
+
+- The graph HTML embedded the payload with `json.dumps`, so a task, model or node name containing `</script>` ended the
+  script and the rest of the name ran as HTML (CK-25). `<`, `>`, `&`, U+2028 and U+2029 are now written as `\uXXXX`
+  escapes inside the embedded JSON (it parses back to the same data), and the page title is HTML-escaped.
+- The graph HTML's tooltips wrote node names and edge endpoints into `innerHTML` unescaped, so a crafted scores
+  file (circuit artifacts are shared between users) could run script when a node was hovered (CK-25). Every value
+  from the payload is now HTML-escaped before it reaches a tooltip.
 
 ## [Unreleased] (next release)
 

@@ -13,7 +13,7 @@ Tools for visualizing circuit discovery results: interactive graphs, saliency an
 ## Key modules
 
 - `graph_viz.py` — `CircuitGraphVisualizer`: shared data prep with Plotly notebook widget and D3.js HTML export paths for circuit graphs.
-- `d3_template.py` — `render_d3_circuit_html`: renders a self-contained, zoom/pan/threshold-slider D3.js HTML page from graph payloads.
+- `d3_template.py` — `render_d3_circuit_html`: renders a zoom/pan/threshold-slider D3.js HTML page from graph payloads (loads D3.js and elkjs from pinned, integrity-checked CDN URLs).
 - `saliency.py` — `ActivationSaliencyVisualizer`: token/position activation heatmaps across layers.
 - `feature_saliency.py` — `FeatureSaliencyVisualizer`: node-level feature attribution maps (gradient or patching based).
 - `comparison.py` — `ComparisonDashboard`: side-by-side circuit comparison across seeds, corruptions, or tasks.

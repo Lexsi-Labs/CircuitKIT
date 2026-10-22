@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 
 import logging
+import warnings
 
 logger = logging.getLogger(__name__)
 
@@ -281,9 +282,10 @@ class Circuit:
         """Render the circuit as an interactive graph.
 
         Delegates to :class:`circuitkit.visualize.graph_viz.CircuitGraphVisualizer`.
-        If the visualization stack's optional dependencies are missing, the
-        method degrades gracefully: it prints a short textual summary and
-        returns ``None`` instead of raising.
+        If the graph cannot be built or rendered (typically because the
+        visualization stack's optional dependencies are missing), the method
+        emits a :class:`RuntimeWarning` with the error and a short circuit
+        summary and returns ``None`` instead of raising.
 
         Args:
             output_path: Optional export path. A ``.json`` extension writes a
@@ -357,9 +359,15 @@ class Circuit:
                 title = f"Circuit ({self.task or 'unknown'} / {self.algorithm or 'eap-ig'})"
                 return viz.to_html(str(out), title=title)
             return viz.interactive_widget()
-        except Exception as exc:  # pragma: no cover - depends on optional deps
-            logger.info(
-                f"Plotting unavailable ({type(exc).__name__}: {exc}). " f"Circuit summary: {self!r}"
+        except Exception as exc:
+            # A warning, not a log line, so a caller who asked for a file
+            # notices that none was written. RuntimeWarning rather than
+            # UserWarning because importing circuitkit.api ignores every
+            # UserWarning.
+            warnings.warn(
+                f"Plotting unavailable ({type(exc).__name__}: {exc}). Circuit summary: {self!r}",
+                RuntimeWarning,
+                stacklevel=2,
             )
             return None
 

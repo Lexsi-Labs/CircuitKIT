@@ -7,6 +7,8 @@ and graceful plot() degradation — all without loading any real model.
 """
 
 import json
+import sys
+import warnings
 from pathlib import Path
 from typing import Dict
 from unittest.mock import MagicMock, patch
@@ -425,3 +427,32 @@ class TestPlotGracefulDegradation:
         )
         mock_viz.to_html.assert_not_called()
         assert result == {"nodes": [], "edges": []}
+
+    def test_plot_without_viz_stack_warns_and_returns_none(self, tmp_path, monkeypatch):
+        """A missing visualisation stack is a warning the caller sees, not a
+        log line (CK-25), and plot() still returns None without raising."""
+        c = Circuit(_NODES, dict(_SCORES))
+        # A None entry makes `from .visualize.graph_viz import ...` raise ImportError.
+        monkeypatch.setitem(sys.modules, "circuitkit.visualize.graph_viz", None)
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            result = c.plot(str(tmp_path / "circuit.html"))
+
+        assert result is None
+        assert not (tmp_path / "circuit.html").exists()
+        plot_warnings = [w for w in caught if "Plotting unavailable" in str(w.message)]
+        assert len(plot_warnings) == 1
+        assert plot_warnings[0].category is RuntimeWarning
+        assert "ModuleNotFoundError" in str(plot_warnings[0].message)
+
+    def test_plot_warning_is_not_hidden_by_the_api_user_warning_filter(self, tmp_path, monkeypatch):
+        """Importing circuitkit.api ignores every UserWarning; the plot warning
+        must not be a UserWarning, or it would be swallowed."""
+        c = Circuit(_NODES, dict(_SCORES))
+        monkeypatch.setitem(sys.modules, "circuitkit.visualize.graph_viz", None)
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            warnings.filterwarnings("ignore", category=UserWarning)  # as circuitkit.api does
+            c.plot(str(tmp_path / "circuit.html"))
+
+        assert any("Plotting unavailable" in str(w.message) for w in caught)

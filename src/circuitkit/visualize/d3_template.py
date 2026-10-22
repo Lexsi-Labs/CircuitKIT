@@ -2,13 +2,15 @@
 D3.js HTML template renderer for CircuitKIT circuit graphs.
 
 ``render_d3_circuit_html`` takes the graph payload produced by
-``CircuitGraphVisualizer._build_export_data()`` and returns a fully
-self-contained HTML string that can be written to disk and opened in any
-modern browser with no additional dependencies.
+``CircuitGraphVisualizer._build_export_data()`` and returns a single HTML
+string that can be written to disk and opened in any modern browser.
 
-The D3.js library (v7) is loaded from the official CDN. Everything else
-(layout coordinates, colors, theme values) is embedded directly as a JSON
-constant so the file works offline once the CDN script has been cached.
+The page is not offline-capable: it loads two scripts from public CDNs, D3.js
+(cdnjs) and elkjs (jsDelivr). Both URLs are pinned to an exact version and
+carry a Subresource Integrity hash (see the constants below), so a new CDN
+release cannot change a page that was already written, and a tampered file is
+refused by the browser. Everything else (layout coordinates, colors, theme
+values) is embedded directly as JSON constants.
 
 Visual features
 ---------------
@@ -27,6 +29,7 @@ Visual features
 
 from __future__ import annotations
 
+import html
 import json
 from typing import Any, Dict
 
@@ -37,6 +40,47 @@ from typing import Any, Dict
 # — not re-derived client-side — so it is directly testable without a browser.
 NODE_SVG_LIMIT = 400
 EDGE_SVG_LIMIT = 4000
+
+# Third-party scripts the page loads. Each URL names an exact version and has
+# the sha384 Subresource Integrity hash of the file it serves. elkjs is loaded as
+# the package's own ``lib/elk.bundled.js``: the package ships no ``.min.js``, and
+# the one jsDelivr generates on request can change bytes without a new elkjs
+# release, which would make the browser refuse it. To bump a version, recompute
+# the hash:
+#   curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A
+D3_SCRIPT_URL = "https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"
+D3_SCRIPT_SRI = "sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i"
+ELKJS_VERSION = "0.12.0"
+ELKJS_SCRIPT_URL = f"https://cdn.jsdelivr.net/npm/elkjs@{ELKJS_VERSION}/lib/elk.bundled.js"
+ELKJS_SCRIPT_SRI = "sha384-ww57TDqx4cGknIavPm0QKO+aygLUR1BLSn2Vhbnt1XdYKWcwLyWTFKX7aZMaKIi2"
+
+# Characters that can end or confuse a ``<script>`` body, as JSON string escapes.
+# U+2028 / U+2029 are line terminators in JavaScript source before ES2019 and
+# in some embedding contexts, so they are escaped too.
+_SCRIPT_UNSAFE_CHARS = {
+    ord("<"): "\\u003c",
+    ord(">"): "\\u003e",
+    ord("&"): "\\u0026",
+    0x2028: "\\u2028",
+    0x2029: "\\u2029",
+}
+
+
+def _json_for_script(value: Any) -> str:
+    """Serialise ``value`` as JSON that is safe inside an inline ``<script>``.
+
+    A task, model or node name containing ``</script>`` would otherwise close
+    the script element and let the rest of the name run as HTML. The unsafe
+    characters can only occur inside JSON string literals, so replacing them
+    with ``\\uXXXX`` escapes changes the text but not the parsed value.
+
+    Args:
+        value: Any JSON-serialisable object.
+
+    Returns:
+        The JSON text, with ``<``, ``>``, ``&``, U+2028 and U+2029 escaped.
+    """
+    return json.dumps(value, ensure_ascii=False).translate(_SCRIPT_UNSAFE_CHARS)
 
 
 # ---------------------------------------------------------------------------
@@ -51,7 +95,10 @@ def render_d3_circuit_html(
     default_threshold: float = 0.0,
 ) -> str:
     """
-    Build a self-contained D3.js HTML page from the circuit graph payload.
+    Build a D3.js HTML page from the circuit graph payload.
+
+    The page loads D3.js and elkjs from pinned, integrity-checked CDN URLs, so
+    it needs network access the first time it is opened.
 
     Args:
         graph_data:         Output of ``CircuitGraphVisualizer._build_export_data()``.
@@ -67,12 +114,17 @@ def render_d3_circuit_html(
     n_edges = len(graph_data.get("edges", []))
     render_mode = "canvas" if (n_nodes > NODE_SVG_LIMIT or n_edges > EDGE_SVG_LIMIT) else "svg"
 
-    # Embed data as JSON constants; json.dumps handles escaping.
-    graph_json = json.dumps(graph_data, ensure_ascii=False)
-    theme_json = json.dumps(theme, ensure_ascii=False)
+    graph_json = _json_for_script(graph_data)
+    theme_json = _json_for_script(theme)
 
     return _HTML_TEMPLATE.format(
-        title=title,
+        # The title is placed in <title> and <h1>; it is built from task and
+        # model names, so it is escaped as HTML text.
+        title=html.escape(title),
+        d3_url=D3_SCRIPT_URL,
+        d3_sri=D3_SCRIPT_SRI,
+        elkjs_url=ELKJS_SCRIPT_URL,
+        elkjs_sri=ELKJS_SCRIPT_SRI,
         graph_json=graph_json,
         theme_json=theme_json,
         default_threshold=default_threshold,
@@ -97,8 +149,8 @@ _HTML_TEMPLATE = """\
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>{title}</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/elkjs/lib/elk.bundled.min.js"></script>
+<script src="{d3_url}" integrity="{d3_sri}" crossorigin="anonymous"></script>
+<script src="{elkjs_url}" integrity="{elkjs_sri}" crossorigin="anonymous"></script>
 <style>
 /* ---- Reset & base ---- */
 *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
@@ -333,6 +385,14 @@ body {{
   flex-shrink: 0;
 }}
 
+.legend-note {{
+  max-width: 190px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  line-height: 1.4;
+}}
+
 /* ---- Reset button ---- */
 #reset-zoom {{
   background: var(--bg);
@@ -445,6 +505,10 @@ body {{
         <span>Pruned node</span>
       </div>
     </div>
+    <div class="legend-note">
+      Edges join circuit nodes of adjacent layers, weighted by node importance.
+      They are not measured connections.
+    </div>
   </div>
 </div>
 
@@ -484,6 +548,14 @@ const CK_THEME = {theme_json};
 // ============================================================
 function nodeColor(type) {{
   return CK_THEME.node_colors[type] || CK_THEME.palette.unknown;
+}}
+
+// Values from the scores file (a shared artifact, so untrusted) reach the
+// tooltips through innerHTML; escape them as HTML text.
+function esc(v) {{
+  return String(v).replace(/[&<>"']/g, c => ({{
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }})[c]);
 }}
 
 function fmt(v, decimals=4) {{
@@ -773,16 +845,16 @@ function initCanvasGraph() {{
     if (nearest && nearestDist <= pickRadius) {{
       if (hoveredNode !== nearest) {{ hoveredNode = nearest; draw(); }}
       const headInfo = nearest.head !== null
-        ? `<div class="tt-row"><span class="tt-key">Head</span><span>${{nearest.head}}</span></div>`
+        ? `<div class="tt-row"><span class="tt-key">Head</span><span>${{esc(nearest.head)}}</span></div>`
         : "";
       const statusClass = nearest.in_circuit ? "tt-status-in" : "tt-status-out";
       const statusText = nearest.in_circuit ? "✓ In circuit" : "✗ Pruned";
       tooltip.innerHTML = `
-        <div class="tt-name">${{nearest.id}}</div>
-        <div class="tt-row"><span class="tt-key">Layer</span><span>${{nearest.layer}}</span></div>
+        <div class="tt-name">${{esc(nearest.id)}}</div>
+        <div class="tt-row"><span class="tt-key">Layer</span><span>${{esc(nearest.layer)}}</span></div>
         ${{headInfo}}
         <div class="tt-row"><span class="tt-key">Score</span><span>${{fmt(nearest.raw_score, 6)}}</span></div>
-        <div class="tt-row"><span class="tt-key">Rank</span><span>#${{nearest.rank}} / ${{GRAPH.nodes.length}}</span></div>
+        <div class="tt-row"><span class="tt-key">Rank</span><span>#${{esc(nearest.rank)}} / ${{GRAPH.nodes.length}}</span></div>
         <div class="tt-row"><span class="tt-key">Status</span><span class="${{statusClass}}">${{statusText}}</span></div>`;
       tooltip.classList.add("visible");
       moveTooltip(event);
@@ -1258,15 +1330,15 @@ function showNodeTooltip(event, node) {{
   const statusClass  = node.in_circuit ? "tt-status-in" : "tt-status-out";
   const statusText   = node.in_circuit ? "✓ In circuit" : "✗ Pruned";
   const headInfo     = node.head !== null ? `<div class="tt-row">
-    <span class="tt-key">Head</span><span>${{node.head}}</span></div>` : "";
+    <span class="tt-key">Head</span><span>${{esc(node.head)}}</span></div>` : "";
   const typeColor    = nodeColor(node.type);
-  const typeLabel    = node.type.replace("_", " ");
+  const typeLabel    = esc(String(node.type).replace("_", " "));
 
   tooltip.innerHTML = `
-    <div class="tt-name">${{node.id}}</div>
+    <div class="tt-name">${{esc(node.id)}}</div>
     <div><span class="tt-badge" style="background:${{typeColor}}">${{typeLabel}}</span></div>
     <div class="tt-row">
-      <span class="tt-key">Layer</span><span>${{node.layer}}</span>
+      <span class="tt-key">Layer</span><span>${{esc(node.layer)}}</span>
     </div>
     ${{headInfo}}
     <div class="tt-row">
@@ -1274,7 +1346,7 @@ function showNodeTooltip(event, node) {{
     </div>
     <div class="tt-row">
       <span class="tt-key">Rank</span>
-      <span>#${{node.rank}} / ${{GRAPH.nodes.length}}</span>
+      <span>#${{esc(node.rank)}} / ${{GRAPH.nodes.length}}</span>
     </div>
     <div class="tt-row">
       <span class="tt-key">Status</span>
@@ -1288,7 +1360,7 @@ function showNodeTooltip(event, node) {{
 function showEdgeTooltip(event, edge) {{
   tooltip.innerHTML = `
     <div class="tt-name" style="font-size:11px">
-      ${{edge.source}} → ${{edge.target}}
+      ${{esc(edge.source)}} → ${{esc(edge.target)}}
     </div>
     <div class="tt-row">
       <span class="tt-key">Strength</span>

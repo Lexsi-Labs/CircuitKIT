@@ -8,6 +8,7 @@ end-to-end execution is covered by the integration suite.
 """
 
 import re
+from unittest.mock import MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
@@ -172,6 +173,60 @@ class TestRunCommandValidation:
         """Passing a path that does not exist must fail (click.Path(exists=True) guard)."""
         result = runner.invoke(cli, ["run", "/nonexistent/path/pipeline.yaml"])
         assert result.exit_code != 0
+
+
+# ---------------------------------------------------------------------------
+# run command — a failed visualize step is recorded, the exit code is unchanged
+# ---------------------------------------------------------------------------
+
+
+class TestRunVisualizeFailure:
+    def _invoke(self, runner, tmp_path, viz_cfg, **visualize_attrs):
+        """Run a YAML with only a visualize step against a mocked Pipeline."""
+        import yaml
+
+        cfg = {
+            "model": "gpt2",
+            "task": "ioi",
+            "output_dir": str(tmp_path / "out"),
+            "visualize": viz_cfg,
+        }
+        config_file = tmp_path / "pipeline.yaml"
+        config_file.write_text(yaml.dump(cfg))
+        pipe = MagicMock()
+        pipe._circuit = object()  # any non-None circuit lets the step run
+        pipe.visualize.configure_mock(**visualize_attrs)
+        with patch("circuitkit.pipeline.Pipeline", return_value=pipe):
+            result = runner.invoke(cli, ["run", str(config_file)])
+        return result, " ".join(_plain(result.output).split())
+
+    def test_exception_is_recorded_and_exit_code_unchanged(self, runner, tmp_path):
+        viz_cfg = {"mode": "graph", "output": str(tmp_path / "g.html")}
+        result, output = self._invoke(runner, tmp_path, viz_cfg, side_effect=ValueError("boom"))
+        assert result.exit_code == 0, result.output
+        assert "visualize failed: boom" in output
+        assert "a step failed: visualize (ValueError: boom)" in output
+        assert "Pipeline complete!" not in output
+
+    def test_graph_export_that_wrote_nothing_counts_as_failed(self, runner, tmp_path):
+        """Circuit.plot() swallows its own errors and returns None."""
+        viz_cfg = {"mode": "graph", "output": str(tmp_path / "g.html")}
+        result, output = self._invoke(runner, tmp_path, viz_cfg, return_value=None)
+        assert result.exit_code == 0, result.output
+        assert "a step failed: visualize (RuntimeError: graph export was not written" in output
+
+    def test_successful_export_reports_complete(self, runner, tmp_path):
+        viz_cfg = {"mode": "graph", "output": str(tmp_path / "g.html")}
+        result, output = self._invoke(runner, tmp_path, viz_cfg, return_value="<html/>")
+        assert result.exit_code == 0, result.output
+        assert "Pipeline complete!" in output
+        assert "step failed" not in output
+
+    def test_none_from_another_mode_is_not_a_failure(self, runner, tmp_path):
+        viz_cfg = {"mode": "comparison", "output": str(tmp_path / "c.html")}
+        result, output = self._invoke(runner, tmp_path, viz_cfg, return_value=None)
+        assert result.exit_code == 0, result.output
+        assert "Pipeline complete!" in output
 
 
 # ---------------------------------------------------------------------------
