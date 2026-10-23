@@ -215,18 +215,17 @@ class TestRunVisualizeFailure:
         assert result.exit_code == 0, result.output
         assert "a step failed: visualize (RuntimeError: graph export was not written" in output
 
-    def test_successful_export_reports_complete(self, runner, tmp_path):
-        viz_cfg = {"mode": "graph", "output": str(tmp_path / "g.html")}
-        result, output = self._invoke(runner, tmp_path, viz_cfg, return_value="<html/>")
+    @pytest.mark.parametrize(
+        "mode, returned",
+        [("graph", "<html/>"), ("comparison", None)],
+        ids=["graph-written", "other-mode-returns-none"],
+    )
+    def test_no_failure_reports_complete(self, runner, tmp_path, mode, returned):
+        viz_cfg = {"mode": mode, "output": str(tmp_path / "v.html")}
+        result, output = self._invoke(runner, tmp_path, viz_cfg, return_value=returned)
         assert result.exit_code == 0, result.output
         assert "Pipeline complete!" in output
         assert "step failed" not in output
-
-    def test_none_from_another_mode_is_not_a_failure(self, runner, tmp_path):
-        viz_cfg = {"mode": "comparison", "output": str(tmp_path / "c.html")}
-        result, output = self._invoke(runner, tmp_path, viz_cfg, return_value=None)
-        assert result.exit_code == 0, result.output
-        assert "Pipeline complete!" in output
 
 
 # ---------------------------------------------------------------------------

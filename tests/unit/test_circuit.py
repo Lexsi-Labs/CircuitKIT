@@ -429,13 +429,15 @@ class TestPlotGracefulDegradation:
         assert result == {"nodes": [], "edges": []}
 
     def test_plot_without_viz_stack_warns_and_returns_none(self, tmp_path, monkeypatch):
-        """A missing visualisation stack is a warning the caller sees, not a
-        log line (CK-25), and plot() still returns None without raising."""
+        """A missing visualisation stack is a RuntimeWarning the caller sees, even
+        with the UserWarning filter importing circuitkit.api installs (CK-25), and
+        plot() still returns None without raising."""
         c = Circuit(_NODES, dict(_SCORES))
         # A None entry makes `from .visualize.graph_viz import ...` raise ImportError.
         monkeypatch.setitem(sys.modules, "circuitkit.visualize.graph_viz", None)
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
+            warnings.filterwarnings("ignore", category=UserWarning)  # as circuitkit.api does
             result = c.plot(str(tmp_path / "circuit.html"))
 
         assert result is None
@@ -444,15 +446,3 @@ class TestPlotGracefulDegradation:
         assert len(plot_warnings) == 1
         assert plot_warnings[0].category is RuntimeWarning
         assert "ModuleNotFoundError" in str(plot_warnings[0].message)
-
-    def test_plot_warning_is_not_hidden_by_the_api_user_warning_filter(self, tmp_path, monkeypatch):
-        """Importing circuitkit.api ignores every UserWarning; the plot warning
-        must not be a UserWarning, or it would be swallowed."""
-        c = Circuit(_NODES, dict(_SCORES))
-        monkeypatch.setitem(sys.modules, "circuitkit.visualize.graph_viz", None)
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter("always")
-            warnings.filterwarnings("ignore", category=UserWarning)  # as circuitkit.api does
-            c.plot(str(tmp_path / "circuit.html"))
-
-        assert any("Plotting unavailable" in str(w.message) for w in caught)

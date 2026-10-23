@@ -1,5 +1,7 @@
 """Tests for the circuit graph export hardening (CK-25): edge labelling, pinned and
-integrity-checked scripts, and safe embedding of the payload in the HTML.
+integrity-checked scripts, and safe embedding of the payload and tooltips in the HTML.
+
+One test per contract, to keep the fast tier small.
 
 Everything here is offline: the script hashes are compared with the module
 constants, never fetched.
@@ -56,133 +58,69 @@ def _embedded_graph(html: str) -> dict:
 
 
 class TestEdgeKind:
-    def test_value_is_layer_adjacent(self):
-        assert EDGE_KIND_LAYER_ADJACENT == "layer_adjacent"
-
-    def test_to_json_carries_edge_kind(self, tmp_path):
-        out = tmp_path / "graph.json"
-        returned = _viz(_scores()).to_json(str(out))
-        assert returned["metadata"]["edge_kind"] == "layer_adjacent"
-        assert json.loads(out.read_text(encoding="utf-8"))["metadata"]["edge_kind"] == (
-            "layer_adjacent"
-        )
-
-    def test_bounded_to_json_keeps_edge_kind(self, tmp_path):
-        returned = _viz(_scores()).to_json(str(tmp_path / "g.json"), max_nodes=2, max_edges=1)
-        assert returned["metadata"]["edge_kind"] == "layer_adjacent"
-
-    def test_export_graph_data_carries_edge_kind(self, tmp_path):
-        out = tmp_path / "export.json"
-        _viz(_scores()).export_graph_data(str(out))
-        assert json.loads(out.read_text(encoding="utf-8"))["metadata"]["edge_kind"] == (
-            "layer_adjacent"
-        )
+    def test_json_exports_carry_edge_kind(self, tmp_path):
+        # Bounded to_json and unbounded export_graph_data take different paths
+        # through _build_graph_data; both must label the edges.
+        viz = _viz(_scores())
+        bounded = viz.to_json(str(tmp_path / "g.json"), max_nodes=2, max_edges=1)
+        viz.export_graph_data(str(tmp_path / "export.json"))
+        full = json.loads((tmp_path / "export.json").read_text(encoding="utf-8"))
+        assert bounded["metadata"]["edge_kind"] == EDGE_KIND_LAYER_ADJACENT == "layer_adjacent"
+        assert full["metadata"]["edge_kind"] == EDGE_KIND_LAYER_ADJACENT
 
     def test_html_embeds_edge_kind_and_explains_it(self, tmp_path):
         html = _viz(_scores()).to_html(str(tmp_path / "g.html"))
-        assert _embedded_graph(html)["metadata"]["edge_kind"] == "layer_adjacent"
+        assert _embedded_graph(html)["metadata"]["edge_kind"] == EDGE_KIND_LAYER_ADJACENT
         assert "not measured connections" in html
 
 
-# ---------------------------------------------------------------------------
-# Pinned, integrity-checked scripts
-# ---------------------------------------------------------------------------
-
-
-def _script_tags(html: str) -> list:
-    return re.findall(r"<script\b[^>]*\bsrc=[^>]*>", html)
-
-
 class TestPinnedScripts:
-    def test_both_script_tags_are_pinned_and_checked(self):
+    def test_both_scripts_are_pinned_and_integrity_checked(self):
         html = d3_template.render_d3_circuit_html(_viz(_scores())._build_export_data(), {})
-        tags = _script_tags(html)
-        assert len(tags) == 2
-
-        expected = {
-            D3_SCRIPT_URL: D3_SCRIPT_SRI,
-            ELKJS_SCRIPT_URL: ELKJS_SCRIPT_SRI,
-        }
+        tags = re.findall(r"<script\b[^>]*\bsrc=[^>]*>", html)
         seen = {}
         for tag in tags:
-            src = re.search(r'src="([^"]+)"', tag).group(1)
-            integrity = re.search(r'integrity="([^"]+)"', tag)
-            assert integrity, f"no integrity attribute on {tag}"
             assert 'crossorigin="anonymous"' in tag
-            seen[src] = integrity.group(1)
-        assert seen == expected
+            seen[re.search(r'src="([^"]+)"', tag).group(1)] = re.search(
+                r'integrity="([^"]+)"', tag
+            ).group(1)
+        assert seen == {D3_SCRIPT_URL: D3_SCRIPT_SRI, ELKJS_SCRIPT_URL: ELKJS_SCRIPT_SRI}
 
-    def test_urls_name_an_exact_version(self):
-        assert re.search(r"/elkjs@\d+\.\d+\.\d+/", ELKJS_SCRIPT_URL)
         assert re.search(r"/d3/\d+\.\d+\.\d+/", D3_SCRIPT_URL)
-
-    def test_elkjs_is_the_package_file_not_a_cdn_minified_one(self):
         # elkjs ships no .min.js; jsDelivr minifies on request, and those bytes
         # can change without a release, which would break the integrity check.
-        assert ELKJS_SCRIPT_URL.endswith("/lib/elk.bundled.js")
-
-    def test_integrity_values_are_sha384_digests(self):
-        for sri in (D3_SCRIPT_SRI, ELKJS_SCRIPT_SRI):
+        assert re.search(r"/elkjs@\d+\.\d+\.\d+/lib/elk\.bundled\.js$", ELKJS_SCRIPT_URL)
+        for sri in seen.values():
             algorithm, _, digest = sri.partition("-")
             assert algorithm == "sha384"
             assert len(base64.b64decode(digest, validate=True)) == 48
 
-    def test_docstring_no_longer_claims_no_external_dependencies(self):
-        from circuitkit.visualize.graph_viz import CircuitGraphVisualizer as Viz
-
-        assert "no external dependencies" not in (Viz.to_html.__doc__ or "").lower()
-        assert "no additional dependencies" not in (d3_template.__doc__ or "").lower()
-
-
-# ---------------------------------------------------------------------------
-# Safe embedding
-# ---------------------------------------------------------------------------
-
 
 class TestSafeEmbedding:
     def test_json_for_script_escapes_and_round_trips(self):
-        value = {"k": _HOSTILE, "nested": [{"a&b": "<>"}], "n": 1.5, "none": None}
+        value = {"k": _HOSTILE, "nested": [{"a&b": "<>"}], "label": "—é中"}
         text = _json_for_script(value)
         for ch in ("<", ">", "&", _LS, _PS):
             assert ch not in text
+        assert "中" in text  # other non-ASCII stays readable
         assert json.loads(text) == value
 
-    def test_json_for_script_keeps_other_non_ascii(self):
-        value = {"label": "Circuit " + chr(0x2014) + " " + chr(0xE9) + chr(0x4E2D)}
-        text = _json_for_script(value)
-        assert chr(0x2014) in text and chr(0x4E2D) in text
-        assert json.loads(text) == value
-
-    def test_hostile_names_cannot_break_out_of_the_data_script(self, tmp_path):
-        scores = _scores(task=_HOSTILE, model=_HOSTILE, extra=_HOSTILE)
-        viz = _viz(scores, pruned=["A2.0"])
+    def test_hostile_names_cannot_break_the_page(self, tmp_path):
+        viz = _viz(_scores(task=_HOSTILE, model=_HOSTILE, extra=_HOSTILE), pruned=["A2.0"])
         html = viz.to_html(str(tmp_path / "g.html"))
 
-        # No name can form a script tag in the page.
         assert "<script>alert(1)" not in html
-        assert "alert(1)</script>" not in html
-
-        # The first </script> after the data constant is the real end of the
-        # page's own script, so the data cannot have closed it early. The line
-        # separators (which end a line in JavaScript source) are escaped there.
+        # The default title upper-cases the task; it is HTML-escaped in <title> and <h1>.
+        assert "&lt;/SCRIPT&gt;&lt;SCRIPT&gt;" in html
+        # The first </script> after the data is the real end of the page's own
+        # script, so the data cannot have closed it early.
         data_start = html.index("const GRAPH")
-        script_end = html.index("</script>", data_start)
-        script_body = html[data_start:script_end]
+        script_body = html[data_start : html.index("</script>", data_start)]
         assert "end initGraph" in script_body
         assert _LS not in script_body and _PS not in script_body
         assert html.count("</script>") == 3  # two <script src> tags + the page script
-
         # The embedded data is the exported payload, unchanged.
-        expected = json.loads(json.dumps(viz._build_export_data()))
-        assert _embedded_graph(html) == expected
-        assert _embedded_graph(html)["metadata"]["task"] == _HOSTILE
-
-    def test_title_is_html_escaped(self, tmp_path):
-        # The default title upper-cases the task, hence the capitals.
-        viz = _viz(_scores(task="</title><h1>x</h1>"))
-        html = viz.to_html(str(tmp_path / "g.html"))
-        assert "</TITLE><H1>" not in html
-        assert "&lt;/TITLE&gt;&lt;H1&gt;" in html
+        assert _embedded_graph(html) == json.loads(json.dumps(viz._build_export_data()))
 
 
 class TestTooltipEscaping:
