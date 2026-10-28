@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 
 import logging
+import re
 import warnings
 
 logger = logging.getLogger(__name__)
@@ -39,6 +40,54 @@ __all__ = ["Circuit"]
 # A pruning artifact is either a flat list of node names (node-level) or a
 # nested neuron dict (neuron-level discovery).
 PruningArtifact = Union[List[str], Dict[str, Any]]
+
+# Component names in the score keys, by naming style: EAP / EAP-IG write
+# ``m{layer}`` and ``a{layer}.h{head}``; IBCircuit writes ``MLP {layer}`` and
+# ``A{layer}.{head}``.
+_MLP_NAME_PATTERNS = (re.compile(r"m(\d+)$"), re.compile(r"MLP (\d+)$"))
+_HEAD_NAME_PATTERNS = (re.compile(r"a(\d+)\.h(\d+)$"), re.compile(r"A(\d+)\.(\d+)$"))
+
+
+def _fully_pruned_components(pruning_dict: Dict[str, Any], component_names: List[str]) -> List[str]:
+    """Return the components of a neuron-level artifact whose neurons were all pruned.
+
+    A neuron-level pruning dict lists pruned neuron indices per layer (``mlp``)
+    and per ``(layer, head)`` (``heads``), so a component is pruned from the
+    circuit only when every one of its neurons is in that list. The neuron
+    counts come from ``_meta`` (``neurons_per_mlp`` / ``neurons_per_head``);
+    artifacts written without them report no pruned component, which is what
+    they showed before the counts were recorded.
+
+    Args:
+        pruning_dict: The neuron-level artifact (``mlp``, ``heads``, ``_meta``).
+        component_names: Component names as used by the scores, in either naming style.
+
+    Returns:
+        The names from ``component_names`` that are fully pruned.
+    """
+    meta = pruning_dict.get("_meta") or {}
+    per_mlp = meta.get("neurons_per_mlp")
+    per_head = meta.get("neurons_per_head")
+    mlp_pruned = pruning_dict.get("mlp") or {}
+    heads_pruned = pruning_dict.get("heads") or {}
+
+    pruned: List[str] = []
+    for name in component_names:
+        for pattern in _MLP_NAME_PATTERNS:
+            match = pattern.match(name)
+            if match:
+                if per_mlp and len(set(mlp_pruned.get(int(match.group(1)), ()))) >= per_mlp:
+                    pruned.append(name)
+                break
+        else:
+            for pattern in _HEAD_NAME_PATTERNS:
+                match = pattern.match(name)
+                if match:
+                    key = (int(match.group(1)), int(match.group(2)))
+                    if per_head and len(set(heads_pruned.get(key, ()))) >= per_head:
+                        pruned.append(name)
+                    break
+    return pruned
 
 
 class Circuit:
@@ -338,10 +387,10 @@ class Circuit:
             if isinstance(self.nodes, list):
                 pruned_nodes = self.nodes
             elif isinstance(self.nodes, dict):
-                # neuron-level artifact: flatten mlp + heads keys
-                pruned_nodes = list(self.nodes.get("mlp", {}).keys()) + list(
-                    self.nodes.get("heads", {}).keys()
-                )
+                # Neuron-level artifact: its keys are layer numbers and
+                # (layer, head) tuples, not component names. A component is
+                # pruned only when all of its neurons are.
+                pruned_nodes = _fully_pruned_components(self.nodes, list(self.scores))
 
             graph_dict = {"nodes": {name: {} for name in self.scores}, "edges": []}
             viz = CircuitGraphVisualizer(graph_dict, cs, pruned_nodes=pruned_nodes)

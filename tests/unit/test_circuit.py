@@ -446,3 +446,37 @@ class TestPlotGracefulDegradation:
         assert len(plot_warnings) == 1
         assert plot_warnings[0].category is RuntimeWarning
         assert "ModuleNotFoundError" in str(plot_warnings[0].message)
+
+
+class TestPlotNeuronLevelPrunedComponents:
+    def test_only_fully_pruned_components_are_pruned(self, tmp_path):
+        """A neuron-level component is pruned only when all of its neurons are
+        (CK-26), in both naming styles; an artifact written before the neuron
+        counts were recorded marks none and still plots."""
+        cases = [
+            # EAP / EAP-IG names. m0 and a0.h0 are fully pruned; m1 and a0.h1 are not.
+            (
+                {"m0": 0.5, "m1": 0.4, "a0.h0": 0.3, "a0.h1": 0.2},
+                {"mlp": {0: [0, 1, 2, 3], 1: [0]}, "heads": {(0, 0): [0, 1], (0, 1): [0]}},
+                {"m0", "a0.h0"},
+            ),
+            # IBCircuit names, same pruning.
+            (
+                {"MLP 0": 0.5, "MLP 1": 0.4, "A0.0": 0.3, "A0.1": 0.2},
+                {"mlp": {0: [0, 1, 2, 3], 1: [0]}, "heads": {(0, 0): [0, 1], (0, 1): [0]}},
+                {"MLP 0", "A0.0"},
+            ),
+        ]
+        for i, (scores, pruned, expected) in enumerate(cases):
+            meta = {"mlp_hook": "mlp_out", "neurons_per_mlp": 4, "neurons_per_head": 2}
+            nodes = {**pruned, "_meta": meta}
+            # A real save/load round trip: the head keys are (layer, head) tuples.
+            Circuit(nodes, scores, level="neuron").save(tmp_path / f"c{i}.pt")
+            circuit = Circuit.from_artifact(tmp_path / f"c{i}.pt")
+            out = circuit.plot(str(tmp_path / f"c{i}.json"))
+            assert {n["id"] for n in out["nodes"] if not n["in_circuit"]} == expected
+
+            # Same artifact without the neuron counts: nothing is pruned.
+            legacy = {**pruned, "_meta": {"mlp_hook": "mlp_out"}}
+            out = Circuit(legacy, scores, level="neuron").plot(str(tmp_path / f"l{i}.json"))
+            assert all(n["in_circuit"] for n in out["nodes"])

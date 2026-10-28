@@ -6,7 +6,7 @@ from contextlib import ExitStack, contextmanager
 from datetime import datetime
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 import torch as t
 
@@ -878,6 +878,64 @@ def _build_artifact_stem(config: Dict[str, Any]) -> str:
     return "_".join(str(p) for p in parts)
 
 
+def _flatten_ib_neuron_scores(
+    neuron_scores: Dict[str, Any],
+) -> Tuple[List[Tuple[float, Tuple[str, int, Any, int]]], Dict[str, float], Dict[str, int]]:
+    """Flatten IBCircuit per-neuron scores for pruning, node scores and graph metadata.
+
+    One pass over the scores yields everything the IBCircuit neuron branch of
+    :func:`discover_circuit` needs, so no tensor is read twice.
+
+    Args:
+        neuron_scores: ``{component name: 1-D score tensor}`` (values are read with
+            ``len`` and iteration, so any 1-D sequence of tensors works) with names
+            ``A{layer}.{head}`` and ``MLP {layer}``, as returned by
+            ``IBHookedTransformer.extract_neuron_scores``. Other names are skipped.
+
+    Returns:
+        A tuple ``(entries, node_scores, neurons_per_kind)``:
+
+        * ``entries``: one ``(abs score, (kind, layer, head, neuron index))`` per
+          neuron, with ``kind`` ``"attn"`` or ``"mlp"`` and ``head`` ``None`` for MLPs.
+        * ``node_scores``: the largest absolute neuron score per component, the
+          same shape node-level discovery writes, so ``Circuit.from_artifact``
+          and ``Circuit.plot`` can use it.
+        * ``neurons_per_kind``: ``neurons_per_head`` / ``neurons_per_mlp`` when
+          every component of that kind has the same neuron count. A kind whose
+          sizes differ (or that is absent) gets no key, so the graph treats no
+          component of it as pruned rather than guessing.
+    """
+    entries: List[Tuple[float, Tuple[str, int, Any, int]]] = []
+    node_scores: Dict[str, float] = {}
+    sizes: Dict[str, set] = {"neurons_per_head": set(), "neurons_per_mlp": set()}
+
+    for ib_name, score_tensor in neuron_scores.items():
+        attn_match = re.match(r"A(\d+)\.(\d+)$", ib_name)
+        mlp_match = re.match(r"MLP (\d+)$", ib_name)
+        if attn_match:
+            entry_key: Tuple[str, int, Any] = (
+                "attn",
+                int(attn_match.group(1)),
+                int(attn_match.group(2)),
+            )
+            sizes["neurons_per_head"].add(len(score_tensor))
+        elif mlp_match:
+            entry_key = ("mlp", int(mlp_match.group(1)), None)
+            sizes["neurons_per_mlp"].add(len(score_tensor))
+        else:
+            continue
+        top = float("-inf")
+        for neuron_idx, score in enumerate(score_tensor):
+            abs_score = abs(score.item())
+            entries.append((abs_score, (*entry_key, neuron_idx)))
+            top = max(top, abs_score)
+        if top != float("-inf"):
+            node_scores[ib_name] = top
+
+    neurons_per_kind = {k: next(iter(v)) for k, v in sizes.items() if len(v) == 1}
+    return entries, node_scores, neurons_per_kind
+
+
 def _save_artifact(
     data: Any, output_path: str, suffix: str, logger, config: Dict = None
 ) -> Optional[str]:
@@ -1522,8 +1580,17 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
                     pruned_attn_neurons = defaultdict(list)
 
                     all_neuron_scores = []
+                    # Neurons per component, for the circuit graph: a component
+                    # counts as pruned only when all of them were. Constant per
+                    # kind (set by the model config), so one number each.
+                    neurons_per_mlp: Optional[int] = None
+                    neurons_per_head: Optional[int] = None
                     for node in tqdm(graph.nodes.values(), desc="Extracting neuron scores"):
                         if isinstance(node, (MLPNode, AttentionNode)):
+                            if isinstance(node, MLPNode):
+                                neurons_per_mlp = node.d_neuron
+                            else:
+                                neurons_per_head = node.d_neuron
                             # Filter by scope
                             if effective_scope == "mlp" and not isinstance(node, MLPNode):
                                 continue
@@ -1575,13 +1642,18 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
                                 (int(attn_match.group(1)), int(attn_match.group(2)))
                             ].append(neuron_idx)
 
+                    result_meta: Dict[str, Any] = {
+                        "mlp_hook": discovery_cfg.get("mlp_hook", "mlp_out"),
+                        "heads_hook": "attn.hook_result",  # EAP uses attn.hook_result for heads
+                    }
+                    if neurons_per_mlp is not None:
+                        result_meta["neurons_per_mlp"] = neurons_per_mlp
+                    if neurons_per_head is not None:
+                        result_meta["neurons_per_head"] = neurons_per_head
                     result = {
                         "mlp": dict(pruned_mlp_neurons),
                         "heads": dict(pruned_attn_neurons),
-                        "_meta": {
-                            "mlp_hook": discovery_cfg.get("mlp_hook", "mlp_out"),
-                            "heads_hook": "attn.hook_result",  # EAP uses attn.hook_result for heads
-                        },
+                        "_meta": result_meta,
                     }
                     if config.get("output_path"):
                         os.makedirs(os.path.dirname(config["output_path"]), exist_ok=True)
@@ -1690,40 +1762,18 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
                 # save in the same format as EAP neuron so evaluate_circuit works.
                 pruned_mlp_neurons = defaultdict(list)
                 pruned_attn_neurons = defaultdict(list)
-                all_neuron_scores = []
-
-                for ib_name, score_tensor in node_scores.items():
-                    attn_match = re.match(r"A(\d+)\.(\d+)$", ib_name)
-                    mlp_match = re.match(r"MLP (\d+)$", ib_name)
-                    for neuron_idx, score in enumerate(score_tensor):
-                        if attn_match:
-                            all_neuron_scores.append(
-                                (
-                                    abs(score.item()),
-                                    (
-                                        "attn",
-                                        int(attn_match.group(1)),
-                                        int(attn_match.group(2)),
-                                        neuron_idx,
-                                    ),
-                                )
-                            )
-                        elif mlp_match:
-                            all_neuron_scores.append(
-                                (
-                                    abs(score.item()),
-                                    ("mlp", int(mlp_match.group(1)), None, neuron_idx),
-                                )
-                            )
-
-                all_neuron_scores.sort(key=lambda x: x[0])  # ascending: lowest = least important
-                n_to_prune = int(len(all_neuron_scores) * pruning_cfg["target_sparsity"])
-
-                logger.info(
-                    f"IBCircuit neuron discovery: {len(all_neuron_scores)} total neurons, pruning {n_to_prune}"
+                ib_neuron_entries, ib_node_scores, neurons_per_kind = _flatten_ib_neuron_scores(
+                    node_scores
                 )
 
-                for _, (kind, layer, head, neuron_idx) in all_neuron_scores[:n_to_prune]:
+                ib_neuron_entries.sort(key=lambda x: x[0])  # ascending: lowest = least important
+                n_to_prune = int(len(ib_neuron_entries) * pruning_cfg["target_sparsity"])
+
+                logger.info(
+                    f"IBCircuit neuron discovery: {len(ib_neuron_entries)} total neurons, pruning {n_to_prune}"
+                )
+
+                for _, (kind, layer, head, neuron_idx) in ib_neuron_entries[:n_to_prune]:
                     if kind == "mlp":
                         pruned_mlp_neurons[layer].append(neuron_idx)
                     else:
@@ -1732,15 +1782,19 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
                 result = {
                     "mlp": dict(pruned_mlp_neurons),
                     "heads": dict(pruned_attn_neurons),
-                    "_meta": {"mlp_hook": ib_config["mlp_hook"]},
+                    "_meta": {"mlp_hook": ib_config["mlp_hook"], **neurons_per_kind},
                 }
 
                 _save_artifact(
                     {
                         "algo": algo,
                         "level": "neuron",
+                        # Largest absolute neuron score per component, as the EAP
+                        # neuron branch writes, so Circuit.from_artifact gets
+                        # non-empty scores and the circuit graph can be drawn.
+                        "node_scores": ib_node_scores,
                         "neurons_scores": node_scores,
-                        "total_neurons": len(all_neuron_scores),
+                        "total_neurons": len(ib_neuron_entries),
                     },
                     config.get("output_path"),
                     "_scores",

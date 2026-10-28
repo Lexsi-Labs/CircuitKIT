@@ -119,6 +119,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (TransformerLens 3.8 has Gemma configs for Hub names only, and the Hub name loads the base
   weights; CK-28). Without patch `0007` (a TransformerLens patched on disk by the old script, or
   another version), the old path check stays.
+- **IBCircuit neuron-level runs get a circuit graph** (CK-26). The neuron branch wrote only `neurons_scores`, so
+  `Circuit.from_artifact` found no `node_scores`, `Circuit.scores` was empty and `Circuit.plot` wrote nothing. It now
+  also writes `node_scores` (the largest absolute neuron score per component, keyed `A{layer}.{head}` / `MLP {layer}`)
+  into the scores side-car, as the EAP and EAP-IG neuron branches already do. `neurons_scores` is unchanged.
+- **Neuron-level circuit graphs mark only fully pruned components as pruned** (CK-26, EAP, EAP-IG and IBCircuit).
+  `Circuit.plot` took the pruning dict's keys (layer numbers and `(layer, head)` tuples) for component names, so no
+  component matched and every one showed as in the circuit. A component is now pruned when all of its neurons were.
+  Discovery records the neuron counts in the pruning dict's `_meta` (`neurons_per_mlp`, `neurons_per_head`). A
+  pruning dict saved before this change has no counts, so no component shows as pruned, as before; it still loads.
 - Hyperparameter checks: `eval.pillars: []` is now an error (it would run nothing), and an
   ACDC grid point too large to compute (`tao_exps: [400]`) is reported as tau >= 1 instead of
   being skipped.
