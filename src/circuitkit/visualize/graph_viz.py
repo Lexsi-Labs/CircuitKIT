@@ -712,7 +712,7 @@ class CircuitGraphVisualizer:
         self,
         output_path: str,
         title: Optional[str] = None,
-        default_threshold: float = 0.0,
+        default_threshold: Optional[float] = None,
         **_kw: Any,
     ) -> str:
         """
@@ -727,6 +727,9 @@ class CircuitGraphVisualizer:
         - Hover tooltips on nodes and edges.
         - Real-time threshold slider for edge filtering. The legend states
           that edges join adjacent-layer circuit nodes and are not measured.
+        - No size limit. A circuit with more than 20,000 edges opens with the
+          threshold raised so only its strongest edges are drawn (a note on
+          the page says how many); every edge stays in the file.
         - Toggle to show/hide pruned (background) nodes.
         - Color legend with node-type key.
 
@@ -734,7 +737,12 @@ class CircuitGraphVisualizer:
             output_path:        File path for the HTML file.
             title:              Figure title. Defaults to
                                 ``"<TASK> Circuit — <model> / <algo>"``.
-            default_threshold:  Initial edge threshold [0, 1].
+            default_threshold:  Initial edge threshold [0, 1]. ``None`` (the
+                                default) picks it automatically: 0 for up to
+                                ``INITIAL_VISIBLE_EDGES`` (20,000) edges,
+                                otherwise the lowest 0.01 step that leaves at
+                                most that many edges drawn. An explicit value
+                                is used as given.
 
         Returns:
             The full HTML string (also written to ``output_path``).

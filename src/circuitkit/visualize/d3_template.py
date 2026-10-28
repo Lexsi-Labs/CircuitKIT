@@ -20,6 +20,9 @@ Visual features
 * On node hover: connected edges and neighbor nodes highlight; all others dim.
 * Real-time threshold slider that fades out edges below the threshold using
   D3 transitions (no full redraw needed).
+* No size limit. A graph with more than ``INITIAL_VISIBLE_EDGES`` edges opens
+  with the threshold raised so only its strongest edges are drawn, and a note
+  on the page says so; every edge stays in the page.
 * Toggle checkbox to show/hide pruned (background) nodes.
 * Color legend showing node types.
 * Layer labels along the x-axis.
@@ -31,7 +34,8 @@ from __future__ import annotations
 
 import html
 import json
-from typing import Any, Dict
+import math
+from typing import Any, Dict, Optional
 
 # Level-of-detail thresholds: above either limit, the page renders the graph
 # on <canvas> instead of SVG+ELK (SVG/ELK layout cost and per-element DOM
@@ -40,6 +44,18 @@ from typing import Any, Dict
 # — not re-derived client-side — so it is directly testable without a browser.
 NODE_SVG_LIMIT = 400
 EDGE_SVG_LIMIT = 4000
+
+# The page has no size ceiling: it always draws. Frame rate while zooming or
+# moving the slider falls roughly linearly with the number of edges drawn (a
+# browser benchmark measured about 2.3 ms per 1,000 edges), while opening the
+# page stays fast even at hundreds of thousands of edges. A graph with more
+# edges than this therefore opens with the threshold raised until at most this
+# many are drawn, which keeps zoom usable. Every edge stays in the page, and
+# moving the slider to 0 shows them all.
+INITIAL_VISIBLE_EDGES = 20_000
+
+# The threshold slider moves in steps of this size (see ``step`` on the input).
+_THRESHOLD_STEP = 0.01
 
 # Third-party scripts the page loads. Each URL names an exact version and has
 # the sha384 Subresource Integrity hash of the file it serves. elkjs is loaded as
@@ -83,6 +99,35 @@ def _json_for_script(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False).translate(_SCRIPT_UNSAFE_CHARS)
 
 
+def _auto_threshold(edges: Any) -> float:
+    """Pick the opening threshold for a graph.
+
+    Args:
+        edges: The payload's edge dicts, each with ``normalized_weight``.
+
+    Returns:
+        ``0.0`` when the graph has at most ``INITIAL_VISIBLE_EDGES`` edges.
+        Otherwise the smallest multiple of the slider step at which at most
+        ``INITIAL_VISIBLE_EDGES`` edges have ``normalized_weight >= threshold``.
+        It is capped at the slider maximum of ``1.0``, so if more than
+        ``INITIAL_VISIBLE_EDGES`` edges tie at weight 1.0 they all stay drawn.
+    """
+    if len(edges) <= INITIAL_VISIBLE_EDGES:
+        return 0.0
+    weights = sorted((float(e.get("normalized_weight", 0.0)) for e in edges), reverse=True)
+    # The weight just past the budget must fall below the threshold, so the
+    # threshold has to be strictly greater than it.
+    first_hidden = weights[INITIAL_VISIBLE_EDGES]
+    steps_per_unit = round(1 / _THRESHOLD_STEP)
+    k = math.floor(first_hidden * steps_per_unit) + 1
+    # Fix up float rounding at the step boundaries (e.g. 0.57 * 100 < 57).
+    while first_hidden >= k / steps_per_unit:
+        k += 1
+    while k > 0 and first_hidden < (k - 1) / steps_per_unit:
+        k -= 1
+    return min(round(k / steps_per_unit, 2), 1.0)
+
+
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
@@ -92,7 +137,7 @@ def render_d3_circuit_html(
     graph_data: Dict[str, Any],
     theme: Dict[str, Any],
     title: str = "Circuit Graph",
-    default_threshold: float = 0.0,
+    default_threshold: Optional[float] = None,
 ) -> str:
     """
     Build a D3.js HTML page from the circuit graph payload.
@@ -104,15 +149,31 @@ def render_d3_circuit_html(
         graph_data:         Output of ``CircuitGraphVisualizer._build_export_data()``.
         theme:              Output of ``get_d3_theme()`` — design system dict.
         title:              Page and figure title.
-        default_threshold:  Initial edge threshold slider value [0, 1].
+        default_threshold:  Initial edge threshold slider value [0, 1]. ``None``
+                            (the default) picks it automatically: ``0.0`` for a
+                            graph of at most ``INITIAL_VISIBLE_EDGES`` edges,
+                            otherwise the lowest slider step that leaves at
+                            most that many edges drawn, so a very large circuit
+                            opens with only its strongest edges. All edges stay
+                            in the page and the page says how many are hidden.
+                            An explicit value is used as given.
 
     Returns:
         Complete HTML string. Carries a ``data-ck-render-mode="canvas"|"svg"``
         attribute on ``<body>`` recording which LOD path this payload got.
+        There is no size limit: the page draws a graph of any size.
     """
     n_nodes = len(graph_data.get("nodes", []))
     n_edges = len(graph_data.get("edges", []))
     render_mode = "canvas" if (n_nodes > NODE_SVG_LIMIT or n_edges > EDGE_SVG_LIMIT) else "svg"
+
+    # Like the render mode, the opening threshold is decided here so it is
+    # testable without a browser. The page only says edges are hidden when this
+    # automatic choice hid some, not when the caller asked for a threshold.
+    auto_filtered = False
+    if default_threshold is None:
+        default_threshold = _auto_threshold(graph_data.get("edges", []))
+        auto_filtered = default_threshold > 0
 
     graph_json = _json_for_script(graph_data)
     theme_json = _json_for_script(theme)
@@ -128,6 +189,7 @@ def render_d3_circuit_html(
         graph_json=graph_json,
         theme_json=theme_json,
         default_threshold=default_threshold,
+        auto_filtered="true" if auto_filtered else "false",
         render_mode=render_mode,
         node_svg_limit=NODE_SVG_LIMIT,
         edge_svg_limit=EDGE_SVG_LIMIT,
@@ -411,33 +473,6 @@ body {{
   border-color: var(--accent);
 }}
 
-/* ---- Too-large fallback ---- */
-#graph-toolarge {{
-  display: none;
-  flex: 1;
-  align-items: center;
-  justify-content: center;
-  padding: 40px;
-}}
-
-.toolarge-box {{
-  max-width: 480px;
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 13px;
-  line-height: 1.6;
-}}
-
-.toolarge-box h2 {{
-  font-size: 16px;
-  color: var(--text);
-  margin-bottom: 10px;
-}}
-
-.toolarge-box p {{
-  margin-bottom: 8px;
-}}
-
 #graph-canvas {{
   width: 100%;
   height: 100%;
@@ -446,6 +481,23 @@ body {{
 }}
 
 #graph-canvas:active {{ cursor: grabbing; }}
+
+/* Says that the opening threshold hid edges (see AUTO_FILTERED below). */
+#threshold-hint {{
+  display: none;
+  position: absolute;
+  top: 12px;
+  left: 20px;
+  max-width: 420px;
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-muted);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}}
 </style>
 </head>
 <body data-ck-render-mode="{render_mode}">
@@ -491,6 +543,9 @@ body {{
        NODE_SVG_LIMIT / EDGE_SVG_LIMIT (see data-ck-render-mode on <body>). -->
   <canvas id="graph-canvas"></canvas>
 
+  <!-- Set from script (textContent) when the opening threshold hid edges. -->
+  <div id="threshold-hint"></div>
+
   <!-- Tooltip (absolutely positioned) -->
   <div id="tooltip"></div>
 
@@ -509,16 +564,6 @@ body {{
       Edges join circuit nodes of adjacent layers, weighted by node importance.
       They are not measured connections.
     </div>
-  </div>
-</div>
-
-<!-- Too-large fallback (hidden unless the size guard trips) -->
-<div id="graph-toolarge">
-  <div class="toolarge-box">
-    <h2>This circuit is too large to render interactively</h2>
-    <p id="toolarge-detail"></p>
-    <p>Try raising the edge threshold, increasing sparsity to prune more
-       nodes, or exporting a static image instead.</p>
   </div>
 </div>
 
@@ -594,8 +639,20 @@ function updateStats(visibleEdges) {{
     : `${{visibleEdges}} / ${{GRAPH.edges.length}} edges`;
   document.getElementById("stats-pill").textContent =
     `${{m.n_circuit_nodes}} circuit · ${{m.n_pruned_nodes}} pruned · ${{edgeText}}`;
+
+  // Only when the automatic opening threshold hid edges; it follows the slider.
+  const hint = document.getElementById("threshold-hint");
+  const hidden = AUTO_FILTERED && visibleEdges < GRAPH.edges.length;
+  hint.style.display = hidden ? "block" : "none";
+  hint.textContent = hidden
+    ? `Showing the strongest ${{visibleEdges}} of ${{GRAPH.edges.length}} edges. ` +
+      "Move the threshold to 0 to show all."
+    : "";
 }}
-updateStats(GRAPH.edges.length);
+// The same threshold the slider and the first draw start from.
+const INITIAL_THRESHOLD = {default_threshold};
+const AUTO_FILTERED = {auto_filtered};
+updateStats(GRAPH.edges.filter(e => e.normalized_weight >= INITIAL_THRESHOLD).length);
 
 // ============================================================
 // D3 setup
@@ -610,17 +667,16 @@ const labelsG = d3.select("#labels-g");
 const layerLabelsG = d3.select("#layer-labels-g");
 
 // ============================================================
-// Size guard — bail out before attempting ANY layout, even canvas
+// Render mode (there is no size limit: any graph is drawn)
 // ============================================================
 // RENDER_MODE is decided server-side (see graph_viz.d3_template.
 // render_d3_circuit_html) from the actual node/edge counts, against
 // NODE_SVG_LIMIT / EDGE_SVG_LIMIT ({node_svg_limit} / {edge_svg_limit}).
 // It picks SVG+ELK (rich interactions, small graphs) vs. canvas (cheap
-// per-element cost, large graphs). MAX_RENDERABLE_* below is a much higher
-// absolute ceiling past which even canvas isn't worth attempting.
+// per-element cost, large graphs). A very large graph opens with the
+// threshold raised (INITIAL_THRESHOLD) so only its strongest edges are drawn;
+// all edges stay in GRAPH.edges.
 const RENDER_MODE = "{render_mode}";
-const MAX_RENDERABLE_NODES = 5000;
-const MAX_RENDERABLE_EDGES = 50000;
 
 function markReady() {{
   // Signal that the page has reached a stable render state, so headless
@@ -629,19 +685,7 @@ function markReady() {{
   document.body.setAttribute("data-ck-ready", "1");
 }}
 
-function showTooLarge() {{
-  document.getElementById("graph-container").style.display = "none";
-  document.getElementById("legend").style.display = "none";
-  document.getElementById("toolarge-detail").textContent =
-    `This circuit has ${{GRAPH.nodes.length}} nodes and ${{GRAPH.edges.length}} edges ` +
-    `(limits: ${{MAX_RENDERABLE_NODES}} nodes / ${{MAX_RENDERABLE_EDGES}} edges).`;
-  document.getElementById("graph-toolarge").style.display = "flex";
-  markReady();
-}}
-
-if (GRAPH.nodes.length > MAX_RENDERABLE_NODES || GRAPH.edges.length > MAX_RENDERABLE_EDGES) {{
-  showTooLarge();
-}} else if (RENDER_MODE === "canvas") {{
+if (RENDER_MODE === "canvas") {{
   document.getElementById("graph-svg").style.display = "none";
   document.getElementById("graph-canvas").style.display = "block";
   try {{
@@ -723,7 +767,7 @@ function initCanvasGraph() {{
 
   let transform = null;
   let showBackground = true;
-  let threshold = {default_threshold};
+  let threshold = INITIAL_THRESHOLD;
   let hoveredNode = null;
 
   function draw() {{
@@ -1174,7 +1218,7 @@ labelsG.selectAll(".node-label")
   .text(d => d.id);
 
 // ---- Draw edges ----
-let currentThreshold = {default_threshold};
+let currentThreshold = INITIAL_THRESHOLD;
 
 function redrawEdges(threshold) {{
   currentThreshold = threshold;

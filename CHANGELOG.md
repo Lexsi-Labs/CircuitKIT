@@ -95,6 +95,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and the HTML legend says that edges join circuit nodes of adjacent layers, weighted by node importance, and are not
   measured connections. Docstrings no longer imply that edges are attributions. Real edge attributions are not part
   of this change.
+- **The circuit graph HTML no longer refuses large circuits** (CK-25). A circuit above 5,000 nodes or 50,000 edges
+  showed "too large to render interactively" and drew nothing; that limit is removed (a browser benchmark opened 334,000
+  edges in under 5 seconds). What does slow down is zoom and the slider, in proportion to the edges drawn, so a circuit
+  with more than 20,000 edges now opens with the edge threshold raised to the lowest 0.01 step that draws at most 20,000
+  of them, and the page says "Showing the strongest N of M edges. Move the threshold to 0 to show all." Every edge stays
+  in the page. `render_d3_circuit_html` and `CircuitGraphVisualizer.to_html` take `default_threshold=None` for this
+  automatic choice; a value you pass is used as given.
 - The exported HTML pins its scripts: elkjs to `0.12.0`, loaded as the package's own `lib/elk.bundled.js` (it was
   unversioned, so a new release changed every page already written, and the package ships no `.min.js`) and both elkjs and D3 carry `integrity`/`crossorigin`. The docstrings no longer claim "no external
   dependencies": the page loads D3 (cdnjs) and elkjs (jsDelivr).
