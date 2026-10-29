@@ -1,0 +1,128 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: hemgo-lexsi <hem.gosalia@lexsi.ai>
+Date: Thu, 29 Oct 2026 13:36:47 +0530
+Subject: [PATCH 7/7] local checkpoints: config and model class from
+ config.json, not the path
+
+convert_hf_model_config chose the architecture, and for 29 branches the
+whole config, from substrings of the model name. A local checkpoint's
+directory name is arbitrary: a fine-tuned "meta-llama-Llama-3.2-1B_sft"
+folder loaded with base Llama-3.2-1B's hard-coded config and never read
+its own config.json, and other Llama-named folders crashed on
+hf_config=None. For a local directory with a config.json, the chain now
+sees an empty name, so the architecture comes from config.json and only
+architecture-keyed branches match (Llama: the generic LlamaForCausalLM
+branch). get_pretrained_state_dict picks a local checkpoint's model class
+from its architecture instead of "bert" / "t5" / "hubert" / "wav2vec2" in
+the path. Hub names are unchanged.
+---
+ transformer_lens/loading_from_pretrained.py | 34 ++++++++++++++++-----
+ 1 file changed, 27 insertions(+), 7 deletions(-)
+
+diff --git a/transformer_lens/loading_from_pretrained.py b/transformer_lens/loading_from_pretrained.py
+index 1f80721..bd33dd8 100644
+--- a/transformer_lens/loading_from_pretrained.py
++++ b/transformer_lens/loading_from_pretrained.py
+@@ -151,6 +151,11 @@ def get_official_model_name(model_name: str) -> str:
+     return official_model_name
+ 
+ 
++# Patch 0007: local checkpoints take their config and model class from
++# config.json, never from their path name. Read by circuitkit.load_model.
++LOCAL_CHECKPOINTS_FROM_CONFIG = True
++
++
+ def convert_hf_model_config(model_name: str, **kwargs: Any) -> dict[str, Any]:
+     """
+     Returns the model config for a HuggingFace model, converted to a dictionary
+@@ -159,12 +164,21 @@ def convert_hf_model_config(model_name: str, **kwargs: Any) -> dict[str, Any]:
+     Takes the official_model_name as an input.
+     """
+     # In case the user passed in an alias
+-    if (Path(model_name) / "config.json").exists():
++    is_local = (Path(model_name) / "config.json").exists()
++    if is_local:
+         logging.info("Loading model config from local directory")
+         official_model_name = model_name
+     else:
+         official_model_name = get_official_model_name(model_name)
+ 
++    # A local checkpoint is described by its config.json alone. Its directory
++    # name says nothing reliable (a fine-tuned "meta-llama-Llama-3.2-1B_sft"
++    # folder is not base Llama-3.2-1B), so no branch below may match on it:
++    # they see an empty name until the chain is done.
++    checkpoint_name = official_model_name
++    if is_local:
++        official_model_name = ""
++
+     # Load HuggingFace model config. Stays None on the name-based branches
+     # below, which infer the architecture from the model name and never fetch.
+     hf_config: Any = None
+@@ -194,7 +208,7 @@ def convert_hf_model_config(model_name: str, **kwargs: Any) -> dict[str, Any]:
+     else:
+         huggingface_token = os.environ.get("HF_TOKEN", "")
+         hf_config = AutoConfig.from_pretrained(
+-            official_model_name,
++            checkpoint_name,
+             token=huggingface_token if len(huggingface_token) > 0 else None,
+             **kwargs,
+         )
+@@ -1841,6 +1855,7 @@ def convert_hf_model_config(model_name: str, **kwargs: Any) -> dict[str, Any]:
+         }
+     else:
+         raise NotImplementedError(f"{architecture} is not currently supported.")
++    official_model_name = checkpoint_name
+     # All of these models use LayerNorm
+     cfg_dict["original_architecture"] = architecture
+     # Carried on the cfg so the loader can act on the quantization without a
+@@ -2213,11 +2228,16 @@ def get_pretrained_state_dict(
+     if "torch_dtype" in kwargs:
+         dtype = kwargs["torch_dtype"]
+         del kwargs["torch_dtype"]
+-    if Path(official_model_name).exists():
++    is_local = Path(official_model_name).exists()
++    if is_local:
+         official_model_name = str(Path(official_model_name).resolve())
+         logging.info(f"Loading model from local path {official_model_name}")
+     else:
+         official_model_name = get_official_model_name(official_model_name)
++    # The model classes below are chosen by name for Hub models; a local
++    # checkpoint's path can contain "bert" or "t5" by chance, so use its
++    # architecture (e.g. "T5ForConditionalGeneration") instead.
++    class_key = (cfg.original_architecture or "").lower() if is_local else official_model_name
+     if official_model_name.startswith(NEED_REMOTE_CODE_MODELS) and not kwargs.get(
+         "trust_remote_code", False
+     ):
+@@ -2275,28 +2295,28 @@ def get_pretrained_state_dict(
+             huggingface_token = os.environ.get("HF_TOKEN", "")
+             if official_model_name in NON_HF_HOSTED_MODEL_NAMES:
+                 raise NotImplementedError("Model not hosted on HuggingFace, must pass in hf_model")
+-            elif "hubert" in official_model_name:
++            elif "hubert" in class_key:
+                 hf_model = HubertModel.from_pretrained(
+                     official_model_name,
+                     dtype=dtype,
+                     token=huggingface_token if len(huggingface_token) > 0 else None,
+                     **kwargs,
+                 )
+-            elif "wav2vec2" in official_model_name:
++            elif "wav2vec2" in class_key:
+                 hf_model = Wav2Vec2Model.from_pretrained(
+                     official_model_name,
+                     dtype=dtype,
+                     token=huggingface_token if len(huggingface_token) > 0 else None,
+                     **kwargs,
+                 )
+-            elif "bert" in official_model_name:
++            elif "bert" in class_key:
+                 hf_model = BertForPreTraining.from_pretrained(
+                     official_model_name,
+                     dtype=dtype,
+                     token=huggingface_token if len(huggingface_token) > 0 else None,
+                     **kwargs,
+                 )
+-            elif "t5" in official_model_name:
++            elif "t5" in class_key:
+                 hf_model = T5ForConditionalGeneration.from_pretrained(
+                     official_model_name,
+                     dtype=dtype,

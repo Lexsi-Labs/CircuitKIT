@@ -26,6 +26,17 @@ for it.
 | `0004-gemma4-hf-parity` | proportional RoPE on global layers, final logit softcap 30, `layer_scalar` | **no, new** |
 | `0005-memory-no-weight-copies` | opt-in via `CIRCUITKIT_TL_MEMORY_PATCH=1`: `einsum` for `W_O`; no `.T.contiguous()` copies in `GatedMLP`/`Unembed` | yes |
 | `0006-cohere` | `CohereForCausalLM` / `Cohere2ForCausalLM` weight conversion and model names; config conversion stays in `_tl_compat/cohere.py` | **no, new** |
+| `0007-local-checkpoint-config` | a local checkpoint's config and model class come from its `config.json`, never from substrings of its path; marker `LOCAL_CHECKPOINTS_FROM_CONFIG` | **no, new** |
+
+`0007` is needed because TransformerLens 3.8 chose the architecture, and for
+29 config branches the whole config, from substrings of the model name: a
+local fine-tune in `meta-llama-Llama-3.2-1B_sft/` loaded with base Llama-3.2-1B's
+hard-coded config and never read its own `config.json`. For a local directory the
+branch chain now sees an empty name, so only architecture-keyed branches match
+(Llama: the generic `LlamaForCausalLM` branch); Hub names are unchanged. Gemma
+1-4 configs exist only for Hub names, so `load_model` refuses local Gemma
+checkpoints. TransformerLens 4 loads every model by its `config.json`, so the
+patch retires with the series.
 
 `0001`-`0003` reproduce the vendored fork byte for byte. `0005` is not applied by
 default because it changes bf16 accumulation order and logits; set
