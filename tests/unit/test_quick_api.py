@@ -234,14 +234,11 @@ def test_circuit_from_artifact_missing_file_raises(tmp_path):
         Circuit.from_artifact(tmp_path / "does_not_exist.pt")
 
 
-def test_circuit_plot_degrades_without_scores(caplog):
-    import logging
-
+def test_circuit_plot_degrades_without_scores():
     c = Circuit(["A0.1"])  # no scores
-    with caplog.at_level(logging.INFO):
+    with pytest.warns(RuntimeWarning, match="no node scores"):
         result = c.plot()
     assert result is None
-    assert "no node scores" in caplog.text.lower()
 
 
 def test_circuit_backfills_metadata_from_circuit_scores():

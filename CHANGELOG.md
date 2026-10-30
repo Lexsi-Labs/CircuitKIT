@@ -192,7 +192,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `0.12.0` and added SRI (`integrity`/`crossorigin`) for both scripts.
 - `Circuit.plot()` without the visualisation dependencies (or any other failure to build the graph) only logged at
   `INFO`, so a caller who asked for a file got nothing and no notice (CK-25). It now emits a `RuntimeWarning`
-  (not a `UserWarning`, which importing `circuitkit.api` ignores) and still returns `None`.
+  (not a `UserWarning`, which importing `circuitkit.api` ignores) and still returns `None`. A circuit with no node
+  scores (a discovery run without an output path) did the same, and now emits the same `RuntimeWarning`, which says to
+  re-run discovery with an output path.
 - `circuitkit run <yaml>` with a failing `visualize:` step printed a warning and then "Pipeline complete" as if nothing
   had gone wrong (CK-25). The closing line now names the failed step with its error type and message. In graph mode a
   step that wrote no file (`Circuit.plot()` returned `None`) counts as failed. The exit code is unchanged.

@@ -390,14 +390,21 @@ class TestDunders:
 
 
 class TestPlotGracefulDegradation:
-    def test_plot_with_no_scores_returns_none(self, caplog):
-        import logging
-
+    def test_plot_with_no_scores_warns_and_returns_none(self, tmp_path):
+        """A circuit without node scores is a RuntimeWarning the caller sees, even
+        with the UserWarning filter importing circuitkit.api installs (CK-25), and
+        plot() still returns None without writing a file."""
         c = Circuit(_NODES)  # no scores
-        with caplog.at_level(logging.INFO):
-            result = c.plot()
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            warnings.filterwarnings("ignore", category=UserWarning)  # as circuitkit.api does
+            result = c.plot(str(tmp_path / "circuit.html"))
         assert result is None
-        assert "no node scores" in caplog.text.lower()
+        assert not (tmp_path / "circuit.html").exists()
+        no_scores = [w for w in caught if "no node scores" in str(w.message).lower()]
+        assert len(no_scores) == 1
+        assert no_scores[0].category is RuntimeWarning
+        assert "output_path" in str(no_scores[0].message)
 
     def test_plot_with_scores_to_path_calls_visualizer(self, tmp_path):
         """When scores are present and an output path is given, plot() should

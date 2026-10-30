@@ -359,9 +359,12 @@ class Circuit:
             >>> circuit.plot("ioi_circuit.json", max_nodes=300, max_edges=3000)
         """
         if not self.scores:
-            logger.info(
+            # A warning, not a log line, for the same reason as the one below.
+            warnings.warn(
                 "Circuit has no node scores to plot. "
-                "Re-run discovery with an output_path to capture scores."
+                "Re-run discovery with an output_path to capture scores.",
+                RuntimeWarning,
+                stacklevel=2,
             )
             return None
         try:
