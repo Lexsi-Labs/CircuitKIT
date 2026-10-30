@@ -1800,6 +1800,7 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
                         # non-empty scores and the circuit graph can be drawn.
                         "node_scores": ib_node_scores,
                         "neurons_scores": node_scores,
+                        "mlp_hook": ib_config["mlp_hook"],
                         "total_neurons": len(ib_neuron_entries),
                     },
                     config.get("output_path"),

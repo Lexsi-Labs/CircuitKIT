@@ -148,6 +148,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with `AttributeError`. TransformerLens patch `0008` reads the unembedding from `lm_head` when
   `embed_out` is absent. It backports the `HookedTransformer` half of the fix released in
   TransformerLens 3.9.0 and retires with the TransformerLens 4 migration (CK-22).
+- **`load_scores` reads IBCircuit neuron-level score files** (CK-30). `discover_circuit` saves
+  IBCircuit neuron scores as a dict of tensors under `neurons_scores`, but the loader only treated
+  `neuron_scores` (singular) as IBCircuit and sent the plural key to the EAP path, so every
+  IBCircuit neuron run failed to load: "model_name is required" without a model name, and
+  `'dict' object has no attribute 'float'` with one. The loader now chooses the format from the
+  value (a dict is IBCircuit, a 2-D tensor is EAP), and still reads the old singular key. IBCircuit
+  scores each MLP layer in `d_model` space by default (`mlp_hook="mlp_out"`), and without a model
+  name the loader took those tensors for `d_mlp`-space scores, so selective finetuning would have
+  masked the wrong `down_proj` columns without any error. The file now records `mlp_hook`, and the
+  loader uses neuron-level MLP scores only for `post_act`; for `mlp_out`, or an older file that
+  does not say, each MLP layer gets one node-level score, with a warning.
 - Hyperparameter checks: `eval.pillars: []` is now an error (it would run nothing), and an
   ACDC grid point too large to compute (`tao_exps: [400]`) is reported as tau >= 1 instead of
   being skipped.
