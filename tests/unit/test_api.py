@@ -1239,7 +1239,10 @@ class TestIbcircuitNeuronNodeScores:
         sidecar = torch.load(tmp_path / "circuit_scores.pt", weights_only=True)
         assert sidecar["node_scores"] == pytest.approx({"A0.0": 0.9, "A0.1": 0.3, "MLP 0": 0.7})
         assert set(sidecar["neurons_scores"]) == set(neuron_scores)
-        assert Circuit.from_artifact(out).scores == pytest.approx(sidecar["node_scores"])
+        loaded = Circuit.from_artifact(out)
+        assert loaded.scores == pytest.approx(sidecar["node_scores"])
+        # There is no scores JSON, so the graph's title comes from the side-car.
+        assert (loaded.algorithm, loaded.task, loaded.model_name) == ("ibcircuit", "ioi", "gpt2")
 
 
 class TestEapNeuronPrunedComponents:
@@ -1280,7 +1283,10 @@ class TestEapNeuronPrunedComponents:
         assert result["_meta"]["neurons_per_mlp"] == 8
         assert len(result["heads"][(0, 0)]) == 8 and len(result["mlp"][0]) == 6
 
-        out_graph = Circuit.from_artifact(out).plot(str(tmp_path / "graph.json"))
+        loaded = Circuit.from_artifact(out)
+        # There is no scores JSON, so the graph's title comes from the side-car.
+        assert (loaded.algorithm, loaded.task, loaded.model_name) == ("eap", "ioi", "gpt2")
+        out_graph = loaded.plot(str(tmp_path / "graph.json"))
         assert {n["id"] for n in out_graph["nodes"] if not n["in_circuit"]} == {"a0.h0"}
 
 

@@ -1662,6 +1662,10 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
                     _save_artifact(
                         {
                             "algo": algo,
+                            # Task and model, so Circuit.from_artifact can label a
+                            # neuron-level graph (there is no scores JSON here).
+                            "task": discovery_cfg["task"],
+                            "model": model_cfg["name"],
                             "level": "neuron",
                             "node_scores": node_scores,
                             "neurons_scores": graph.neurons_scores.cpu(),
@@ -1788,6 +1792,8 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
                 _save_artifact(
                     {
                         "algo": algo,
+                        "task": discovery_cfg["task"],
+                        "model": model_cfg["name"],
                         "level": "neuron",
                         # Largest absolute neuron score per component, as the EAP
                         # neuron branch writes, so Circuit.from_artifact gets

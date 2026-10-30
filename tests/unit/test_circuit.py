@@ -215,6 +215,32 @@ class TestFromArtifactPTSidecar:
         c = Circuit.from_artifact(pt)
         assert c.scores["A0.1"] == pytest.approx(0.9)
 
+    def test_pt_sidecar_metadata_gives_the_graph_its_title(self, tmp_path):
+        """A neuron-level run writes no scores JSON, only task, model and algo in
+        the .pt side-car; a side-car without them (written before CK-26) is
+        labelled unknown, never as eap-ig. Non-string values are ignored."""
+        new_pt = tmp_path / "new.pt"
+        _write_artifact(new_pt)
+        torch.save(
+            {"node_scores": _SCORES, "algo": "ibcircuit", "task": "ioi", "model": "gpt2"},
+            tmp_path / "new_scores.pt",
+        )
+        c = Circuit.from_artifact(new_pt)
+        assert (c.algorithm, c.task, c.model_name) == ("ibcircuit", "ioi", "gpt2")
+        assert "ioi / ibcircuit" in c.plot(str(tmp_path / "new.html"))
+
+        old_pt = tmp_path / "old.pt"
+        _write_artifact(old_pt)
+        torch.save(
+            {"node_scores": _SCORES, "algo": 3, "task": None, "level": "neuron"},
+            tmp_path / "old_scores.pt",
+        )
+        c = Circuit.from_artifact(old_pt)
+        assert (c.algorithm, c.task, c.model_name) == (None, None, None)
+        html = c.plot(str(tmp_path / "old.html"))
+        assert "unknown / unknown" in html
+        assert "eap-ig" not in html
+
     def test_json_preferred_over_pt_when_both_exist(self, tmp_path):
         """JSON side-car is checked before .pt side-car."""
         pt = tmp_path / "circuit.pt"

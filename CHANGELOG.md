@@ -108,6 +108,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **IBCircuit neuron-level runs get a circuit graph** (CK-26). The neuron branch wrote only `neurons_scores`, so
+  `Circuit.from_artifact` found no `node_scores`, `Circuit.scores` was empty and `Circuit.plot` wrote nothing. It now
+  also writes `node_scores` (the largest absolute neuron score per component, keyed `A{layer}.{head}` / `MLP {layer}`)
+  into the scores side-car, as the EAP and EAP-IG neuron branches already do. `neurons_scores` is unchanged.
+  The EAP, EAP-IG and IBCircuit neuron branches also write the task and model name into that side-car, and
+  `Circuit.from_artifact` reads the algorithm, task and model from it, because a neuron-level run writes no
+  `_scores.json`. Without this the graph of a neuron-level run was titled "Circuit (unknown / eap-ig)", whatever
+  algorithm ran. A side-car written before this change has no task or model and shows "unknown" for them; a circuit
+  with no algorithm set now shows "unknown" instead of `eap-ig`.
+- **Neuron-level circuit graphs mark only fully pruned components as pruned** (CK-26, EAP, EAP-IG and IBCircuit).
+  `Circuit.plot` took the pruning dict's keys (layer numbers and `(layer, head)` tuples) for component names, so no
+  component matched and every one showed as in the circuit. A component is now pruned when all of its neurons were.
+  Discovery records the neuron counts in the pruning dict's `_meta` (`neurons_per_mlp`, `neurons_per_head`). A
+  pruning dict saved before this change has no counts, so no component shows as pruned, as before; it still loads.
 - **Local checkpoints named after their base model load** (CK-27). `load_model` refused any
   local directory whose path contained "llama" or "gemma", because TransformerLens 3.8 picks
   the architecture, and for 29 config branches the whole config, from the name and then

@@ -32,6 +32,9 @@ import warnings
 
 logger = logging.getLogger(__name__)
 
+# Keys of a ``_scores.pt`` side-car that name the run, and the Circuit attribute each fills.
+_PT_SIDECAR_METADATA = {"algo": "algorithm", "task": "task", "model": "model_name"}
+
 if TYPE_CHECKING:  # pragma: no cover - typing only, avoids heavy imports
     from .artifacts.scores import CircuitScores
 
@@ -224,6 +227,7 @@ class Circuit:
 
         circuit_scores = None
         scores: Dict[str, float] = {}
+        meta: Dict[str, Optional[str]] = {}
         # Resolve the scores side-car: explicit path, then JSON, then .pt.
         candidates: List[Path] = []
         if scores_path is not None:
@@ -260,6 +264,12 @@ class Circuit:
                     scores = {
                         k: float(v.item() if hasattr(v, "item") else v) for k, v in raw.items()
                     }
+                    # The neuron-level branches write no scores JSON, so the run's
+                    # algorithm, task and model come from here when present (an
+                    # older side-car has none and the title says "unknown").
+                    for key, attr in _PT_SIDECAR_METADATA.items():
+                        value = blob.get(key)
+                        meta[attr] = value if isinstance(value, str) else None
             break
 
         return cls(
@@ -269,6 +279,7 @@ class Circuit:
             circuit_scores=circuit_scores,
             level=level,
             artifact_path=str(artifact_path),
+            **meta,
         )
 
     # ------------------------------------------------------------------ #
@@ -373,6 +384,8 @@ class Circuit:
 
             cs = self.circuit_scores
             if cs is None:
+                # CircuitScores accepts only a known algorithm, so build it with
+                # one and then label it as unknown: the page shows this name.
                 cs = CircuitScores(
                     task=self.task or "unknown",
                     model=self.model_name or "unknown",
@@ -381,6 +394,8 @@ class Circuit:
                     node_scores=self.scores,
                     timestamp=CircuitScores.create_timestamp(),
                 )
+                if not self.algorithm:
+                    cs.algorithm = "unknown"
 
             # circuit.nodes is the *pruned* (removed) node list produced by
             # discover_circuit(). The "in-circuit" nodes are scores.keys() minus
@@ -408,7 +423,7 @@ class Circuit:
                         max_edges=max_edges,
                         edge_threshold=edge_threshold,
                     )
-                title = f"Circuit ({self.task or 'unknown'} / {self.algorithm or 'eap-ig'})"
+                title = f"Circuit ({self.task or 'unknown'} / {self.algorithm or 'unknown'})"
                 return viz.to_html(str(out), title=title)
             return viz.interactive_widget()
         except Exception as exc:
