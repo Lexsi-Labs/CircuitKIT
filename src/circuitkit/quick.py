@@ -133,13 +133,18 @@ TL3_HUB_ONLY_GEMMA_ARCHITECTURES = {
 }
 
 
-def _reject_vision_language_checkpoint(name: str) -> None:
-    """Raise for a ``VISION_LANGUAGE_MODEL_TYPES`` checkpoint (reads its config, not TL)."""
-    from transformers import PretrainedConfig
+def _reject_vision_language_checkpoint(name: str, config: Optional[dict] = None) -> None:
+    """Raise for a ``VISION_LANGUAGE_MODEL_TYPES`` checkpoint (reads its config, not TL).
 
-    # Raw dict, not AutoConfig: a model_type this transformers does not know
-    # should still produce the message below.
-    model_type = PretrainedConfig.get_config_dict(name)[0].get("model_type")
+    ``config`` is the checkpoint's raw ``config.json`` when the caller has read it.
+    """
+    if config is None:
+        from transformers import PretrainedConfig
+
+        # Raw dict, not AutoConfig: a model_type this transformers does not know
+        # should still produce the message below.
+        config = PretrainedConfig.get_config_dict(name)[0]
+    model_type = config.get("model_type")
     if model_type in VISION_LANGUAGE_MODEL_TYPES:
         raise ValueError(
             f"{name!r} is {VISION_LANGUAGE_MODEL_TYPES[model_type]} ({model_type}), a "
@@ -149,27 +154,27 @@ def _reject_vision_language_checkpoint(name: str) -> None:
         )
 
 
-def _reject_unloadable_local_checkpoint(local_path: "Path", loading: Any) -> None:
+def _reject_unloadable_local_checkpoint(
+    local_path: "Path", loading: Any, config: Optional[dict]
+) -> None:
     """Raise for a local checkpoint TransformerLens 3.8 would load wrongly or not at all.
 
     With patch ``0007`` (``loading.LOCAL_CHECKPOINTS_FROM_CONFIG``) the config
-    comes from ``config.json`` and the path name does not matter, but Gemma
-    configs exist only for Hub names. Without it (a TransformerLens copy patched
-    on disk by the old script, or a version the series does not apply to), a
-    path containing "llama" or "gemma" is loaded by its name and never reads
-    ``config.json``.
+    comes from ``config.json`` (``config``, ``None`` when the folder has none)
+    and the path name does not matter, but Gemma configs exist only for Hub
+    names. Without it (a TransformerLens copy patched on disk by the old script,
+    or a version the series does not apply to), a path containing "llama" or
+    "gemma" is loaded by its name and never reads ``config.json``.
     """
     if getattr(loading, "LOCAL_CHECKPOINTS_FROM_CONFIG", False):
-        from transformers import PretrainedConfig
-
-        architectures = PretrainedConfig.get_config_dict(str(local_path))[0].get("architectures")
-        architecture = (architectures or [None])[0]
+        architecture = ((config or {}).get("architectures") or [None])[0]
         if architecture in TL3_HUB_ONLY_GEMMA_ARCHITECTURES:
             raise ValueError(
                 f"Local checkpoint {str(local_path)!r} is a Gemma model ({architecture}). "
-                "TransformerLens 3.8 builds Gemma configs only for Hub names (for example "
-                "'google/gemma-2-2b'), so a local Gemma checkpoint cannot be loaded. Load "
-                "the model by its Hub name instead."
+                "TransformerLens 3.8 builds Gemma configs only for Hub names, so local "
+                "Gemma checkpoints, fine-tunes included, cannot be loaded until CircuitKIT "
+                "moves to TransformerLens 4. Loading the Hub name instead (for example "
+                "'google/gemma-2-2b') gives the base model's weights, not this checkpoint's."
             )
         return
     path_lower = str(local_path).lower()
@@ -193,16 +198,22 @@ def _register_checkpoint(name: str) -> None:
     any name or local path by its ``config.json``. Moving to it keeps only the
     :func:`_reject_vision_language_checkpoint` call.
     """
-    from transformer_lens import loading_from_pretrained as loading
     from pathlib import Path
 
+    from transformer_lens import loading_from_pretrained as loading
+    from transformers import PretrainedConfig
+
     local_path = Path(name).expanduser()
+    config = None
+    if (local_path / "config.json").is_file():
+        # Read once for both checks below.
+        config = PretrainedConfig.get_config_dict(str(local_path))[0]
     if local_path.is_dir():
-        _reject_unloadable_local_checkpoint(local_path, loading)
+        _reject_unloadable_local_checkpoint(local_path, loading, config)
 
     if name.lower() in loading.make_model_alias_map():
         return
-    _reject_vision_language_checkpoint(name)
+    _reject_vision_language_checkpoint(name, config)
     loading.OFFICIAL_MODEL_NAMES.append(name)
 
 

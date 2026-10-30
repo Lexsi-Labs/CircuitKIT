@@ -42,10 +42,15 @@ repository — no `HF_TOKEN` needed.
     [Tests](#tests) below).
 
 !!! note "Local checkpoint folders"
-    A local checkpoint folder loads from its `config.json` whatever it is called
-    (a fine-tune in `meta-llama-Llama-3.2-1B_sft/` is not mistaken for base
-    Llama-3.2-1B). Local Gemma checkpoints are refused: TransformerLens 3.8 has
-    Gemma configs for Hub names only, so load them by Hub ID. Local SmolLM3
+    While CircuitKIT's in-memory TransformerLens patch series is active
+    (`transformer-lens==3.8.0`, with `import circuitkit` before the first
+    `import transformer_lens`), a local checkpoint folder loads from its
+    `config.json` whatever it is called (a fine-tune in
+    `meta-llama-Llama-3.2-1B_sft/` is not mistaken for base Llama-3.2-1B).
+    Without the series, a folder whose path contains "llama" or "gemma" is
+    refused. Local Gemma checkpoints, fine-tunes included, are refused until
+    CircuitKIT moves to TransformerLens 4: TransformerLens 3.8 has Gemma configs
+    for Hub names only, and loading the Hub ID gives the base weights. Local SmolLM3
     checkpoint folders are not supported by the current port; load
     `HuggingFaceTB/SmolLM3-3B` by Hub ID.
 

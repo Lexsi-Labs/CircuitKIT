@@ -1,4 +1,5 @@
-"""TransformerLens patch series (``circuitkit/_tl_patches``): Gemma-4, Sarvam-MoE, Cohere, Ministral-3.
+"""TransformerLens patch series (``circuitkit/_tl_patches``): Gemma-4, Sarvam-MoE, Cohere,
+local checkpoints, Ministral-3.
 
 ``import circuitkit`` applies the series to transformer-lens 3.8.0 in memory (see
 ``src/circuitkit/_tl_patches/README.md``). Every model is a tiny random-weight model
@@ -448,6 +449,36 @@ def test_cohere_registry_names():
     ):
         assert name in tl_loading.OFFICIAL_MODEL_NAMES
         assert tl_loading.get_official_model_name(name.split("/")[1]) == name
+
+
+# ---------------------------------------------------------- Local checkpoints (0007)
+
+
+def test_local_checkpoint_config_comes_from_its_config_json(tmp_path, monkeypatch):
+    """The same name is a Hub model or, once a folder holds it, that folder's own config."""
+    from transformers import LlamaConfig
+
+    name = "meta-llama/Llama-3.2-1B"
+    assert tl_loading.convert_hf_model_config(name)["n_ctx"] == 2048  # TL's hard-coded config
+
+    LlamaConfig(
+        hidden_size=64,
+        intermediate_size=96,
+        num_hidden_layers=2,
+        num_attention_heads=4,
+        num_key_value_heads=2,
+        max_position_embeddings=96,
+        vocab_size=77,
+        rope_theta=500000.0,
+        architectures=["LlamaForCausalLM"],  # saving a model sets it; a bare config does not
+    ).save_pretrained(tmp_path / name)
+    monkeypatch.chdir(tmp_path)
+    cfg = tl_loading.convert_hf_model_config(name)
+
+    assert cfg["original_architecture"] == "LlamaForCausalLM"
+    assert (cfg["d_model"], cfg["n_layers"], cfg["n_ctx"], cfg["d_vocab"]) == (64, 2, 96, 77)
+    assert cfg["rotary_base"] == 500000.0
+    assert tl_loading.LOCAL_CHECKPOINTS_FROM_CONFIG  # read by circuitkit.load_model
 
 
 # ------------------------------------------------------------------------ Ministral-3

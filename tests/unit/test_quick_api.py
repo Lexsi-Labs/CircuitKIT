@@ -680,7 +680,9 @@ def test_load_model_local_checkpoint_named_after_its_base_model(tmp_path):
     """The platform names a fine-tuned checkpoint after its base model; its config.json wins.
 
     "Llama-3.2-1B" in the path once selected TL's hard-coded base config, and "t5"
-    (in "sft5") the T5 model class.
+    (in "sft5") the T5 model class. Rope theta and llama3 rope scaling (tokens past
+    original_max_position_embeddings) differ from the defaults, so both must be read
+    from config.json to match; tied embeddings and an odd vocabulary as on real models.
     """
     torch = pytest.importorskip("torch")
     pytest.importorskip("transformer_lens")
@@ -696,17 +698,26 @@ def test_load_model_local_checkpoint_named_after_its_base_model(tmp_path):
             num_attention_heads=4,
             num_key_value_heads=2,
             max_position_embeddings=64,
-            vocab_size=64,
+            vocab_size=77,
+            rope_theta=500000.0,
+            rope_scaling={
+                "rope_type": "llama3",
+                "factor": 8.0,
+                "low_freq_factor": 1.0,
+                "high_freq_factor": 4.0,
+                "original_max_position_embeddings": 16,
+            },
+            tie_word_embeddings=True,
         )
     )
     hf.eval().save_pretrained(checkpoint)
-    _save_tiny_tokenizer(checkpoint, 64)
+    _save_tiny_tokenizer(checkpoint, 77)
 
     model = quick.load_model(str(checkpoint), dtype="float32", device="cpu")
 
-    assert (model.cfg.d_model, model.cfg.n_layers) == (64, 2)
+    assert (model.cfg.d_model, model.cfg.n_layers, model.cfg.d_vocab) == (64, 2, 77)
     assert model.cfg.tokenizer_name == str(checkpoint)
-    tokens = torch.randint(3, 64, (2, 10))
+    tokens = torch.randint(3, 77, (2, 24))
     with torch.no_grad():
         ref = hf(tokens).logits.log_softmax(-1)
         out = model(tokens).log_softmax(-1)
@@ -735,18 +746,10 @@ def _transformer_lens_3():
         return False
 
 
-@pytest.mark.xfail(
-    _transformer_lens_3(),
-    raises=ValueError,
-    strict=True,
-    reason="TransformerLens 3.8 has Gemma configs for Hub names only; 4.x loads by config.json",
-)
-def test_load_model_local_gemma_checkpoint(tmp_path):
-    torch = pytest.importorskip("torch")
-    pytest.importorskip("transformer_lens")
+def _save_tiny_gemma2(checkpoint):
+    import torch
     from transformers import Gemma2Config, Gemma2ForCausalLM
 
-    checkpoint = tmp_path / "checkpoint"
     torch.manual_seed(0)
     hf = Gemma2ForCausalLM(
         Gemma2Config(
@@ -763,6 +766,30 @@ def test_load_model_local_gemma_checkpoint(tmp_path):
     )
     hf.eval().save_pretrained(checkpoint)
     _save_tiny_tokenizer(checkpoint, 64)
+    return hf
+
+
+@pytest.mark.skipif(not _transformer_lens_3(), reason="TransformerLens 4 loads local Gemma")
+def test_load_model_refuses_local_gemma_checkpoint_on_tl3(tmp_path):
+    pytest.importorskip("torch")
+    pytest.importorskip("transformer_lens")
+    _save_tiny_gemma2(tmp_path / "checkpoint")
+
+    with pytest.raises(ValueError, match="is a Gemma model.*TransformerLens 4"):
+        quick.load_model(str(tmp_path / "checkpoint"), dtype="float32", device="cpu")
+
+
+@pytest.mark.xfail(
+    _transformer_lens_3(),
+    raises=ValueError,
+    strict=True,
+    reason="TransformerLens 3.8 has Gemma configs for Hub names only; 4.x loads by config.json",
+)
+def test_load_model_local_gemma_checkpoint(tmp_path):
+    torch = pytest.importorskip("torch")
+    pytest.importorskip("transformer_lens")
+    checkpoint = tmp_path / "checkpoint"
+    hf = _save_tiny_gemma2(checkpoint)
 
     model = quick.load_model(str(checkpoint), dtype="float32", device="cpu")
 

@@ -99,9 +99,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   never reads `config.json` (a fine-tune in `meta-llama-Llama-3.2-1B_pruned_wanda_v2-sft_v1/`
   would have loaded with base Llama-3.2-1B's hard-coded config). TransformerLens patch `0007`
   makes a local directory's config and model class come from its `config.json`; Hub names
-  are unchanged. Local Llama checkpoints now load under any name. Local Gemma checkpoints
-  are refused with an accurate message (TransformerLens 3.8 has Gemma configs for Hub names
-  only). Without patch `0007` (a TransformerLens patched on disk by the old script, or
+  are unchanged. Local Llama checkpoints now load under any name. Local Gemma checkpoints,
+  fine-tunes included, are refused with a message saying they need TransformerLens 4
+  (TransformerLens 3.8 has Gemma configs for Hub names only, and the Hub name loads the base
+  weights; CK-28). Without patch `0007` (a TransformerLens patched on disk by the old script, or
   another version), the old path check stays.
 - Hyperparameter checks: `eval.pillars: []` is now an error (it would run nothing), and an
   ACDC grid point too large to compute (`tao_exps: [400]`) is reported as tau >= 1 instead of
