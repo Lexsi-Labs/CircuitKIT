@@ -118,7 +118,7 @@ class StreamlitCircuitDashboard:
         Welcome to the CircuitKIT visualization dashboard!
 
         ### Features
-        - **Circuit Visualization**: Visualize circuit graphs with node importance and edge attribution
+        - **Circuit Visualization**: Visualize circuit graphs with node importance (edges join adjacent-layer circuit nodes; they are not measured connections)
         - **Activation Saliency**: Analyze activation patterns across layers
         - **Feature Attribution**: Understand which nodes most contribute to output
         - **Circuit Comparison**: Compare circuits across different conditions
