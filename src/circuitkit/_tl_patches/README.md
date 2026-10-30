@@ -10,9 +10,9 @@
 
 Adds `HookedTransformer` support for Gemma-4 (`google/gemma-4-31B-it`),
 Sarvam-MoE (`sarvamai/sarvam-30b`) and Cohere / Cohere2 (Aya Expanse, Tiny Aya) to
-**transformer-lens 3.8.0**. It replaces a locally maintained TransformerLens
-fork with a small, versioned patch series that is applied in memory and
-checked against upstream source.
+**transformer-lens 3.8.0**, and fixes two loading bugs (local checkpoints, GPT-NeoX / Pythia).
+It replaces a locally maintained TransformerLens fork with a small, versioned patch
+series that is applied in memory and checked against upstream source.
 
 Ministral-3 needs no patch. Upstream 3.8.0 supports `Ministral3ForCausalLM` through
 `TransformerBridge` only; neither upstream nor the fork has a `HookedTransformer` path
@@ -27,6 +27,7 @@ for it.
 | `0005-memory-no-weight-copies` | opt-in via `CIRCUITKIT_TL_MEMORY_PATCH=1`: `einsum` for `W_O`; no `.T.contiguous()` copies in `GatedMLP`/`Unembed` | yes |
 | `0006-cohere` | `CohereForCausalLM` / `Cohere2ForCausalLM` weight conversion and model names; config conversion stays in `_tl_compat/cohere.py` | **no, new** |
 | `0007-local-checkpoint-config` | a local checkpoint's config and model class come from its `config.json`, never from substrings of its path; marker `LOCAL_CHECKPOINTS_FROM_CONFIG` | **no, new** |
+| `0008-neox-lm-head` | `convert_neox_weights` reads the unembedding from `lm_head` when `embed_out` is absent (GPT-NeoX / Pythia on current transformers) | **no, new** |
 
 `0007` is needed because TransformerLens 3.8 chose the architecture, and for
 29 config branches the whole config, from substrings of the model name: a
@@ -57,6 +58,14 @@ in patch `0006`. Both Hub and local-checkpoint paths are checked against Hugging
 logits. TransformerLens 3.8 builds causal masks for the active sequence length, so the
 ports preserve each checkpoint's full `max_position_embeddings` rather than capping
 `n_ctx` at 8192.
+
+`0008` backports the `HookedTransformer` half of an upstream fix released in
+TransformerLens 3.9.0. transformers renamed `GPTNeoXForCausalLM.embed_out` to `lm_head`
+(upstream gives the version as 5.13 in one place and 5.14 in another), and 3.8.0 reads
+only `embed_out`, so without `0008` every GPT-NeoX / Pythia checkpoint, Hub or local,
+fails with `AttributeError` on the transformers versions CircuitKIT requires. The patch
+is `hasattr`-based, so it does not depend on the exact version. TransformerLens 4 loads
+models by their `config.json` and the patch retires with the series.
 
 ## How it is applied
 
@@ -92,4 +101,5 @@ patch series writes to disk.
 3. `git format-patch` the result back into this directory.
 4. Update `TL_VERSION` in `__init__.py` here and the `transformer-lens` pin in
    `pyproject.toml`.
-5. Re-run the tests.
+5. Drop `0008` once the target version is 3.9.0 or later (the fix is upstream there).
+6. Re-run the tests.

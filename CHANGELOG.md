@@ -142,6 +142,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   component matched and every one showed as in the circuit. A component is now pruned when all of its neurons were.
   Discovery records the neuron counts in the pruning dict's `_meta` (`neurons_per_mlp`, `neurons_per_head`). A
   pruning dict saved before this change has no counts, so no component shows as pruned, as before; it still loads.
+- **Pythia / GPT-NeoX models load again** (CK-29). transformers 5 renamed
+  `GPTNeoXForCausalLM.embed_out` to `lm_head`, but TransformerLens 3.8.0's weight conversion
+  still reads `embed_out`, so every GPT-NeoX / Pythia checkpoint, Hub or local, failed to load
+  with `AttributeError`. TransformerLens patch `0008` reads the unembedding from `lm_head` when
+  `embed_out` is absent. It backports the `HookedTransformer` half of the fix released in
+  TransformerLens 3.9.0 and retires with the TransformerLens 4 migration (CK-22).
 - Hyperparameter checks: `eval.pillars: []` is now an error (it would run nothing), and an
   ACDC grid point too large to compute (`tao_exps: [400]`) is reported as tau >= 1 instead of
   being skipped.

@@ -481,6 +481,64 @@ def test_local_checkpoint_config_comes_from_its_config_json(tmp_path, monkeypatc
     assert tl_loading.LOCAL_CHECKPOINTS_FROM_CONFIG  # read by circuitkit.load_model
 
 
+# ---------------------------------------------------------------- GPT-NeoX / Pythia (0008)
+
+
+def _tiny_neox(tie_word_embeddings):
+    """Tiny random GPT-NeoX / Pythia with partial rotary and off-identity LayerNorms."""
+    import transformers
+
+    cfg = transformers.GPTNeoXConfig(
+        vocab_size=128,
+        hidden_size=64,
+        intermediate_size=96,
+        num_hidden_layers=2,
+        num_attention_heads=4,
+        max_position_embeddings=256,
+        rotary_pct=0.25,  # partial rotary, as in Pythia
+        use_parallel_residual=True,
+        tie_word_embeddings=tie_word_embeddings,
+        pad_token_id=0,
+        bos_token_id=1,
+        eos_token_id=2,
+    )
+    torch.manual_seed(0)
+    hf = transformers.GPTNeoXForCausalLM(cfg).float().eval()
+    with torch.no_grad():
+        for name, p in hf.named_parameters():
+            if "layer_norm" in name or "layernorm" in name:  # so a missed ln copy shows
+                p.copy_(1 + 0.3 * torch.randn_like(p))
+    return hf
+
+
+@pytest.mark.parametrize("tie_word_embeddings", [False, True])
+def test_neox_loads_from_local_dir_via_load_model(tie_word_embeddings, tmp_path):
+    """transformers 5 calls the unembedding ``lm_head``; TL 3.8.0 reads ``embed_out``."""
+    from tokenizers import Tokenizer
+    from tokenizers.models import WordLevel
+    from transformers import PreTrainedTokenizerFast
+
+    from circuitkit import load_model
+
+    hf = _tiny_neox(tie_word_embeddings)
+    hf.save_pretrained(tmp_path)
+    PreTrainedTokenizerFast(
+        tokenizer_object=Tokenizer(WordLevel({f"t{i}": i for i in range(128)}, unk_token="t0")),
+        bos_token="t1",
+        eos_token="t2",
+        pad_token="t0",
+        unk_token="t0",
+    ).save_pretrained(tmp_path)
+
+    model = load_model(str(tmp_path), dtype="float32", device="cpu")
+    tokens = torch.randint(3, 128, (2, 12))
+    with torch.no_grad():  # log-probs: from_pretrained folds LN and centres the unembed
+        ref = hf(input_ids=tokens).logits.log_softmax(-1)
+        out = model(tokens).log_softmax(-1)
+    assert model.cfg.original_architecture == "GPTNeoXForCausalLM"
+    assert torch.allclose(out, ref, atol=1e-4), (out - ref).abs().max()
+
+
 # ------------------------------------------------------------------------ Ministral-3
 
 
