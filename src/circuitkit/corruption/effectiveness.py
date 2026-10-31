@@ -23,7 +23,7 @@ class CorruptionEffectiveness:
         avg_impact: Average output change (0.0 to 1.0, higher = larger change)
         label_consistency: Percentage of answers staying valid [0.0, 1.0]
         semantic_shift: Average embedding distance before/after corruption
-        difficulty_impact: Change in task difficulty (negative = easier, positive = harder)
+        difficulty_impact: Change in task difficulty (negative = harder, positive = easier)
         severity: Average severity scores from validate() (0.0 to 1.0)
         validation_pass_rate: Percentage of corruptions that passed validate()
         error_rate: Percentage of corruptions that failed/raised errors
@@ -88,7 +88,7 @@ Impact Metrics:
   Average Output Impact: {self.avg_impact:.3f} (0=no change, 1=large change)
   Label Consistency: {self.label_consistency:.1%} (answers stay valid)
   Semantic Shift: {self.semantic_shift:.3f} (embedding distance)
-  Difficulty Impact: {self.difficulty_impact:+.3f} (negative=easier, positive=harder)
+  Difficulty Impact: {self.difficulty_impact:+.3f} (negative=harder, positive=easier)
 
 Quality Metrics:
   Average Severity: {self.severity:.3f} (0=mild, 1=severe)
@@ -237,7 +237,7 @@ class EffectivenessCalculator:
             corrupted_accuracy: Model accuracy on corrupted examples
 
         Returns:
-            Difficulty impact (negative = easier, positive = harder)
+            Difficulty impact (negative = harder, positive = easier)
         """
         return corrupted_accuracy - clean_accuracy
 

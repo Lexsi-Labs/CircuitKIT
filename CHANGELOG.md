@@ -103,6 +103,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `CIRCUITKIT_SKIP_MEM_GUARD=1` to silence it.
 - Docs and README pointed at `lexsi-labs.github.io/circuitkit/`, which 404s; the site lives at `https://circuitkit.lexsi.ai/`.
   Also fixed the README "Applications" deep link.
+- `CorruptionEffectiveness.summary()` and the `difficulty_impact` docstrings had the sign backwards.
+  The value is corrupted accuracy minus clean accuracy, so negative means harder.
 - Stale version strings: landing-page chip, both BibTeX blocks and the install check said `1.0.0`; they now read the installed package version.
   `CITATION.cff` release date corrected, and the release-notes page now explains the older `v1.0.0` internal milestone.
 - Issue-template contact links pointed at a personal fork, and the contributing guide pointed to GitHub Discussions (not enabled).

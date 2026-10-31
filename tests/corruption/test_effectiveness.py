@@ -113,6 +113,15 @@ class TestCorruptionEffectiveness:
         assert "0.75" in summary or "0.750" in summary
         assert "EFFECTIVE" in summary
 
+    def test_summary_labels_difficulty_sign(self):
+        """A corruption that lowers accuracy reads as harder, not easier."""
+        eff = CorruptionEffectiveness(
+            strategy_name="entity_swap",
+            num_examples=100,
+            difficulty_impact=EffectivenessCalculator.calculate_difficulty_impact(0.9, 0.5),
+        )
+        assert "-0.400 (negative=harder, positive=easier)" in eff.summary()
+
     def test_summary_ineffective(self):
         """Test summary for ineffective corruption."""
         eff = CorruptionEffectiveness(
