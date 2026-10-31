@@ -27,29 +27,23 @@ import math
 from typing import Any, Dict, List, Optional, Tuple
 
 import torch
+from scipy.stats import spearmanr
 from torch.utils.data import DataLoader
 
 logger = logging.getLogger(__name__)
 
 
 def _spearman_rho(x: List[float], y: List[float]) -> float:
-    """Compute Spearman rank correlation of two score lists."""
-    n = len(x)
-    if n < 3:
+    """Compute Spearman rank correlation of two score lists.
+
+    Pairs holding a NaN score are skipped. Returns 0.0 when rho is undefined
+    (fewer than 3 pairs, or a constant list).
+    """
+    pairs = [(a, b) for a, b in zip(x, y) if not (math.isnan(a) or math.isnan(b))]
+    if len(pairs) < 3:
         return 0.0
-    rank_x = _ranks(x)
-    rank_y = _ranks(y)
-    d2 = sum((rx - ry) ** 2 for rx, ry in zip(rank_x, rank_y))
-    denom = n * (n**2 - 1)
-    return 1.0 - 6.0 * d2 / denom if denom > 0 else 0.0
-
-
-def _ranks(scores: List[float]) -> List[float]:
-    sorted_idx = sorted(range(len(scores)), key=lambda i: scores[i])
-    ranks = [0.0] * len(scores)
-    for rank, idx in enumerate(sorted_idx, 1):
-        ranks[idx] = float(rank)
-    return ranks
+    rho, _ = spearmanr(*zip(*pairs))
+    return float(rho) if not math.isnan(rho) else 0.0
 
 
 def _score_circuit_vs_baseline(

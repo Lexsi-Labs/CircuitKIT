@@ -101,6 +101,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   actual free-memory query. It emits an advisory `RuntimeWarning` instead of
   refusing a run from an approximate estimate; set
   `CIRCUITKIT_SKIP_MEM_GUARD=1` to silence it.
+- Pillar 7 R1 used a Spearman formula that is only exact without ties, so tied node scores gave
+  the wrong rho, and two constant score lists counted as a perfect 1.0. It now uses
+  `scipy.stats.spearmanr`, skips NaN scores pairwise, and returns 0.0 when rho is undefined.
+  `r1_seed_consistency` and `reliability_index` change only for runs whose node scores tie.
 - Docs and README pointed at `lexsi-labs.github.io/circuitkit/`, which 404s; the site lives at `https://circuitkit.lexsi.ai/`.
   Also fixed the README "Applications" deep link.
 - Stale version strings: landing-page chip, both BibTeX blocks and the install check said `1.0.0`; they now read the installed package version.
