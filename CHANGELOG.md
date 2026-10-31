@@ -93,6 +93,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Transfer matrices: `TransferMatrix.analyze()` and `TransferMatrixAnalyzer.effect_sizes()` used
+  `np.argmax`, which returns the index of a NaN, so a failed evaluation was reported as the best
+  transfer. They now skip NaN cells. When every evaluation failed, `best_transfer` is `None` (like
+  `worst_transfer`) and `effect_sizes()` returns NaN bounds instead of raising `ValueError`.
 - Hyperparameter checks: `eval.pillars: []` is now an error (it would run nothing), and an
   ACDC grid point too large to compute (`tao_exps: [400]`) is reported as tau >= 1 instead of
   being skipped.

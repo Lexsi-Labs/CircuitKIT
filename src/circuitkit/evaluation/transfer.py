@@ -232,8 +232,10 @@ class TransferMatrix:
             Dict[str, Any] with keys:
                 'source_avg': Dict[str, float] - Mean score per source task
                 'target_avg': Dict[str, float] - Mean score per target task
-                'best_transfer': Tuple[str, str, float] - (source, target, score)
-                'worst_transfer': Tuple[str, str, float] - (source, target, score)
+                'best_transfer': Optional[Tuple[str, str, float]] - (source, target, score),
+                    None if every evaluation failed
+                'worst_transfer': Optional[Tuple[str, str, float]] - (source, target, score),
+                    None if every evaluation failed
                 'overall_mean': float - Mean of all non-NaN transfers
                 'overall_std': float - Std of all non-NaN transfers
                 'num_successful': int - Count of non-NaN transfers
@@ -265,14 +267,17 @@ class TransferMatrix:
 
         # Find best and worst transfers
         valid_scores = self.matrix[valid_mask]
-        best_idx = np.unravel_index(np.argmax(self.matrix), self.matrix.shape)
+        best_idx = np.nanargmax(self.matrix) if np.any(~np.isnan(self.matrix)) else None
         worst_idx = np.nanargmin(self.matrix) if np.any(~np.isnan(self.matrix)) else None
 
-        best_transfer = (
-            self.task_names[best_idx[0]],
-            self.task_names[best_idx[1]],
-            float(self.matrix[best_idx]),
-        )
+        best_transfer = None
+        if best_idx is not None:
+            best_idx = np.unravel_index(best_idx, self.matrix.shape)
+            best_transfer = (
+                self.task_names[best_idx[0]],
+                self.task_names[best_idx[1]],
+                float(self.matrix[best_idx]),
+            )
 
         worst_transfer = None
         if worst_idx is not None:

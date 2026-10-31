@@ -493,6 +493,59 @@ class TestTransferMatrixEdgeCases:
 
         assert analysis["num_successful"] == 0
         assert np.isnan(analysis["overall_mean"])
+        assert analysis["best_transfer"] is None
+        assert analysis["worst_transfer"] is None
+        assert "Best Transfer" not in tm.summary()
+
+    def test_failed_evaluation_is_not_best_transfer(self):
+        """A NaN cell must not win best_transfer over the real scores."""
+        from circuitkit.evaluation.transfer import TransferMatrix
+
+        tm = TransferMatrix(["a", "b", "c"])
+        tm.matrix = np.array(
+            [
+                [0.9, np.nan, 0.2],
+                [0.3, 0.8, 0.1],
+                [0.4, 0.6, 0.5],
+            ]
+        )
+
+        analysis = tm.analyze()
+
+        assert analysis["best_transfer"] == ("a", "a", 0.9)
+        assert analysis["worst_transfer"] == ("b", "c", 0.1)
+        assert "(0.9000)" in tm.summary()
+
+    def test_effect_sizes_skip_failed_evaluations(self):
+        """largest_improvements reports each source's best real score."""
+        from circuitkit.evaluation.transfer_analysis import TransferMatrixAnalyzer
+
+        analyzer = TransferMatrixAnalyzer(["a", "b", "c"])
+        matrix = np.array(
+            [
+                [0.9, np.nan, 0.2],
+                [0.3, 0.8, 0.1],
+                [0.4, 0.6, np.nan],
+            ]
+        )
+
+        effects = analyzer.effect_sizes(matrix)
+
+        assert effects["largest_improvements"] == [
+            ("a", "a", 0.9),
+            ("b", "b", 0.8),
+            ("c", "b", 0.6),
+        ]
+
+    def test_effect_sizes_all_failed(self):
+        """A run where every evaluation failed reports nothing, not a crash."""
+        from circuitkit.evaluation.transfer_analysis import TransferMatrixAnalyzer
+
+        effects = TransferMatrixAnalyzer(["a", "b"]).effect_sizes(np.full((2, 2), np.nan))
+
+        assert np.isnan(effects["effect_size_range"]).all()
+        assert effects["largest_improvements"] == []
+        assert effects["largest_regressions"] == []
 
     def test_perfect_transfer_matrix(self):
         """Test with perfect transfer (all 1.0)."""
