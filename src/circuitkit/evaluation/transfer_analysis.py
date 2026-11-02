@@ -252,7 +252,8 @@ class TransferMatrixAnalyzer:
             Dict with keys:
                 'pairs_above_threshold': Dict[float, int] - count of pairs >= threshold
                 'practical_significance': float - % of transfers >= 0.5
-                'effect_size_range': Tuple[float, float] - (min, max)
+                'effect_size_range': Tuple[float, float] - (min, max), NaN if every
+                    evaluation failed
                 'largest_improvements': List - best transfers
                 'largest_regressions': List - worst transfers
         """
@@ -265,7 +266,9 @@ class TransferMatrixAnalyzer:
 
         practical_significance = float(np.sum(valid >= 0.5) / len(valid) if len(valid) > 0 else 0)
 
-        effect_range = (float(np.min(valid)), float(np.max(valid)))
+        effect_range = (
+            (float(np.min(valid)), float(np.max(valid))) if len(valid) > 0 else (np.nan, np.nan)
+        )
 
         # Find best and worst transfers for each source
         largest_improvements = []
@@ -275,7 +278,7 @@ class TransferMatrixAnalyzer:
             # Best transfer from this source
             valid_targets = ~np.isnan(matrix[src_idx])
             if np.any(valid_targets):
-                best_idx = np.argmax(matrix[src_idx])
+                best_idx = np.nanargmax(matrix[src_idx])
                 best_val = matrix[src_idx, best_idx]
                 largest_improvements.append((src_task, self.task_names[best_idx], float(best_val)))
 
