@@ -51,7 +51,6 @@ def get_scores_exact(
             written in-place to graph.scores.
     """
     graph.in_graph |= graph.real_edge_mask  # All edges that are real are now in the graph
-    pair_padding_side = getattr(dataloader, "pair_padding_side", None)
     baseline = evaluate_baseline(model, dataloader, metric).mean().item()
     edges = graph.edges.values() if quiet else tqdm(graph.edges.values())
     for edge in edges:
@@ -66,7 +65,6 @@ def get_scores_exact(
                 intervention_dataloader=intervention_dataloader,
                 quiet=True,
                 skip_clean=True,
-                pair_padding_side=pair_padding_side,
             )
             .mean()
             .item()

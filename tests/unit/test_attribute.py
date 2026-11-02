@@ -6,7 +6,7 @@ pytest.mark.skipif. Tests that only check dispatcher logic use mocks and
 run on CPU.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, create_autospec, patch
 
 import pytest
 import torch
@@ -265,3 +265,33 @@ class TestAttributeWithRealModel:
         attribute(tiny_model, g1, dl_1, logit_diff_metric, method="EAP", quiet=True)
         attribute(tiny_model, g2, dl_2, logit_diff_metric, method="EAP", quiet=True)
         assert torch.allclose(g1.scores, g2.scores, atol=1e-5)
+
+
+# ===========================================================================
+# get_scores_exact — call signature
+# ===========================================================================
+
+
+class TestGetScoresExactSignature:
+    def test_calls_evaluate_graph_with_accepted_arguments(self):
+        """get_scores_exact must only pass arguments evaluate_graph accepts.
+
+        Regression: it used to pass pair_padding_side=..., which evaluate_graph
+        does not take, so edge-level method="exact" raised TypeError on the
+        first edge. create_autospec makes the mock enforce the real signature.
+        """
+        from circuitkit.backends.eap import attribute as attribute_module
+        from circuitkit.backends.eap.evaluate import evaluate_graph
+
+        graph = Graph.from_model(TINY_CFG)
+        fake_eval_graph = create_autospec(evaluate_graph, return_value=torch.zeros(1))
+
+        with (
+            patch.object(attribute_module, "evaluate_graph", fake_eval_graph),
+            patch.object(attribute_module, "evaluate_baseline", return_value=torch.zeros(1)),
+        ):
+            attribute_module.get_scores_exact(
+                MagicMock(), graph, DataLoader([0]), MagicMock(), quiet=True
+            )
+
+        assert fake_eval_graph.call_count == len(graph.edges)

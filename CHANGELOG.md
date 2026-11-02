@@ -90,12 +90,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   CLI); `circuitkit discover --ig-steps` is unset by default for the same reason.
   `circuitkit run` follows `Pipeline.evaluate`: an `evaluate:` block without `pillars:` now runs
   the two basic pillars instead of all of them; list `pillars:` (or `pillars: all`) for more.
-- **Circuit graph export edges are labelled** (CK-25). The graph payload (`CircuitGraphVisualizer.to_json`,
+- **Circuit graph export edges are labelled**. The graph payload (`CircuitGraphVisualizer.to_json`,
   `export_graph_data` and the data embedded in the HTML) now carries `metadata["edge_kind"] = "layer_adjacent"`,
   and the HTML legend says that edges join circuit nodes of adjacent layers, weighted by node importance, and are not
   measured connections. Docstrings no longer imply that edges are attributions. Real edge attributions are not part
   of this change.
-- **The circuit graph HTML no longer refuses large circuits** (CK-25). A circuit above 5,000 nodes or 50,000 edges
+- **The circuit graph HTML no longer refuses large circuits**. A circuit above 5,000 nodes or 50,000 edges
   showed "too large to render interactively" and drew nothing; that limit is removed (a browser benchmark opened 334,000
   edges in under 5 seconds). What does slow down is zoom and the slider, in proportion to the edges drawn, so a circuit
   with more than 20,000 edges now opens with the edge threshold raised to the lowest 0.01 step that draws at most 20,000
@@ -108,10 +108,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Saved neuron-level circuits keep their label** (CK-16). `Circuit.save` wrote a `_scores.json` with no
+- **Saved neuron-level circuits keep their label**. `Circuit.save` wrote a `_scores.json` with no
   task, model or algorithm, and `from_artifact` reads that file first, so the graph title said
   "unknown / unknown". The file now carries them, and files without them still load.
-- **IBCircuit neuron-level runs get a circuit graph** (CK-26). The neuron branch wrote only `neurons_scores`, so
+- **IBCircuit neuron-level runs get a circuit graph**. The neuron branch wrote only `neurons_scores`, so
   `Circuit.from_artifact` found no `node_scores`, `Circuit.scores` was empty and `Circuit.plot` wrote nothing. It now
   also writes `node_scores` (the largest absolute neuron score per component, keyed `A{layer}.{head}` / `MLP {layer}`)
   into the scores side-car, as the EAP and EAP-IG neuron branches already do. `neurons_scores` is unchanged.
@@ -120,12 +120,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `_scores.json`. Without this the graph of a neuron-level run was titled "Circuit (unknown / eap-ig)", whatever
   algorithm ran. A side-car written before this change has no task or model and shows "unknown" for them; a circuit
   with no algorithm set now shows "unknown" instead of `eap-ig`.
-- **Neuron-level circuit graphs mark only fully pruned components as pruned** (CK-26, EAP, EAP-IG and IBCircuit).
+- **Neuron-level circuit graphs mark only fully pruned components as pruned** (EAP, EAP-IG and IBCircuit).
   `Circuit.plot` took the pruning dict's keys (layer numbers and `(layer, head)` tuples) for component names, so no
   component matched and every one showed as in the circuit. A component is now pruned when all of its neurons were.
   Discovery records the neuron counts in the pruning dict's `_meta` (`neurons_per_mlp`, `neurons_per_head`). A
   pruning dict saved before this change has no counts, so no component shows as pruned, as before; it still loads.
-- **Local checkpoints named after their base model load** (CK-27). `load_model` refused any
+- **Local checkpoints named after their base model load**. `load_model` refused any
   local directory whose path contained "llama" or "gemma", because TransformerLens 3.8 picks
   the architecture, and for 29 config branches the whole config, from the name and then
   never reads `config.json` (a fine-tune in `meta-llama-Llama-3.2-1B_pruned_wanda_v2-sft_v1/`
@@ -134,24 +134,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   are unchanged. Local Llama checkpoints now load under any name. Local Gemma checkpoints,
   fine-tunes included, are refused with a message saying they need TransformerLens 4
   (TransformerLens 3.8 has Gemma configs for Hub names only, and the Hub name loads the base
-  weights; CK-28). Without patch `0007` (a TransformerLens patched on disk by the old script, or
+  weights). Without patch `0007` (a TransformerLens patched on disk by the old script, or
   another version), the old path check stays.
-- **IBCircuit neuron-level runs get a circuit graph** (CK-26). The neuron branch wrote only `neurons_scores`, so
-  `Circuit.from_artifact` found no `node_scores`, `Circuit.scores` was empty and `Circuit.plot` wrote nothing. It now
-  also writes `node_scores` (the largest absolute neuron score per component, keyed `A{layer}.{head}` / `MLP {layer}`)
-  into the scores side-car, as the EAP and EAP-IG neuron branches already do. `neurons_scores` is unchanged.
-- **Neuron-level circuit graphs mark only fully pruned components as pruned** (CK-26, EAP, EAP-IG and IBCircuit).
-  `Circuit.plot` took the pruning dict's keys (layer numbers and `(layer, head)` tuples) for component names, so no
-  component matched and every one showed as in the circuit. A component is now pruned when all of its neurons were.
-  Discovery records the neuron counts in the pruning dict's `_meta` (`neurons_per_mlp`, `neurons_per_head`). A
-  pruning dict saved before this change has no counts, so no component shows as pruned, as before; it still loads.
-- **Pythia / GPT-NeoX models load again** (CK-29). transformers 5 renamed
+- **Pythia / GPT-NeoX models load again**. transformers 5 renamed
   `GPTNeoXForCausalLM.embed_out` to `lm_head`, but TransformerLens 3.8.0's weight conversion
   still reads `embed_out`, so every GPT-NeoX / Pythia checkpoint, Hub or local, failed to load
   with `AttributeError`. TransformerLens patch `0008` reads the unembedding from `lm_head` when
   `embed_out` is absent. It backports the `HookedTransformer` half of the fix released in
-  TransformerLens 3.9.0 and retires with the TransformerLens 4 migration (CK-22).
-- **`load_scores` reads IBCircuit neuron-level score files** (CK-30). `discover_circuit` saves
+  TransformerLens 3.9.0 and retires with the TransformerLens 4 migration).
+- **`load_scores` reads IBCircuit neuron-level score files**. `discover_circuit` saves
   IBCircuit neuron scores as a dict of tensors under `neurons_scores`, but the loader only treated
   `neuron_scores` (singular) as IBCircuit and sent the plural key to the EAP path, so every
   IBCircuit neuron run failed to load: "model_name is required" without a model name, and
@@ -162,6 +153,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   masked the wrong `down_proj` columns without any error. The file now records `mlp_hook`, and the
   loader uses neuron-level MLP scores only for `post_act`; for `mlp_out`, or an older file that
   does not say, each MLP layer gets one node-level score, with a warning.
+- Transfer matrices: `TransferMatrix.analyze()` and `TransferMatrixAnalyzer.effect_sizes()` used
+  `np.argmax`, which returns the index of a NaN, so a failed evaluation was reported as the best
+  transfer. They now skip NaN cells. When every evaluation failed, `best_transfer` is `None` (like
+  `worst_transfer`) and `effect_sizes()` returns NaN bounds instead of raising `ValueError`.
 - Hyperparameter checks: `eval.pillars: []` is now an error (it would run nothing), and an
   ACDC grid point too large to compute (`tao_exps: [400]`) is reported as tau >= 1 instead of
   being skipped.
@@ -170,8 +165,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   actual free-memory query. It emits an advisory `RuntimeWarning` instead of
   refusing a run from an approximate estimate; set
   `CIRCUITKIT_SKIP_MEM_GUARD=1` to silence it.
+- Pillar 7 R1 used a Spearman formula that is only exact without ties, so tied node scores gave
+  the wrong rho, and two constant score lists counted as a perfect 1.0. It now uses
+  `scipy.stats.spearmanr`, skips NaN scores pairwise, and returns 0.0 when rho is undefined.
+  `r1_seed_consistency` and `reliability_index` change only for runs whose node scores tie.
 - Docs and README pointed at `lexsi-labs.github.io/circuitkit/`, which 404s; the site lives at `https://circuitkit.lexsi.ai/`.
   Also fixed the README "Applications" deep link.
+- `CorruptionEffectiveness.summary()` and the `difficulty_impact` docstrings had the sign backwards.
+  The value is corrupted accuracy minus clean accuracy, so negative means harder.
 - Stale version strings: landing-page chip, both BibTeX blocks and the install check said `1.0.0`; they now read the installed package version.
   `CITATION.cff` release date corrected, and the release-notes page now explains the older `v1.0.0` internal milestone.
 - Issue-template contact links pointed at a personal fork, and the contributing guide pointed to GitHub Discussions (not enabled).
@@ -225,21 +226,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pinned version and `d3` with no Subresource Integrity. Pinned `elkjs` to
   `0.12.0` and added SRI (`integrity`/`crossorigin`) for both scripts.
 - `Circuit.plot()` without the visualisation dependencies (or any other failure to build the graph) only logged at
-  `INFO`, so a caller who asked for a file got nothing and no notice (CK-25). It now emits a `RuntimeWarning`
+  `INFO`, so a caller who asked for a file got nothing and no notice). It now emits a `RuntimeWarning`
   (not a `UserWarning`, which importing `circuitkit.api` ignores) and still returns `None`. A circuit with no node
   scores (a discovery run without an output path) did the same, and now emits the same `RuntimeWarning`, which says to
   re-run discovery with an output path.
 - `circuitkit run <yaml>` with a failing `visualize:` step printed a warning and then "Pipeline complete" as if nothing
-  had gone wrong (CK-25). The closing line now names the failed step with its error type and message. In graph mode a
+  had gone wrong). The closing line now names the failed step with its error type and message. In graph mode a
   step that wrote no file (`Circuit.plot()` returned `None`) counts as failed. The exit code is unchanged.
+- Edge-level `get_scores_exact` (`method="exact"`) no longer raises `TypeError`: it
+  passed `pair_padding_side` to `evaluate_graph`, which does not accept it (the value
+  is read from the dataloader inside `evaluate_graph`).
 
 ### Security
 
 - The graph HTML embedded the payload with `json.dumps`, so a task, model or node name containing `</script>` ended the
-  script and the rest of the name ran as HTML (CK-25). `<`, `>`, `&`, U+2028 and U+2029 are now written as `\uXXXX`
+  script and the rest of the name ran as HTML). `<`, `>`, `&`, U+2028 and U+2029 are now written as `\uXXXX`
   escapes inside the embedded JSON (it parses back to the same data), and the page title is HTML-escaped.
 - The graph HTML's tooltips wrote node names and edge endpoints into `innerHTML` unescaped, so a crafted scores
-  file (circuit artifacts are shared between users) could run script when a node was hovered (CK-25). Every value
+  file (circuit artifacts are shared between users) could run script when a node was hovered). Every value
   from the payload is now HTML-escaped before it reaches a tooltip.
 
 ## [Unreleased] (next release)
