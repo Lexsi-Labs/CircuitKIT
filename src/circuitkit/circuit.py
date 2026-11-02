@@ -35,6 +35,14 @@ logger = logging.getLogger(__name__)
 # Keys of a ``_scores.pt`` side-car that name the run, and the Circuit attribute each fills.
 _PT_SIDECAR_METADATA = {"algo": "algorithm", "task": "task", "model": "model_name"}
 
+
+def _sidecar_metadata(blob: Dict[str, Any]) -> Dict[str, Optional[str]]:
+    """Algorithm, task and model from a scores side-car; ``None`` where absent."""
+    return {
+        attr: blob[key] if isinstance(blob.get(key), str) else None
+        for key, attr in _PT_SIDECAR_METADATA.items()
+    }
+
 if TYPE_CHECKING:  # pragma: no cover - typing only, avoids heavy imports
     from .artifacts.scores import CircuitScores
 
@@ -255,6 +263,7 @@ class Circuit:
                     scores = dict(circuit_scores.node_scores)
                 else:
                     scores = {k: float(v) for k, v in blob.get("node_scores", {}).items()}
+                    meta = _sidecar_metadata(blob)
             else:
                 # Untrusted side-car (auto-discovered next to the artifact);
                 # weights_only=True blocks pickle RCE. Payload is a score dict.
@@ -267,9 +276,7 @@ class Circuit:
                     # The neuron-level branches write no scores JSON, so the run's
                     # algorithm, task and model come from here when present (an
                     # older side-car has none and the title says "unknown").
-                    for key, attr in _PT_SIDECAR_METADATA.items():
-                        value = blob.get(key)
-                        meta[attr] = value if isinstance(value, str) else None
+                    meta = _sidecar_metadata(blob)
             break
 
         return cls(
@@ -319,6 +326,10 @@ class Circuit:
             from .artifacts.scores import interop_fields
 
             data = {"node_scores": self.scores}
+            # from_artifact reads this file first, so it has to carry the label.
+            for key, attr in _PT_SIDECAR_METADATA.items():
+                if getattr(self, attr):
+                    data[key] = getattr(self, attr)
             data.update(
                 interop_fields(
                     self.scores, self.model_name, method=f"discover.{self.algorithm or 'unknown'}"

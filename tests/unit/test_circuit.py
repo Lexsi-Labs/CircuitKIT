@@ -513,3 +513,46 @@ class TestPlotNeuronLevelPrunedComponents:
             legacy = {**pruned, "_meta": {"mlp_hook": "mlp_out"}}
             out = Circuit(legacy, scores, level="neuron").plot(str(tmp_path / f"l{i}.json"))
             assert all(n["in_circuit"] for n in out["nodes"])
+
+
+# ---------------------------------------------------------------------------
+# save / from_artifact keep the run's label
+# ---------------------------------------------------------------------------
+class TestLabelRoundTrip:
+    def _neuron_circuit(self, tmp_path):
+        import torch
+
+        nodes = {"_meta": {"level": "neuron"}, "pruned": []}
+        torch.save(nodes, tmp_path / "c.pt")
+        torch.save(
+            {"node_scores": {"blocks.0.mlp": 0.5}, "algo": "eap", "task": "ioi", "model": "gpt2"},
+            tmp_path / "c_scores.pt",
+        )
+        return Circuit.from_artifact(tmp_path / "c.pt")
+
+    def test_save_then_load_keeps_task_model_and_algorithm(self, tmp_path):
+        self._neuron_circuit(tmp_path).save(tmp_path / "saved.pt")
+        again = Circuit.from_artifact(tmp_path / "saved.pt")
+        assert (again.task, again.model_name, again.algorithm) == ("ioi", "gpt2", "eap")
+        assert again.scores == {"blocks.0.mlp": 0.5}
+
+    def test_second_round_trip_keeps_it_too(self, tmp_path):
+        self._neuron_circuit(tmp_path).save(tmp_path / "one.pt")
+        Circuit.from_artifact(tmp_path / "one.pt").save(tmp_path / "two.pt")
+        again = Circuit.from_artifact(tmp_path / "two.pt")
+        assert (again.task, again.algorithm) == ("ioi", "eap")
+
+    def test_bare_json_with_no_label_still_loads_as_unknown(self, tmp_path):
+        import torch
+
+        torch.save({"_meta": {}, "pruned": []}, tmp_path / "old.pt")
+        (tmp_path / "old_scores.json").write_text(json.dumps({"node_scores": {"a": 1.0}}))
+        c = Circuit.from_artifact(tmp_path / "old.pt")
+        assert c.scores == {"a": 1.0} and c.task is None and c.algorithm is None
+
+    def test_non_string_label_is_ignored(self, tmp_path):
+        import torch
+
+        torch.save({"_meta": {}}, tmp_path / "x.pt")
+        (tmp_path / "x_scores.json").write_text(json.dumps({"node_scores": {}, "task": 5}))
+        assert Circuit.from_artifact(tmp_path / "x.pt").task is None

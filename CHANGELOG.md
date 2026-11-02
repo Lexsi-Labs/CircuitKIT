@@ -108,6 +108,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Saved neuron-level circuits keep their label** (CK-16). `Circuit.save` wrote a `_scores.json` with no
+  task, model or algorithm, and `from_artifact` reads that file first, so the graph title said
+  "unknown / unknown". The file now carries them, and files without them still load.
 - **IBCircuit neuron-level runs get a circuit graph** (CK-26). The neuron branch wrote only `neurons_scores`, so
   `Circuit.from_artifact` found no `node_scores`, `Circuit.scores` was empty and `Circuit.plot` wrote nothing. It now
   also writes `node_scores` (the largest absolute neuron score per component, keyed `A{layer}.{head}` / `MLP {layer}`)
