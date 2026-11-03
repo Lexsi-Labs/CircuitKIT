@@ -148,7 +148,7 @@ class FinalAnswerSwap(CorruptionStrategy):
         rng: Optional[random.Random] = None,
         **_unused: Any,
     ) -> CorruptionResult:
-        rng = rng or random.Random(hash(record.record_id) & 0xFFFFFFFF)
+        rng = rng or self._record_rng(record)
 
         # --- Mode 1: math-reasoning prompt-level operand swap -----------
         solution = record.meta.get("solution_text", "") if record.meta else ""

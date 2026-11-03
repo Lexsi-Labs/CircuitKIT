@@ -43,7 +43,7 @@ class Resample(CorruptionStrategy):
                 notes="resample requires `pool` kwarg with peer records",
                 succeeded=False,
             )
-        rng = rng or random.Random(hash(record.record_id) & 0xFFFFFFFF)
+        rng = rng or self._record_rng(record)
         candidates = [r for r in pool if r.record_id != record.record_id]
         if not candidates:
             return CorruptionResult(None, None, notes="empty pool", succeeded=False)

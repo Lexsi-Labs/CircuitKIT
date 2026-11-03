@@ -67,7 +67,7 @@ class InstructionSwap(CorruptionStrategy):
         rng: Optional[random.Random] = None,
         **_unused: Any,
     ) -> CorruptionResult:
-        rng = rng or random.Random(hash(record.record_id) & 0xFFFFFFFF)
+        rng = rng or self._record_rng(record)
         m = _DIRECTIVE_RE.search(record.clean_prompt)
         if not m:
             return CorruptionResult(None, None, notes="no directive verb", succeeded=False)

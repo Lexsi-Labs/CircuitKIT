@@ -45,7 +45,7 @@ class MathStepCorrupt(CorruptionStrategy):
         rng: Optional[random.Random] = None,
         **_unused: Any,
     ) -> CorruptionResult:
-        rng = rng or random.Random(hash(record.record_id) & 0xFFFFFFFF)
+        rng = rng or self._record_rng(record)
         # Look for an equation in the solution text first, fall back to prompt
         target_text = record.meta.get("solution_text") or record.clean_prompt
         matches = list(_EQ_PAT.finditer(target_text))

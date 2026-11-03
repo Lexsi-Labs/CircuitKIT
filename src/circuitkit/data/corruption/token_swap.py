@@ -64,7 +64,7 @@ class TokenSwap(CorruptionStrategy):
         rng: Optional[random.Random] = None,
         **_unused: Any,
     ) -> CorruptionResult:
-        rng = rng or random.Random(hash(record.record_id) & 0xFFFFFFFF)
+        rng = rng or self._record_rng(record)
         words = re.findall(r"\b[\w']+\b", record.clean_prompt)
         candidates = [
             w for w in words if w.lower() not in _STOPWORDS and len(w) >= 3 and w.isalpha()
