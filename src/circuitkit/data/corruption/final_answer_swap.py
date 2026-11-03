@@ -183,8 +183,11 @@ class FinalAnswerSwap(CorruptionStrategy):
                 if corrupt_prompt == clean_prompt:
                     # The final step is not echoed in the prompt; fall back
                     # to swapping the bare result number near the end.
-                    idx = clean_prompt.rfind(old_ans)
-                    if idx != -1:
+                    # Whole numbers only: "5" must not be swapped inside "15".
+                    whole = rf"(?<![\d.,]){re.escape(old_ans)}(?![.,]?\d)"
+                    hits = list(re.finditer(whole, clean_prompt))
+                    if hits:
+                        idx = hits[-1].start()
                         corrupt_prompt = (
                             clean_prompt[:idx] + new_ans + clean_prompt[idx + len(old_ans) :]
                         )

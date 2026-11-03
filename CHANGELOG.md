@@ -155,6 +155,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `examples/visualization/` duplicate) loaded `elkjs` from jsDelivr with no
   pinned version and `d3` with no Subresource Integrity. Pinned `elkjs` to
   `0.12.0` and added SRI (`integrity`/`crossorigin`) for both scripts.
+- `final_answer_swap` swaps only a whole number when it falls back to the bare result in the
+  prompt. With a question-only prompt it swapped the digits inside a larger number (`spent 15`
+  became `spent 17` for a result of 5), so the corrupt prompt no longer matched its answer.
 
 ## [Unreleased] (next release)
 
