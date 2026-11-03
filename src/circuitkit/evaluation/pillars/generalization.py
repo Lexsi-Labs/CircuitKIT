@@ -562,8 +562,8 @@ class Pillar6_Generalization:
         # Find best and worst transfers
         best_transfer = None
         worst_transfer = None
-        best_ratio = -1
-        worst_ratio = 2.0
+        best_ratio = float("-inf")
+        worst_ratio = float("inf")
 
         for source_task in source_tasks:
             for target_task in target_tasks:

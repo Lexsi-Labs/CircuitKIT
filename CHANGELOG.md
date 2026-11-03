@@ -93,6 +93,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Pillar 6: `summarize_transfer_matrix()` started its best/worst search at -1 and 2.0, so when
+  every cross-task ratio was above 2.0 (a circuit more faithful on the target than on its own
+  task) `worst_transfer` was `None`. The search now starts at -inf and +inf.
 - Hyperparameter checks: `eval.pillars: []` is now an error (it would run nothing), and an
   ACDC grid point too large to compute (`tao_exps: [400]`) is reported as tau >= 1 instead of
   being skipped.
