@@ -93,6 +93,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Corruption strategies called without an `rng` (as `circuitkit data prepare` does) seeded from
+  `hash(record_id)`, which changes with every Python process, so the same dataset was corrupted
+  differently on each run. They now seed from a crc32 of `record_id`.
 - Hyperparameter checks: `eval.pillars: []` is now an error (it would run nothing), and an
   ACDC grid point too large to compute (`tao_exps: [400]`) is reported as tau >= 1 instead of
   being skipped.
