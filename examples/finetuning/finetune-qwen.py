@@ -367,7 +367,7 @@ def _build_parser() -> argparse.ArgumentParser:
     mdl.add_argument(
         "--dtype",
         default="bfloat16",
-        choices=["float16", "bfloat16", "float32"],
+        choices=["bfloat16", "float32"],
         help="Model dtype. Qwen models default to bfloat16.",
     )
     mdl.add_argument(

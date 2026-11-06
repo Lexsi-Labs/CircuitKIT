@@ -517,7 +517,8 @@ def run_finetuning(
 
     Parameters
     ----------
-    model               : HuggingFace CausalLM on `device`.
+    model               : HuggingFace CausalLM on `device`, in float32 or
+                          bfloat16. float16 raises ValueError (see below).
     selection           : SelectionResult controlling which params are trained.
     finetune_dataloader : DataLoader from build_finetune_dataloader.
     device              : Training device.
@@ -540,7 +541,20 @@ def run_finetuning(
     -----
     Hooks are always removed in a finally block.  If training is interrupted
     the model is left in its partially-trained state with requires_grad reset.
+
+    The weights are trained in their own dtype, with no float32 master copy.
+    AdamW cannot do that in float16: eps=1e-8 and the squared gradient of any
+    gradient below about 5e-3 round to 0, so the update is 0/0 or x/0 and those
+    weights become NaN/inf after the first step. A float16 model is therefore
+    rejected before anything is changed.
     """
+    if any(p.dtype == torch.float16 for p in model.parameters()):
+        raise ValueError(
+            "run_finetuning trains the weights in place with AdamW, which turns "
+            "float16 weights into NaN/inf after one step. Load the model in "
+            "torch.bfloat16 or torch.float32."
+        )
+
     hook_handles, trainable_params, masks_dict = setup_selective_training(model, selection, device)
 
     optimiser = torch.optim.AdamW(trainable_params, lr=lr)

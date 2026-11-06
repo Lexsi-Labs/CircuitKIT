@@ -151,6 +151,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `evaluation.hf_checkpoint._load_causal_lm` still passed the deprecated
   `torch_dtype=` keyword to `AutoModelForCausalLM.from_pretrained`; replaced
   with `dtype=`.
+- **Behaviour change:** selective fine-tuning (`run_finetuning`) now raises
+  `ValueError` for a float16 model. It trains the weights in place with AdamW,
+  and in float16 AdamW's `eps=1e-8` and small squared gradients round to 0, so
+  one step turned the trained weights into NaN/inf (every `q_proj` weight of a
+  tiny Llama, masked or not). `finetune_llama.py` defaulted to `--dtype
+  float16`; it now defaults to `bfloat16`, and the Llama and Qwen examples no
+  longer offer `float16`.
 - The IOI EAP-IG visualization pages (`docs/assets/ioi_eap-ig.html` and its
   `examples/visualization/` duplicate) loaded `elkjs` from jsDelivr with no
   pinned version and `d3` with no Subresource Integrity. Pinned `elkjs` to
