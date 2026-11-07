@@ -108,8 +108,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 - **Saved neuron-level circuits keep their label**. `Circuit.save` wrote a `_scores.json` with no
   task, model or algorithm, and `from_artifact` reads that file first, so the graph title said
   "unknown / unknown". The file now carries them, and files without them still load.
@@ -159,16 +157,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `np.argmax`, which returns the index of a NaN, so a failed evaluation was reported as the best
   transfer. They now skip NaN cells. When every evaluation failed, `best_transfer` is `None` (like
   `worst_transfer`) and `effect_sizes()` returns NaN bounds instead of raising `ValueError`.
-=======
 - Corruption strategies called without an `rng` (as `circuitkit data prepare` does) seeded from
   `hash(record_id)`, which changes with every Python process, so the same dataset was corrupted
   differently on each run. They now seed from a crc32 of `record_id`.
->>>>>>> ck26
-=======
 - Pillar 6: `summarize_transfer_matrix()` started its best/worst search at -1 and 2.0, so when
   every cross-task ratio was above 2.0 (a circuit more faithful on the target than on its own
   task) `worst_transfer` was `None`. The search now starts at -inf and +inf.
->>>>>>> ck27
 - Hyperparameter checks: `eval.pillars: []` is now an error (it would run nothing), and an
   ACDC grid point too large to compute (`tao_exps: [400]`) is reported as tau >= 1 instead of
   being skipped.
@@ -252,7 +246,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `examples/visualization/` duplicate) loaded `elkjs` from jsDelivr with no
   pinned version and `d3` with no Subresource Integrity. Pinned `elkjs` to
   `0.12.0` and added SRI (`integrity`/`crossorigin`) for both scripts.
-<<<<<<< HEAD
 - `Circuit.plot()` without the visualisation dependencies (or any other failure to build the graph) only logged at
   `INFO`, so a caller who asked for a file got nothing and no notice). It now emits a `RuntimeWarning`
   (not a `UserWarning`, which importing `circuitkit.api` ignores) and still returns `None`. A circuit with no node
@@ -273,11 +266,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The graph HTML's tooltips wrote node names and edge endpoints into `innerHTML` unescaped, so a crafted scores
   file (circuit artifacts are shared between users) could run script when a node was hovered). Every value
   from the payload is now HTML-escaped before it reaches a tooltip.
-=======
 - `final_answer_swap` swaps only a whole number when it falls back to the bare result in the
   prompt. With a question-only prompt it swapped the digits inside a larger number (`spent 15`
   became `spent 17` for a result of 5), so the corrupt prompt no longer matched its answer.
->>>>>>> ck28
 
 ## [Unreleased] (next release)
 
