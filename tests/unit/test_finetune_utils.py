@@ -199,6 +199,45 @@ class TestDataUtilities(unittest.TestCase):
 
 
 class TestFinetuningEndToEnd(unittest.TestCase):
+    def _one_batch(self):
+        return [
+            {
+                "input_ids": torch.tensor([[5, 6, 7, 8]]),
+                "attention_mask": torch.tensor([[1, 1, 1, 0]]),
+                "query_length": torch.tensor([2]),
+            }
+        ]
+
+    def test_float16_model_is_rejected(self):
+        """AdamW on float16 weights turns them into NaN/inf after one step (eps=1e-8
+        and small squared gradients round to 0), so a float16 model is refused
+        before setup touches it."""
+        model = MockLlamaModel().half()
+        selection = SelectionResult(attn={"attn_0": {"q": [0]}}, mlp={})
+
+        with self.assertRaisesRegex(ValueError, "float16"):
+            finetune_utils.run_finetuning(
+                model=model,
+                selection=selection,
+                finetune_dataloader=self._one_batch(),
+                device=torch.device("cpu"),
+                n_epochs=1,
+            )
+        # setup_selective_training never ran: nothing was frozen.
+        self.assertTrue(all(p.requires_grad for p in model.parameters()))
+
+    def test_bfloat16_model_is_accepted(self):
+        model = MockLlamaModel().to(torch.bfloat16)
+        selection = SelectionResult(attn={"attn_0": {"q": [0]}}, mlp={})
+
+        finetune_utils.run_finetuning(
+            model=model,
+            selection=selection,
+            finetune_dataloader=self._one_batch(),
+            device=torch.device("cpu"),
+            n_epochs=1,
+        )
+
     def test_run_finetuning_padding_logic(self):
         """Ensure labels are properly padded with -100 for cross-entropy ignore."""
         model = MockLlamaModel()
