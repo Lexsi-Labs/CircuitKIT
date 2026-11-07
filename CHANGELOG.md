@@ -223,6 +223,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   applied once and would otherwise outlive the other tenants.
 - `enable_expandable_segments()` is now also skipped on Windows, where PyTorch
   does not support this allocator setting and warns if asked.
+- Selective fine-tuning (`selective_finetuning.finetune_utils.run_finetuning`)
+  changed weights outside the selection. The masked-out rows/columns get zero
+  gradient, but AdamW's default `weight_decay=0.01` still shrank them by
+  `lr * 0.01` every step (all 240 masked-out entries of a 16x16 `q_proj` moved
+  after 5 steps in fp32). Masked parameters now get the decay on their
+  selected entries only, so the masked-out entries stay bit-identical and the
+  selected entries train as before. `weight_decay` is now a `run_finetuning`
+  argument (default 0.01, unchanged).
 - Un-gated 8 more fast-tier modules (`tests/apply/test_pruner.py`,
   `tests/unit/test_api.py`, `test_pillars.py`, `test_quick_api.py`,
   `test_quick_extensions.py`, `test_score_loader.py`, `test_end_to_end.py`,

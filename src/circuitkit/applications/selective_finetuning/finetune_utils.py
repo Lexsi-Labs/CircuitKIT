@@ -511,6 +511,7 @@ def run_finetuning(
     eval_dataloader: Optional[DataLoader] = None,
     eval_fn: Optional[Any] = None,
     log_every: int = 10,
+    weight_decay: float = 0.01,
 ) -> Tuple[nn.Module, List[Dict[str, float]]]:
     """
     Run selective gradient-masked finetuning.
@@ -531,6 +532,9 @@ def run_finetuning(
     eval_fn             : Optional callable(model, eval_dataloader) → Dict[str, float].
                           Called at the end of every epoch if provided.
     log_every           : Print training loss every N steps.
+    weight_decay        : AdamW decoupled weight decay (0.01, the AdamW default).
+                          For a masked parameter it is applied to the selected
+                          entries only; masked-out entries are never changed.
 
     Returns
     -------
@@ -557,7 +561,22 @@ def run_finetuning(
 
     hook_handles, trainable_params, masks_dict = setup_selective_training(model, selection, device)
 
-    optimiser = torch.optim.AdamW(trainable_params, lr=lr)
+    # AdamW's decoupled weight decay shrinks every entry of a parameter, including
+    # the masked-out entries whose gradient is zero. Masked parameters therefore
+    # get no decay from the optimiser; it is applied to their selected entries
+    # just before each step instead. The factor is kept in float32, as AdamW's
+    # scalar factor is, so half-precision weights decay by the same amount.
+    masked_params = [p for p in trainable_params if str(id(p)) in masks_dict]
+    decay_factors = [
+        1.0 - lr * weight_decay * masks_dict[str(id(p))].float() for p in masked_params
+    ]
+    param_groups = [
+        {"params": [p for p in trainable_params if str(id(p)) not in masks_dict]},
+        {"params": masked_params, "weight_decay": 0.0},
+    ]
+    optimiser = torch.optim.AdamW(
+        [g for g in param_groups if g["params"]], lr=lr, weight_decay=weight_decay
+    )
     epoch_logs: List[Dict[str, float]] = []
     verified = False
 
@@ -619,6 +638,11 @@ def run_finetuning(
                 # during backward, so masks are applied before clipping acts
                 # on the masked gradients.
                 torch.nn.utils.clip_grad_norm_(trainable_params, max_grad_norm)
+                if weight_decay:
+                    with torch.no_grad():
+                        for param, factor in zip(masked_params, decay_factors):
+                            if param.grad is not None:
+                                param.mul_(factor)
                 optimiser.step()
 
                 epoch_loss += loss.item()

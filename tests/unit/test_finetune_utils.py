@@ -270,5 +270,90 @@ class TestFinetuningEndToEnd(unittest.TestCase):
             self.assertTrue(torch.equal(labels, torch.tensor([[-100, -100, 7, -100]])))
 
 
+class WeightLossLlamaModel(MockLlamaModel):
+    """MockLlamaModel whose loss depends on its weights, so training moves them."""
+
+    def forward(self, input_ids, attention_mask, labels=None):
+        outputs = MagicMock()
+        outputs.loss = sum((p**2).sum() for p in self.parameters() if p.requires_grad)
+        return outputs
+
+
+class TestMaskedEntriesStayFrozen(unittest.TestCase):
+    def setUp(self):
+        torch.manual_seed(0)
+        self.model = WeightLossLlamaModel()
+        with torch.no_grad():
+            for p in self.model.parameters():
+                p.copy_(torch.randn_like(p))
+        # q: row 0 selected, o: column 1 selected, down_proj: column 2 selected.
+        self.selection = SelectionResult(attn={"attn_0": {"q": [0], "o": [1]}}, mlp={"mlp_0": [2]})
+        self.batch = {
+            "input_ids": torch.tensor([[5, 6, 7, 8]]),
+            "attention_mask": torch.tensor([[1, 1, 1, 1]]),
+            "query_length": torch.tensor([2]),
+        }
+
+    def _selected(self):
+        """(param, boolean mask of the selected entries) for each masked param."""
+        q = finetune_utils.get_q_proj(self.model, 0)
+        o = finetune_utils.get_o_proj(self.model, 0)
+        down = finetune_utils.get_down_proj(self.model, 0)
+        q_sel = torch.zeros_like(q, dtype=torch.bool)
+        q_sel[0, :] = True
+        o_sel = torch.zeros_like(o, dtype=torch.bool)
+        o_sel[:, 1] = True
+        down_sel = torch.zeros_like(down, dtype=torch.bool)
+        down_sel[:, 2] = True
+        return [(q, q_sel), (o, o_sel), (down, down_sel)]
+
+    def test_masked_out_entries_are_bit_identical_after_training(self):
+        """Entries outside the selection get zero gradient, so nothing may move them,
+        including AdamW's decoupled weight decay."""
+        before = [p.detach().clone() for p, _ in self._selected()]
+
+        finetune_utils.run_finetuning(
+            model=self.model,
+            selection=self.selection,
+            finetune_dataloader=[self.batch] * 5,
+            device=torch.device("cpu"),
+            n_epochs=1,
+        )
+
+        for (param, sel), old in zip(self._selected(), before):
+            new = param.detach()
+            self.assertTrue(
+                torch.equal(new[~sel], old[~sel]),
+                f"{int((new[~sel] != old[~sel]).sum())} of {int((~sel).sum())} "
+                f"masked-out entries of a {tuple(param.shape)} weight changed",
+            )
+            # The selected entries must have trained, or the check above is vacuous.
+            self.assertTrue(bool((new[sel] != old[sel]).all()))
+
+    def test_selected_entries_match_plain_adamw(self):
+        """The selected entries are trained exactly as AdamW (default weight decay)
+        trains an unmasked copy of the same weight. lr=1e-2 makes the decay large
+        enough (1e-4 per step) that leaving it out would fail this check."""
+        q = finetune_utils.get_q_proj(self.model, 0)
+        reference = nn.Parameter(q.detach().clone())
+        ref_opt = torch.optim.AdamW([reference], lr=1e-2)
+
+        finetune_utils.run_finetuning(
+            model=self.model,
+            selection=SelectionResult(attn={"attn_0": {"q": [0]}}, mlp={}),
+            finetune_dataloader=[self.batch] * 5,
+            device=torch.device("cpu"),
+            n_epochs=1,
+            lr=1e-2,
+            max_grad_norm=float("inf"),
+        )
+        for _ in range(5):
+            ref_opt.zero_grad()
+            (reference**2).sum().backward()
+            ref_opt.step()
+
+        torch.testing.assert_close(q.detach()[0], reference.detach()[0], rtol=1e-6, atol=0.0)
+
+
 if __name__ == "__main__":
     unittest.main()
