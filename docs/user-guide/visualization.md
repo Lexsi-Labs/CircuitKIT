@@ -27,7 +27,7 @@ pipe.visualize(mode="graph", output="./circuit.html")
 
 ## Mode 1: Graph view
 
-Renders the circuit as a directed graph: nodes are attention heads and MLP layers, edges represent information flow weighted by attribution score.
+Renders the circuit as a directed graph: nodes are attention heads and MLP layers, edges join circuit nodes of adjacent layers, weighted by node importance. They are not measured connections.
 
 ```python
 fig = ck.visualize_circuit(circuit, mode="graph")
@@ -35,7 +35,8 @@ fig = ck.visualize_circuit(circuit, mode="graph")
 
 - Nodes coloured by type (blue = attention head, amber = MLP)
 - Node size proportional to importance score
-- Edges only for components at or above sparsity threshold
+- Edges are drawn only between components in the circuit (pruned components have none)
+- A graph with more than 20,000 edges opens with the threshold raised so it draws at most 20,000 (the page says how many are shown); move the threshold to 0 to show all
 - Hover tooltips with layer, head index, and importance score
 
 Graph mode delegates to `Circuit.plot`, which takes only an optional output path.

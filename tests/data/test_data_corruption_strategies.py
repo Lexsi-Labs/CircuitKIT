@@ -21,7 +21,10 @@ the module skips cleanly rather than erroring if the data layer is absent.
 
 from __future__ import annotations
 
+import os
 import random
+import subprocess
+import sys
 
 import pytest
 
@@ -472,6 +475,30 @@ class TestFinalAnswerSwap:
         # The trailing "#### N" marker is kept consistent with the new answer.
         assert res.corrupt_answer.strip() in res.corrupt_prompt
 
+    @pytest.mark.parametrize("seed", range(6))
+    def test_prompt_fallback_swaps_whole_numbers_only(self, seed):
+        # Question-only prompt (the math adapter's layout): the final step is not in it, so the
+        # fallback looks for the bare result. "5" must not be swapped inside "15".
+        sol = "Lisa has <<20-15=5>>5 left.\n#### 5"
+        rec = _rec(
+            clean_prompt="Lisa had 20 dollars and spent 15. How much is left?",
+            clean_answer=" 5",
+            meta={"solution_text": sol},
+        )
+        res = FinalAnswerSwap().corrupt(rec, rng=random.Random(seed))
+        _assert_success(res)
+        assert res.corrupt_prompt == rec.clean_prompt
+
+        rec = _rec(
+            clean_prompt="Lisa spent 15 and has 5 left. How much is left?",
+            clean_answer=" 5",
+            meta={"solution_text": sol},
+        )
+        res = FinalAnswerSwap().corrupt(rec, rng=random.Random(seed))
+        _assert_success(res)
+        new = res.corrupt_answer.strip()
+        assert res.corrupt_prompt == f"Lisa spent 15 and has {new} left. How much is left?"
+
     def test_answer_only_numeric_mode(self):
         rec = _rec(clean_prompt="The answer is", clean_answer="42")
         res = FinalAnswerSwap().corrupt(rec, rng=random.Random(3))
@@ -598,6 +625,32 @@ class TestBaseBridges:
         out = TokenSwap().apply(paired, rng=random.Random(1))
         # Native pairs are returned untouched (same object identity).
         assert out is paired
+
+    def test_default_rng_gives_the_same_corruption_in_every_process(self):
+        # With no rng, corrupt() seeds from record_id. String hashes change
+        # with PYTHONHASHSEED, so a hash()-based seed gave a different
+        # corruption on each run of `circuitkit data prepare`.
+        script = (
+            "from circuitkit.data.corruption.entity_swap import EntitySwap\n"
+            "from circuitkit.data.corruption.operand_swap import OperandSwap\n"
+            "from circuitkit.data.corruption.token_swap import TokenSwap\n"
+            "from circuitkit.data.normalized import ContrastiveRecord, ContrastSource\n"
+            "rec = ContrastiveRecord(record_id='000001', clean_prompt="
+            "'Alice gave Bob 12 apples and then Carol took 7 oranges from Dave. 12 + 7 =', "
+            "clean_answer=' 19', contrast_source=ContrastSource.GENERATED)\n"
+            "for s in (EntitySwap(), OperandSwap(), TokenSwap()):\n"
+            "    print(s.corrupt(rec).corrupt_prompt)\n"
+        )
+
+        def run(seed: str) -> str:
+            env = {**os.environ, "PYTHONHASHSEED": seed}
+            return subprocess.run(
+                [sys.executable, "-c", script], env=env, capture_output=True, text=True, check=True
+            ).stdout
+
+        outputs = {run(seed) for seed in ("1", "2", "3")}
+        assert len(outputs) == 1
+        assert "None" not in outputs.pop()
 
     def test_corrupt_example_dict_bridge_preserves_extra_keys(self):
         example = {"prompt": "The accountant said that", "answer": " he", "extra": 123}

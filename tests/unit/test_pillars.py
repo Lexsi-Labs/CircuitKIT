@@ -1889,6 +1889,24 @@ class TestPillar6Generalization:
         assert summary["best_transfer"] is None
         assert summary["worst_transfer"] is None
 
+    def test_summarize_transfer_matrix_ratios_above_two(self):
+        """A circuit can be more faithful on the target than on its own task,
+        so ratios above 2.0 are valid and must still yield a worst transfer."""
+        matrix = {
+            "ioi": {
+                "ioi": {"transfer_ratio": 1.0},
+                "sva": {"transfer_ratio": 3.0},
+            },
+            "sva": {
+                "ioi": {"transfer_ratio": 2.5},
+                "sva": {"transfer_ratio": 1.0},
+            },
+        }
+
+        summary = Pillar6_Generalization.summarize_transfer_matrix(matrix)
+        assert summary["best_transfer"] == ("ioi", "sva", 3.0)
+        assert summary["worst_transfer"] == ("sva", "ioi", 2.5)
+
 
 class TestRunFullFaithfulness:
     """Tests for run_full_faithfulness orchestrator (full.py)."""

@@ -7,6 +7,8 @@ and graceful plot() degradation — all without loading any real model.
 """
 
 import json
+import sys
+import warnings
 from pathlib import Path
 from typing import Dict
 from unittest.mock import MagicMock, patch
@@ -213,6 +215,32 @@ class TestFromArtifactPTSidecar:
         c = Circuit.from_artifact(pt)
         assert c.scores["A0.1"] == pytest.approx(0.9)
 
+    def test_pt_sidecar_metadata_gives_the_graph_its_title(self, tmp_path):
+        """A neuron-level run writes no scores JSON, only task, model and algo in
+        the .pt side-car; a side-car without them (written before CK-26) is
+        labelled unknown, never as eap-ig. Non-string values are ignored."""
+        new_pt = tmp_path / "new.pt"
+        _write_artifact(new_pt)
+        torch.save(
+            {"node_scores": _SCORES, "algo": "ibcircuit", "task": "ioi", "model": "gpt2"},
+            tmp_path / "new_scores.pt",
+        )
+        c = Circuit.from_artifact(new_pt)
+        assert (c.algorithm, c.task, c.model_name) == ("ibcircuit", "ioi", "gpt2")
+        assert "ioi / ibcircuit" in c.plot(str(tmp_path / "new.html"))
+
+        old_pt = tmp_path / "old.pt"
+        _write_artifact(old_pt)
+        torch.save(
+            {"node_scores": _SCORES, "algo": 3, "task": None, "level": "neuron"},
+            tmp_path / "old_scores.pt",
+        )
+        c = Circuit.from_artifact(old_pt)
+        assert (c.algorithm, c.task, c.model_name) == (None, None, None)
+        html = c.plot(str(tmp_path / "old.html"))
+        assert "unknown / unknown" in html
+        assert "eap-ig" not in html
+
     def test_json_preferred_over_pt_when_both_exist(self, tmp_path):
         """JSON side-car is checked before .pt side-car."""
         pt = tmp_path / "circuit.pt"
@@ -388,14 +416,21 @@ class TestDunders:
 
 
 class TestPlotGracefulDegradation:
-    def test_plot_with_no_scores_returns_none(self, caplog):
-        import logging
-
+    def test_plot_with_no_scores_warns_and_returns_none(self, tmp_path):
+        """A circuit without node scores is a RuntimeWarning the caller sees, even
+        with the UserWarning filter importing circuitkit.api installs (CK-25), and
+        plot() still returns None without writing a file."""
         c = Circuit(_NODES)  # no scores
-        with caplog.at_level(logging.INFO):
-            result = c.plot()
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            warnings.filterwarnings("ignore", category=UserWarning)  # as circuitkit.api does
+            result = c.plot(str(tmp_path / "circuit.html"))
         assert result is None
-        assert "no node scores" in caplog.text.lower()
+        assert not (tmp_path / "circuit.html").exists()
+        no_scores = [w for w in caught if "no node scores" in str(w.message).lower()]
+        assert len(no_scores) == 1
+        assert no_scores[0].category is RuntimeWarning
+        assert "output_path" in str(no_scores[0].message)
 
     def test_plot_with_scores_to_path_calls_visualizer(self, tmp_path):
         """When scores are present and an output path is given, plot() should
@@ -425,3 +460,99 @@ class TestPlotGracefulDegradation:
         )
         mock_viz.to_html.assert_not_called()
         assert result == {"nodes": [], "edges": []}
+
+    def test_plot_without_viz_stack_warns_and_returns_none(self, tmp_path, monkeypatch):
+        """A missing visualisation stack is a RuntimeWarning the caller sees, even
+        with the UserWarning filter importing circuitkit.api installs (CK-25), and
+        plot() still returns None without raising."""
+        c = Circuit(_NODES, dict(_SCORES))
+        # A None entry makes `from .visualize.graph_viz import ...` raise ImportError.
+        monkeypatch.setitem(sys.modules, "circuitkit.visualize.graph_viz", None)
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            warnings.filterwarnings("ignore", category=UserWarning)  # as circuitkit.api does
+            result = c.plot(str(tmp_path / "circuit.html"))
+
+        assert result is None
+        assert not (tmp_path / "circuit.html").exists()
+        plot_warnings = [w for w in caught if "Plotting unavailable" in str(w.message)]
+        assert len(plot_warnings) == 1
+        assert plot_warnings[0].category is RuntimeWarning
+        assert "ModuleNotFoundError" in str(plot_warnings[0].message)
+
+
+class TestPlotNeuronLevelPrunedComponents:
+    def test_only_fully_pruned_components_are_pruned(self, tmp_path):
+        """A neuron-level component is pruned only when all of its neurons are
+        (CK-26), in both naming styles; an artifact written before the neuron
+        counts were recorded marks none and still plots."""
+        cases = [
+            # EAP / EAP-IG names. m0 and a0.h0 are fully pruned; m1 and a0.h1 are not.
+            (
+                {"m0": 0.5, "m1": 0.4, "a0.h0": 0.3, "a0.h1": 0.2},
+                {"mlp": {0: [0, 1, 2, 3], 1: [0]}, "heads": {(0, 0): [0, 1], (0, 1): [0]}},
+                {"m0", "a0.h0"},
+            ),
+            # IBCircuit names, same pruning.
+            (
+                {"MLP 0": 0.5, "MLP 1": 0.4, "A0.0": 0.3, "A0.1": 0.2},
+                {"mlp": {0: [0, 1, 2, 3], 1: [0]}, "heads": {(0, 0): [0, 1], (0, 1): [0]}},
+                {"MLP 0", "A0.0"},
+            ),
+        ]
+        for i, (scores, pruned, expected) in enumerate(cases):
+            meta = {"mlp_hook": "mlp_out", "neurons_per_mlp": 4, "neurons_per_head": 2}
+            nodes = {**pruned, "_meta": meta}
+            # A real save/load round trip: the head keys are (layer, head) tuples.
+            Circuit(nodes, scores, level="neuron").save(tmp_path / f"c{i}.pt")
+            circuit = Circuit.from_artifact(tmp_path / f"c{i}.pt")
+            out = circuit.plot(str(tmp_path / f"c{i}.json"))
+            assert {n["id"] for n in out["nodes"] if not n["in_circuit"]} == expected
+
+            # Same artifact without the neuron counts: nothing is pruned.
+            legacy = {**pruned, "_meta": {"mlp_hook": "mlp_out"}}
+            out = Circuit(legacy, scores, level="neuron").plot(str(tmp_path / f"l{i}.json"))
+            assert all(n["in_circuit"] for n in out["nodes"])
+
+
+# ---------------------------------------------------------------------------
+# save / from_artifact keep the run's label
+# ---------------------------------------------------------------------------
+class TestLabelRoundTrip:
+    def _neuron_circuit(self, tmp_path):
+        import torch
+
+        nodes = {"_meta": {"level": "neuron"}, "pruned": []}
+        torch.save(nodes, tmp_path / "c.pt")
+        torch.save(
+            {"node_scores": {"blocks.0.mlp": 0.5}, "algo": "eap", "task": "ioi", "model": "gpt2"},
+            tmp_path / "c_scores.pt",
+        )
+        return Circuit.from_artifact(tmp_path / "c.pt")
+
+    def test_save_then_load_keeps_task_model_and_algorithm(self, tmp_path):
+        self._neuron_circuit(tmp_path).save(tmp_path / "saved.pt")
+        again = Circuit.from_artifact(tmp_path / "saved.pt")
+        assert (again.task, again.model_name, again.algorithm) == ("ioi", "gpt2", "eap")
+        assert again.scores == {"blocks.0.mlp": 0.5}
+
+    def test_second_round_trip_keeps_it_too(self, tmp_path):
+        self._neuron_circuit(tmp_path).save(tmp_path / "one.pt")
+        Circuit.from_artifact(tmp_path / "one.pt").save(tmp_path / "two.pt")
+        again = Circuit.from_artifact(tmp_path / "two.pt")
+        assert (again.task, again.algorithm) == ("ioi", "eap")
+
+    def test_bare_json_with_no_label_still_loads_as_unknown(self, tmp_path):
+        import torch
+
+        torch.save({"_meta": {}, "pruned": []}, tmp_path / "old.pt")
+        (tmp_path / "old_scores.json").write_text(json.dumps({"node_scores": {"a": 1.0}}))
+        c = Circuit.from_artifact(tmp_path / "old.pt")
+        assert c.scores == {"a": 1.0} and c.task is None and c.algorithm is None
+
+    def test_non_string_label_is_ignored(self, tmp_path):
+        import torch
+
+        torch.save({"_meta": {}}, tmp_path / "x.pt")
+        (tmp_path / "x_scores.json").write_text(json.dumps({"node_scores": {}, "task": 5}))
+        assert Circuit.from_artifact(tmp_path / "x.pt").task is None

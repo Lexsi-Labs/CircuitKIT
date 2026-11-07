@@ -57,7 +57,7 @@ class MCQChoiceSwap(CorruptionStrategy):
                 notes=("record needs meta['choices'] and meta['correct_idx'] " "(use MCQAdapter)"),
                 succeeded=False,
             )
-        rng = rng or random.Random(hash(record.record_id) & 0xFFFFFFFF)
+        rng = rng or self._record_rng(record)
         choices: List[str] = list(record.meta["choices"])
         correct_idx: int = int(record.meta["correct_idx"])
         if len(choices) < 2:

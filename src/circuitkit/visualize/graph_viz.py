@@ -5,8 +5,9 @@ Two rendering paths that share a single data-preparation layer:
 
 * **Plotly** (``interactive_widget``) — returns a ``go.FigureWidget`` for
   inline Jupyter display with a threshold slider.
-* **D3.js** (``to_html``) — writes a self-contained HTML file with full
-  zoom/pan, hover tooltips, and a real-time threshold slider.
+* **D3.js** (``to_html``) — writes a single HTML file with full zoom/pan,
+  hover tooltips, and a real-time threshold slider. The page loads D3.js and
+  elkjs from pinned, integrity-checked CDN URLs, so it needs network access.
 
 Both paths consume the same ``_GraphData`` structure built from a
 ``CircuitScores`` artifact and an optional list of pruned node names.
@@ -21,7 +22,9 @@ Key design decisions
   background model structure is legible without competing with the circuit.
 * **Edges** connect adjacent-layer circuit nodes, weighted by the product of
   the two endpoint raw scores (normalized within edge set). The threshold
-  slider filters edges by this normalized weight.
+  slider filters edges by this normalized weight. They are a layout aid, not
+  measured connections: node-level discovery scores nodes only, so no edge
+  attribution exists. Exports say so in ``metadata["edge_kind"]``.
 * **Log-scale normalization** of raw scores drives node size/opacity and
   edge color/width. Scores span orders of magnitude, so values are spread
   on a true log scale — this prevents the MLP 0 outlier (score ≈ 1.33 vs.
@@ -43,6 +46,11 @@ import plotly.graph_objects as go
 
 from ..artifacts.scores import CircuitScores
 from .theme import PALETTE, FONT_FAMILY, FONT_MONO, get_node_color, get_plotly_layout, get_d3_theme
+
+# Value of ``metadata["edge_kind"]``: every in-circuit node of layer L is joined
+# to every in-circuit node of layer L+1, weighted by the product of the two node
+# scores. A consumer must not read these edges as measured attributions.
+EDGE_KIND_LAYER_ADJACENT = "layer_adjacent"
 
 # ---------------------------------------------------------------------------
 # Internal data model
@@ -67,7 +75,7 @@ class _NodeData:
 
 @dataclass
 class _EdgeData:
-    """All per-edge values needed for rendering."""
+    """All per-edge values needed for rendering (see ``EDGE_KIND_LAYER_ADJACENT``)."""
 
     src: str
     dst: str
@@ -280,7 +288,9 @@ def _build_graph_data(
     discovery algorithm. Everything in scores.node_scores that is NOT in
     pruned_node_names is considered "in circuit".
 
-    Edge construction:
+    Edge construction (``metadata["edge_kind"] == "layer_adjacent"``):
+        The edges are derived from node scores and layer position only; they
+        are not measured connections between components.
         For every pair (src, dst) where both are in-circuit nodes and
         dst is in the immediately adjacent layer (layer(dst) == layer(src)+1),
         create an edge with weight = raw_score(src) * raw_score(dst).
@@ -423,6 +433,7 @@ def _build_graph_data(
             "n_pruned_nodes": len(pruned_set & kept_name_set),
             "n_nodes_hidden": n_nodes_hidden,
             "n_edges_hidden": n_edges_hidden,
+            "edge_kind": EDGE_KIND_LAYER_ADJACENT,
         },
     )
 
@@ -485,7 +496,8 @@ def _make_plotly_figure(
                 hovertemplate=(
                     f"<b>{edge.src} → {edge.dst}</b><br>"
                     f"Edge strength: {edge.normalized_weight:.3f}<br>"
-                    f"Raw weight: {edge.raw_weight:.6f}"
+                    f"Raw weight: {edge.raw_weight:.6f}<br>"
+                    "Layer-adjacent edge, not a measured connection"
                     "<extra></extra>"
                 ),
                 showlegend=False,
@@ -613,8 +625,8 @@ class CircuitGraphVisualizer:
 
     * ``interactive_widget()`` — Plotly ``FigureWidget`` + ipywidgets threshold
       slider for use in Jupyter notebooks.
-    * ``to_html()`` — self-contained D3.js HTML file with zoom/pan, hover
-      tooltips, and a real-time threshold slider.
+    * ``to_html()`` — D3.js HTML file with zoom/pan, hover tooltips, and a
+      real-time threshold slider (loads D3.js and elkjs from pinned CDN URLs).
 
     Example::
 
@@ -641,7 +653,9 @@ class CircuitGraphVisualizer:
                           ``circuit.plot()`` passes an empty edge list.
             scores:       ``CircuitScores`` artifact (all 156 scored nodes).
             edge_scores:  Optional pre-computed per-edge attribution values.
-                          Currently reserved for future per-edge EAP scores.
+                          Currently reserved and unused: the drawn edges are
+                          layer-adjacent links between circuit nodes (see
+                          ``EDGE_KIND_LAYER_ADJACENT``), not attributions.
             pruned_nodes: List of node names that were *removed* by the
                           discovery algorithm. Everything else is "in circuit".
                           Defaults to an empty list (all nodes shown as
@@ -680,7 +694,11 @@ class CircuitGraphVisualizer:
 
     @property
     def edges(self) -> List[Dict[str, Any]]:
-        """Derived edges as {src, dst, weight} dicts."""
+        """Layer-adjacent edges as {src, dst, weight} dicts.
+
+        The weight is the normalized product of the two node scores; it is not
+        a measured edge attribution.
+        """
         return [
             {"src": e.src, "dst": e.dst, "weight": e.normalized_weight}
             for e in self._graph_data.edges
@@ -694,19 +712,24 @@ class CircuitGraphVisualizer:
         self,
         output_path: str,
         title: Optional[str] = None,
-        default_threshold: float = 0.0,
+        default_threshold: Optional[float] = None,
         **_kw: Any,
     ) -> str:
         """
-        Export the circuit graph as a self-contained D3.js HTML file.
+        Export the circuit graph as a D3.js HTML file.
 
-        The exported file requires no external dependencies (D3.js is
-        bundled via CDN) and works in any modern browser.
+        The page loads D3.js and elkjs from CDNs (exact versions, with
+        Subresource Integrity hashes), so opening it needs network access. It
+        works in any modern browser.
 
         Features:
         - Scroll-to-zoom, drag-to-pan (mouse + trackpad).
         - Hover tooltips on nodes and edges.
-        - Real-time threshold slider for edge filtering.
+        - Real-time threshold slider for edge filtering. The legend states
+          that edges join adjacent-layer circuit nodes and are not measured.
+        - No size limit. A circuit with more than 20,000 edges opens with the
+          threshold raised so only its strongest edges are drawn (a note on
+          the page says how many); every edge stays in the file.
         - Toggle to show/hide pruned (background) nodes.
         - Color legend with node-type key.
 
@@ -714,7 +737,12 @@ class CircuitGraphVisualizer:
             output_path:        File path for the HTML file.
             title:              Figure title. Defaults to
                                 ``"<TASK> Circuit — <model> / <algo>"``.
-            default_threshold:  Initial edge threshold [0, 1].
+            default_threshold:  Initial edge threshold [0, 1]. ``None`` (the
+                                default) picks it automatically: 0 for up to
+                                ``INITIAL_VISIBLE_EDGES`` (20,000) edges,
+                                otherwise the lowest 0.01 step that leaves at
+                                most that many edges drawn. An explicit value
+                                is used as given.
 
         Returns:
             The full HTML string (also written to ``output_path``).
@@ -839,8 +867,8 @@ class CircuitGraphVisualizer:
                 (unbounded) graph, built at construction time.
 
         Returns:
-            Dict with keys ``metadata``, ``nodes``, ``edges``,
-            ``n_layers``, ``circuit_node_ids``.
+            Dict with keys ``metadata`` (includes ``edge_kind``), ``nodes``,
+            ``edges``, ``n_layers``, ``circuit_node_ids``.
         """
         gd = graph_data if graph_data is not None else self._graph_data
         nodes_payload = [

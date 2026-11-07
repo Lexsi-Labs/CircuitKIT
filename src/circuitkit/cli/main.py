@@ -5,6 +5,7 @@ CircuitKIT CLI - Main entry point for command-line interface.
 import os
 import warnings
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 import click
 import yaml
@@ -2222,6 +2223,47 @@ def export(model, artifact, output, intervention, sparsity, scope, precision):
 # ---------------------------------------------------------------------------
 
 
+def _require_graph_export(mode: str, output: Optional[str], result: Any) -> None:
+    """Raise if a graph-mode visualize step with an output path produced nothing.
+
+    ``Circuit.plot()`` catches its own errors (after warning) and returns
+    ``None``, so for ``mode="graph"`` a missing result means no file was
+    written. The other modes return ``None`` on success.
+
+    Args:
+        mode: The ``visualize.mode`` value from the YAML.
+        output: The ``visualize.output`` path, if any.
+        result: What ``Pipeline.visualize`` returned.
+
+    Raises:
+        RuntimeError: If a graph export was requested and nothing came back.
+    """
+    if mode == "graph" and output and result is None:
+        raise RuntimeError("graph export was not written (see the warning above)")
+
+
+def _print_run_outcome(failed_steps: Dict[str, Dict[str, str]]) -> None:
+    """Print the closing line of ``circuitkit run``, naming any step that failed.
+
+    A failed optional step does not change the exit code, so this line is how
+    the run reports it.
+
+    Args:
+        failed_steps: ``{step: {"error_type": ..., "error": ...}}`` for each
+            step that failed without stopping the run.
+    """
+    if not failed_steps:
+        console.print("[bold green]✓ Pipeline complete![/bold green]")
+        return
+    # escape(): the message is arbitrary text and must not be read as rich markup.
+    details = escape(
+        "; ".join(
+            f"{step} ({info['error_type']}: {info['error']})" for step, info in failed_steps.items()
+        )
+    )
+    console.print(f"[bold yellow]Pipeline complete, but a step failed: {details}[/bold yellow]")
+
+
 @cli.command()
 @click.argument("config_path", type=click.Path(exists=True))
 def run(config_path):
@@ -2387,6 +2429,9 @@ def run(config_path):
             console.print(f"[yellow]Warning: benchmark failed:[/yellow] {exc}")
 
     # --- Visualize ---
+    # Steps that failed but did not stop the run, as {step: {"error_type", "error"}};
+    # reported in the closing line (the exit code is unchanged).
+    failed_steps = {}
     viz_cfg = cfg.get("visualize", {})
     if viz_cfg and viz_cfg.get("enabled", True) and pipe._circuit is not None:
         console.print("[cyan]Step: visualize[/cyan]")
@@ -2399,15 +2444,18 @@ def run(config_path):
                 for key in ("max_nodes", "max_edges", "edge_threshold")
                 if key in viz_cfg
             }
-            pipe.visualize(
-                mode=viz_cfg.get("mode", "graph"),
+            viz_mode = viz_cfg.get("mode", "graph")
+            viz_result = pipe.visualize(
+                mode=viz_mode,
                 output=viz_cfg.get("output"),
                 **extra_viz_kw,
             )
+            _require_graph_export(viz_mode, viz_cfg.get("output"), viz_result)
         except Exception as exc:
             console.print(f"[yellow]Warning: visualize failed:[/yellow] {exc}")
+            failed_steps["visualize"] = {"error_type": type(exc).__name__, "error": str(exc)}
 
-    console.print("[bold green]✓ Pipeline complete![/bold green]")
+    _print_run_outcome(failed_steps)
     pipe.summary()
 
 

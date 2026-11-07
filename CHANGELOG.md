@@ -90,9 +90,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   CLI); `circuitkit discover --ig-steps` is unset by default for the same reason.
   `circuitkit run` follows `Pipeline.evaluate`: an `evaluate:` block without `pillars:` now runs
   the two basic pillars instead of all of them; list `pillars:` (or `pillars: all`) for more.
+- **Circuit graph export edges are labelled**. The graph payload (`CircuitGraphVisualizer.to_json`,
+  `export_graph_data` and the data embedded in the HTML) now carries `metadata["edge_kind"] = "layer_adjacent"`,
+  and the HTML legend says that edges join circuit nodes of adjacent layers, weighted by node importance, and are not
+  measured connections. Docstrings no longer imply that edges are attributions. Real edge attributions are not part
+  of this change.
+- **The circuit graph HTML no longer refuses large circuits**. A circuit above 5,000 nodes or 50,000 edges
+  showed "too large to render interactively" and drew nothing; that limit is removed (a browser benchmark opened 334,000
+  edges in under 5 seconds). What does slow down is zoom and the slider, in proportion to the edges drawn, so a circuit
+  with more than 20,000 edges now opens with the edge threshold raised to the lowest 0.01 step that draws at most 20,000
+  of them, and the page says "Showing the strongest N of M edges. Move the threshold to 0 to show all." Every edge stays
+  in the page. `render_d3_circuit_html` and `CircuitGraphVisualizer.to_html` take `default_threshold=None` for this
+  automatic choice; a value you pass is used as given.
+- The exported HTML pins its scripts: elkjs to `0.12.0`, loaded as the package's own `lib/elk.bundled.js` (it was
+  unversioned, so a new release changed every page already written, and the package ships no `.min.js`) and both elkjs and D3 carry `integrity`/`crossorigin`. The docstrings no longer claim "no external
+  dependencies": the page loads D3 (cdnjs) and elkjs (jsDelivr).
 
 ### Fixed
 
+- **Saved neuron-level circuits keep their label**. `Circuit.save` wrote a `_scores.json` with no
+  task, model or algorithm, and `from_artifact` reads that file first, so the graph title said
+  "unknown / unknown". The file now carries them, and files without them still load.
+- **IBCircuit neuron-level runs get a circuit graph**. The neuron branch wrote only `neurons_scores`, so
+  `Circuit.from_artifact` found no `node_scores`, `Circuit.scores` was empty and `Circuit.plot` wrote nothing. It now
+  also writes `node_scores` (the largest absolute neuron score per component, keyed `A{layer}.{head}` / `MLP {layer}`)
+  into the scores side-car, as the EAP and EAP-IG neuron branches already do. `neurons_scores` is unchanged.
+  The EAP, EAP-IG and IBCircuit neuron branches also write the task and model name into that side-car, and
+  `Circuit.from_artifact` reads the algorithm, task and model from it, because a neuron-level run writes no
+  `_scores.json`. Without this the graph of a neuron-level run was titled "Circuit (unknown / eap-ig)", whatever
+  algorithm ran. A side-car written before this change has no task or model and shows "unknown" for them; a circuit
+  with no algorithm set now shows "unknown" instead of `eap-ig`.
+- **Neuron-level circuit graphs mark only fully pruned components as pruned** (EAP, EAP-IG and IBCircuit).
+  `Circuit.plot` took the pruning dict's keys (layer numbers and `(layer, head)` tuples) for component names, so no
+  component matched and every one showed as in the circuit. A component is now pruned when all of its neurons were.
+  Discovery records the neuron counts in the pruning dict's `_meta` (`neurons_per_mlp`, `neurons_per_head`). A
+  pruning dict saved before this change has no counts, so no component shows as pruned, as before; it still loads.
+- **Local checkpoints named after their base model load**. `load_model` refused any
+  local directory whose path contained "llama" or "gemma", because TransformerLens 3.8 picks
+  the architecture, and for 29 config branches the whole config, from the name and then
+  never reads `config.json` (a fine-tune in `meta-llama-Llama-3.2-1B_pruned_wanda_v2-sft_v1/`
+  would have loaded with base Llama-3.2-1B's hard-coded config). TransformerLens patch `0007`
+  makes a local directory's config and model class come from its `config.json`; Hub names
+  are unchanged. Local Llama checkpoints now load under any name. Local Gemma checkpoints,
+  fine-tunes included, are refused with a message saying they need TransformerLens 4
+  (TransformerLens 3.8 has Gemma configs for Hub names only, and the Hub name loads the base
+  weights). Without patch `0007` (a TransformerLens patched on disk by the old script, or
+  another version), the old path check stays.
+- **Pythia / GPT-NeoX models load again**. transformers 5 renamed
+  `GPTNeoXForCausalLM.embed_out` to `lm_head`, but TransformerLens 3.8.0's weight conversion
+  still reads `embed_out`, so every GPT-NeoX / Pythia checkpoint, Hub or local, failed to load
+  with `AttributeError`. TransformerLens patch `0008` reads the unembedding from `lm_head` when
+  `embed_out` is absent. It backports the `HookedTransformer` half of the fix released in
+  TransformerLens 3.9.0 and retires with the TransformerLens 4 migration).
+- **`load_scores` reads IBCircuit neuron-level score files**. `discover_circuit` saves
+  IBCircuit neuron scores as a dict of tensors under `neurons_scores`, but the loader only treated
+  `neuron_scores` (singular) as IBCircuit and sent the plural key to the EAP path, so every
+  IBCircuit neuron run failed to load: "model_name is required" without a model name, and
+  `'dict' object has no attribute 'float'` with one. The loader now chooses the format from the
+  value (a dict is IBCircuit, a 2-D tensor is EAP), and still reads the old singular key. IBCircuit
+  scores each MLP layer in `d_model` space by default (`mlp_hook="mlp_out"`), and without a model
+  name the loader took those tensors for `d_mlp`-space scores, so selective finetuning would have
+  masked the wrong `down_proj` columns without any error. The file now records `mlp_hook`, and the
+  loader uses neuron-level MLP scores only for `post_act`; for `mlp_out`, or an older file that
+  does not say, each MLP layer gets one node-level score, with a warning.
+- Transfer matrices: `TransferMatrix.analyze()` and `TransferMatrixAnalyzer.effect_sizes()` used
+  `np.argmax`, which returns the index of a NaN, so a failed evaluation was reported as the best
+  transfer. They now skip NaN cells. When every evaluation failed, `best_transfer` is `None` (like
+  `worst_transfer`) and `effect_sizes()` returns NaN bounds instead of raising `ValueError`.
+- Corruption strategies called without an `rng` (as `circuitkit data prepare` does) seeded from
+  `hash(record_id)`, which changes with every Python process, so the same dataset was corrupted
+  differently on each run. They now seed from a crc32 of `record_id`.
+- Pillar 6: `summarize_transfer_matrix()` started its best/worst search at -1 and 2.0, so when
+  every cross-task ratio was above 2.0 (a circuit more faithful on the target than on its own
+  task) `worst_transfer` was `None`. The search now starts at -inf and +inf.
 - Hyperparameter checks: `eval.pillars: []` is now an error (it would run nothing), and an
   ACDC grid point too large to compute (`tao_exps: [400]`) is reported as tau >= 1 instead of
   being skipped.
@@ -101,8 +171,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   actual free-memory query. It emits an advisory `RuntimeWarning` instead of
   refusing a run from an approximate estimate; set
   `CIRCUITKIT_SKIP_MEM_GUARD=1` to silence it.
+- Pillar 7 R1 used a Spearman formula that is only exact without ties, so tied node scores gave
+  the wrong rho, and two constant score lists counted as a perfect 1.0. It now uses
+  `scipy.stats.spearmanr`, skips NaN scores pairwise, and returns 0.0 when rho is undefined.
+  `r1_seed_consistency` and `reliability_index` change only for runs whose node scores tie.
 - Docs and README pointed at `lexsi-labs.github.io/circuitkit/`, which 404s; the site lives at `https://circuitkit.lexsi.ai/`.
   Also fixed the README "Applications" deep link.
+- `CorruptionEffectiveness.summary()` and the `difficulty_impact` docstrings had the sign backwards.
+  The value is corrupted accuracy minus clean accuracy, so negative means harder.
 - Stale version strings: landing-page chip, both BibTeX blocks and the install check said `1.0.0`; they now read the installed package version.
   `CITATION.cff` release date corrected, and the release-notes page now explains the older `v1.0.0` internal milestone.
 - Issue-template contact links pointed at a personal fork, and the contributing guide pointed to GitHub Discussions (not enabled).
@@ -141,6 +217,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   applied once and would otherwise outlive the other tenants.
 - `enable_expandable_segments()` is now also skipped on Windows, where PyTorch
   does not support this allocator setting and warns if asked.
+- Selective fine-tuning (`selective_finetuning.finetune_utils.run_finetuning`)
+  changed weights outside the selection. The masked-out rows/columns get zero
+  gradient, but AdamW's default `weight_decay=0.01` still shrank them by
+  `lr * 0.01` every step (all 240 masked-out entries of a 16x16 `q_proj` moved
+  after 5 steps in fp32). Masked parameters now get the decay on their
+  selected entries only, so the masked-out entries stay bit-identical and the
+  selected entries train as before. `weight_decay` is now a `run_finetuning`
+  argument (default 0.01, unchanged).
 - Un-gated 8 more fast-tier modules (`tests/apply/test_pruner.py`,
   `tests/unit/test_api.py`, `test_pillars.py`, `test_quick_api.py`,
   `test_quick_extensions.py`, `test_score_loader.py`, `test_end_to_end.py`,
@@ -151,10 +235,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `evaluation.hf_checkpoint._load_causal_lm` still passed the deprecated
   `torch_dtype=` keyword to `AutoModelForCausalLM.from_pretrained`; replaced
   with `dtype=`.
+- **Behaviour change:** selective fine-tuning (`run_finetuning`) now raises
+  `ValueError` for a float16 model. It trains the weights in place with AdamW,
+  and in float16 AdamW's `eps=1e-8` and small squared gradients round to 0, so
+  one step turned the trained weights into NaN/inf (every `q_proj` weight of a
+  tiny Llama, masked or not). `finetune_llama.py` defaulted to `--dtype
+  float16`; it now defaults to `bfloat16`, and the Llama and Qwen examples no
+  longer offer `float16`.
 - The IOI EAP-IG visualization pages (`docs/assets/ioi_eap-ig.html` and its
   `examples/visualization/` duplicate) loaded `elkjs` from jsDelivr with no
   pinned version and `d3` with no Subresource Integrity. Pinned `elkjs` to
   `0.12.0` and added SRI (`integrity`/`crossorigin`) for both scripts.
+- `Circuit.plot()` without the visualisation dependencies (or any other failure to build the graph) only logged at
+  `INFO`, so a caller who asked for a file got nothing and no notice). It now emits a `RuntimeWarning`
+  (not a `UserWarning`, which importing `circuitkit.api` ignores) and still returns `None`. A circuit with no node
+  scores (a discovery run without an output path) did the same, and now emits the same `RuntimeWarning`, which says to
+  re-run discovery with an output path.
+- `circuitkit run <yaml>` with a failing `visualize:` step printed a warning and then "Pipeline complete" as if nothing
+  had gone wrong). The closing line now names the failed step with its error type and message. In graph mode a
+  step that wrote no file (`Circuit.plot()` returned `None`) counts as failed. The exit code is unchanged.
+- Edge-level `get_scores_exact` (`method="exact"`) no longer raises `TypeError`: it
+  passed `pair_padding_side` to `evaluate_graph`, which does not accept it (the value
+  is read from the dataloader inside `evaluate_graph`).
+
+### Security
+
+- The graph HTML embedded the payload with `json.dumps`, so a task, model or node name containing `</script>` ended the
+  script and the rest of the name ran as HTML). `<`, `>`, `&`, U+2028 and U+2029 are now written as `\uXXXX`
+  escapes inside the embedded JSON (it parses back to the same data), and the page title is HTML-escaped.
+- The graph HTML's tooltips wrote node names and edge endpoints into `innerHTML` unescaped, so a crafted scores
+  file (circuit artifacts are shared between users) could run script when a node was hovered). Every value
+  from the payload is now HTML-escaped before it reaches a tooltip.
+- `final_answer_swap` swaps only a whole number when it falls back to the bare result in the
+  prompt. With a question-only prompt it swapped the digits inside a larger number (`spent 15`
+  became `spent 17` for a result of 5), so the corrupt prompt no longer matched its answer.
 
 ## [Unreleased] (next release)
 

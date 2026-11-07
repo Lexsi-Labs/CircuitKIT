@@ -27,8 +27,21 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 
 import logging
+import re
+import warnings
 
 logger = logging.getLogger(__name__)
+
+# Keys of a ``_scores.pt`` side-car that name the run, and the Circuit attribute each fills.
+_PT_SIDECAR_METADATA = {"algo": "algorithm", "task": "task", "model": "model_name"}
+
+
+def _sidecar_metadata(blob: Dict[str, Any]) -> Dict[str, Optional[str]]:
+    """Algorithm, task and model from a scores side-car; ``None`` where absent."""
+    return {
+        attr: blob[key] if isinstance(blob.get(key), str) else None
+        for key, attr in _PT_SIDECAR_METADATA.items()
+    }
 
 if TYPE_CHECKING:  # pragma: no cover - typing only, avoids heavy imports
     from .artifacts.scores import CircuitScores
@@ -38,6 +51,54 @@ __all__ = ["Circuit"]
 # A pruning artifact is either a flat list of node names (node-level) or a
 # nested neuron dict (neuron-level discovery).
 PruningArtifact = Union[List[str], Dict[str, Any]]
+
+# Component names in the score keys, by naming style: EAP / EAP-IG write
+# ``m{layer}`` and ``a{layer}.h{head}``; IBCircuit writes ``MLP {layer}`` and
+# ``A{layer}.{head}``.
+_MLP_NAME_PATTERNS = (re.compile(r"m(\d+)$"), re.compile(r"MLP (\d+)$"))
+_HEAD_NAME_PATTERNS = (re.compile(r"a(\d+)\.h(\d+)$"), re.compile(r"A(\d+)\.(\d+)$"))
+
+
+def _fully_pruned_components(pruning_dict: Dict[str, Any], component_names: List[str]) -> List[str]:
+    """Return the components of a neuron-level artifact whose neurons were all pruned.
+
+    A neuron-level pruning dict lists pruned neuron indices per layer (``mlp``)
+    and per ``(layer, head)`` (``heads``), so a component is pruned from the
+    circuit only when every one of its neurons is in that list. The neuron
+    counts come from ``_meta`` (``neurons_per_mlp`` / ``neurons_per_head``);
+    artifacts written without them report no pruned component, which is what
+    they showed before the counts were recorded.
+
+    Args:
+        pruning_dict: The neuron-level artifact (``mlp``, ``heads``, ``_meta``).
+        component_names: Component names as used by the scores, in either naming style.
+
+    Returns:
+        The names from ``component_names`` that are fully pruned.
+    """
+    meta = pruning_dict.get("_meta") or {}
+    per_mlp = meta.get("neurons_per_mlp")
+    per_head = meta.get("neurons_per_head")
+    mlp_pruned = pruning_dict.get("mlp") or {}
+    heads_pruned = pruning_dict.get("heads") or {}
+
+    pruned: List[str] = []
+    for name in component_names:
+        for pattern in _MLP_NAME_PATTERNS:
+            match = pattern.match(name)
+            if match:
+                if per_mlp and len(set(mlp_pruned.get(int(match.group(1)), ()))) >= per_mlp:
+                    pruned.append(name)
+                break
+        else:
+            for pattern in _HEAD_NAME_PATTERNS:
+                match = pattern.match(name)
+                if match:
+                    key = (int(match.group(1)), int(match.group(2)))
+                    if per_head and len(set(heads_pruned.get(key, ()))) >= per_head:
+                        pruned.append(name)
+                    break
+    return pruned
 
 
 class Circuit:
@@ -174,6 +235,7 @@ class Circuit:
 
         circuit_scores = None
         scores: Dict[str, float] = {}
+        meta: Dict[str, Optional[str]] = {}
         # Resolve the scores side-car: explicit path, then JSON, then .pt.
         candidates: List[Path] = []
         if scores_path is not None:
@@ -201,6 +263,7 @@ class Circuit:
                     scores = dict(circuit_scores.node_scores)
                 else:
                     scores = {k: float(v) for k, v in blob.get("node_scores", {}).items()}
+                    meta = _sidecar_metadata(blob)
             else:
                 # Untrusted side-car (auto-discovered next to the artifact);
                 # weights_only=True blocks pickle RCE. Payload is a score dict.
@@ -210,6 +273,10 @@ class Circuit:
                     scores = {
                         k: float(v.item() if hasattr(v, "item") else v) for k, v in raw.items()
                     }
+                    # The neuron-level branches write no scores JSON, so the run's
+                    # algorithm, task and model come from here when present (an
+                    # older side-car has none and the title says "unknown").
+                    meta = _sidecar_metadata(blob)
             break
 
         return cls(
@@ -219,6 +286,7 @@ class Circuit:
             circuit_scores=circuit_scores,
             level=level,
             artifact_path=str(artifact_path),
+            **meta,
         )
 
     # ------------------------------------------------------------------ #
@@ -258,6 +326,10 @@ class Circuit:
             from .artifacts.scores import interop_fields
 
             data = {"node_scores": self.scores}
+            # from_artifact reads this file first, so it has to carry the label.
+            for key, attr in _PT_SIDECAR_METADATA.items():
+                if getattr(self, attr):
+                    data[key] = getattr(self, attr)
             data.update(
                 interop_fields(
                     self.scores, self.model_name, method=f"discover.{self.algorithm or 'unknown'}"
@@ -281,9 +353,10 @@ class Circuit:
         """Render the circuit as an interactive graph.
 
         Delegates to :class:`circuitkit.visualize.graph_viz.CircuitGraphVisualizer`.
-        If the visualization stack's optional dependencies are missing, the
-        method degrades gracefully: it prints a short textual summary and
-        returns ``None`` instead of raising.
+        If the graph cannot be built or rendered (typically because the
+        visualization stack's optional dependencies are missing), the method
+        emits a :class:`RuntimeWarning` with the error and a short circuit
+        summary and returns ``None`` instead of raising.
 
         Args:
             output_path: Optional export path. A ``.json`` extension writes a
@@ -308,9 +381,12 @@ class Circuit:
             >>> circuit.plot("ioi_circuit.json", max_nodes=300, max_edges=3000)
         """
         if not self.scores:
-            logger.info(
+            # A warning, not a log line, for the same reason as the one below.
+            warnings.warn(
                 "Circuit has no node scores to plot. "
-                "Re-run discovery with an output_path to capture scores."
+                "Re-run discovery with an output_path to capture scores.",
+                RuntimeWarning,
+                stacklevel=2,
             )
             return None
         try:
@@ -319,6 +395,8 @@ class Circuit:
 
             cs = self.circuit_scores
             if cs is None:
+                # CircuitScores accepts only a known algorithm, so build it with
+                # one and then label it as unknown: the page shows this name.
                 cs = CircuitScores(
                     task=self.task or "unknown",
                     model=self.model_name or "unknown",
@@ -327,6 +405,8 @@ class Circuit:
                     node_scores=self.scores,
                     timestamp=CircuitScores.create_timestamp(),
                 )
+                if not self.algorithm:
+                    cs.algorithm = "unknown"
 
             # circuit.nodes is the *pruned* (removed) node list produced by
             # discover_circuit(). The "in-circuit" nodes are scores.keys() minus
@@ -336,10 +416,10 @@ class Circuit:
             if isinstance(self.nodes, list):
                 pruned_nodes = self.nodes
             elif isinstance(self.nodes, dict):
-                # neuron-level artifact: flatten mlp + heads keys
-                pruned_nodes = list(self.nodes.get("mlp", {}).keys()) + list(
-                    self.nodes.get("heads", {}).keys()
-                )
+                # Neuron-level artifact: its keys are layer numbers and
+                # (layer, head) tuples, not component names. A component is
+                # pruned only when all of its neurons are.
+                pruned_nodes = _fully_pruned_components(self.nodes, list(self.scores))
 
             graph_dict = {"nodes": {name: {} for name in self.scores}, "edges": []}
             viz = CircuitGraphVisualizer(graph_dict, cs, pruned_nodes=pruned_nodes)
@@ -354,12 +434,18 @@ class Circuit:
                         max_edges=max_edges,
                         edge_threshold=edge_threshold,
                     )
-                title = f"Circuit ({self.task or 'unknown'} / {self.algorithm or 'eap-ig'})"
+                title = f"Circuit ({self.task or 'unknown'} / {self.algorithm or 'unknown'})"
                 return viz.to_html(str(out), title=title)
             return viz.interactive_widget()
-        except Exception as exc:  # pragma: no cover - depends on optional deps
-            logger.info(
-                f"Plotting unavailable ({type(exc).__name__}: {exc}). " f"Circuit summary: {self!r}"
+        except Exception as exc:
+            # A warning, not a log line, so a caller who asked for a file
+            # notices that none was written. RuntimeWarning rather than
+            # UserWarning because importing circuitkit.api ignores every
+            # UserWarning.
+            warnings.warn(
+                f"Plotting unavailable ({type(exc).__name__}: {exc}). Circuit summary: {self!r}",
+                RuntimeWarning,
+                stacklevel=2,
             )
             return None
 

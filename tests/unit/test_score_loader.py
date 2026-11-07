@@ -49,7 +49,7 @@ def _make_node_scores_dict(n_layers=4, n_heads=4, include_mlp=True) -> Dict[str,
 
 
 def _make_neuron_scores_dict(n_layers=4, n_heads=4, d_head=16, d_mlp=32) -> Dict[str, torch.Tensor]:
-    """Synthesise a neuron_scores dict as produced by IBCircuit neuron-level."""
+    """Synthesise the neurons_scores dict as produced by IBCircuit neuron-level."""
     d = {}
     for lyr in range(n_layers):
         for h in range(n_heads):
@@ -57,6 +57,12 @@ def _make_neuron_scores_dict(n_layers=4, n_heads=4, d_head=16, d_mlp=32) -> Dict
     for lyr in range(n_layers):
         d[f"MLP {lyr}"] = torch.randn(d_mlp).abs()
     return d
+
+
+def _load_ib(data, model_name=None):
+    """Call _load_ibcircuit_neuron the way load_scores does (dict from either key)."""
+    raw = data.get("neurons_scores", data.get("neuron_scores", {}))
+    return _load_ibcircuit_neuron(raw, data, model_name)
 
 
 def _make_neurons_scores_tensor(n_layers=4, n_heads=4, d_model=64, d_mlp=128):
@@ -234,31 +240,32 @@ class TestIBCircuitNeuron(unittest.TestCase):
         return {
             "algo": "ibcircuit",
             "level": "neuron",
-            "neuron_scores": _make_neuron_scores_dict(
+            "neurons_scores": _make_neuron_scores_dict(
                 self.N_LAYERS, self.N_HEADS, self.D_HEAD, self.D_MLP
             ),
+            "mlp_hook": "post_act",
             "total_neurons": self.N_LAYERS * self.N_HEADS * self.D_HEAD
             + self.N_LAYERS * self.D_MLP,
         }
 
     def test_head_count(self):
-        hs, _, _ = _load_ibcircuit_neuron(self._scores_data(), model_name=None)
+        hs, _, _ = _load_ib(self._scores_data())
         self.assertEqual(len(hs), self.N_LAYERS * self.N_HEADS)
 
     def test_mlp_count(self):
-        _, ms, _ = _load_ibcircuit_neuron(self._scores_data(), model_name=None)
+        _, ms, _ = _load_ib(self._scores_data())
         self.assertEqual(len(ms), self.N_LAYERS)
 
     def test_head_scores_are_floats(self):
         """Attention tensors must be collapsed to a scalar float."""
-        hs, _, _ = _load_ibcircuit_neuron(self._scores_data(), model_name=None)
+        hs, _, _ = _load_ib(self._scores_data())
         for key, val in hs.items():
             self.assertIsInstance(val, float)
             self.assertGreater(val, 0.0)  # abs().sum() of positive tensor
 
     def test_mlp_scores_are_tensors(self):
         """MLP entries should be 1-D tensors of length d_mlp."""
-        _, ms, meta = _load_ibcircuit_neuron(self._scores_data(), model_name=None)
+        _, ms, meta = _load_ib(self._scores_data())
         self.assertTrue(meta["mlp_neuron_level"])
         for layer, val in ms.items():
             self.assertIsInstance(val, torch.Tensor)
@@ -267,7 +274,7 @@ class TestIBCircuitNeuron(unittest.TestCase):
     def test_head_aggregation_is_abs_sum(self):
         """head_scores value should equal abs().sum() of the original tensor."""
         raw = _make_neuron_scores_dict(self.N_LAYERS, self.N_HEADS, self.D_HEAD, self.D_MLP)
-        hs, _, _ = _load_ibcircuit_neuron({"neuron_scores": raw}, model_name=None)
+        hs, _, _ = _load_ib({"neurons_scores": raw, "mlp_hook": "post_act"})
         for lyr in range(self.N_LAYERS):
             for h in range(self.N_HEADS):
                 expected = float(raw[f"A{lyr}.{h}"].abs().sum().item())
@@ -275,7 +282,7 @@ class TestIBCircuitNeuron(unittest.TestCase):
 
     def test_mlp_scores_values_match(self):
         raw = _make_neuron_scores_dict(self.N_LAYERS, self.N_HEADS, self.D_HEAD, self.D_MLP)
-        _, ms, _ = _load_ibcircuit_neuron({"neuron_scores": raw}, model_name=None)
+        _, ms, _ = _load_ib({"neurons_scores": raw, "mlp_hook": "post_act"})
         for lyr in range(self.N_LAYERS):
             self.assertTrue(torch.allclose(ms[lyr], raw[f"MLP {lyr}"]))
 
@@ -283,17 +290,17 @@ class TestIBCircuitNeuron(unittest.TestCase):
         """A length-1 MLP tensor indicates a mislabelled node-level run."""
         raw = {f"A0.{h}": torch.randn(16).abs() for h in range(4)}
         raw["MLP 0"] = torch.tensor([0.7])  # length-1 → node-level
-        hs, ms, meta = _load_ibcircuit_neuron({"neuron_scores": raw}, model_name=None)
+        hs, ms, meta = _load_ib({"neurons_scores": raw, "mlp_hook": "post_act"})
         self.assertFalse(meta["mlp_neuron_level"])
         self.assertIsInstance(ms[0], float)
 
     def test_empty_raises(self):
         with self.assertRaises(ValueError):
-            _load_ibcircuit_neuron({"neuron_scores": {}}, model_name=None)
+            _load_ib({"neurons_scores": {}})
 
-    def test_metadata_hook_unknown_without_model_name(self):
-        _, _, meta = _load_ibcircuit_neuron(self._scores_data(), model_name=None)
-        self.assertEqual(meta["mlp_hook"], "unknown")
+    def test_metadata_hook_comes_from_file(self):
+        _, _, meta = _load_ib(self._scores_data())
+        self.assertEqual(meta["mlp_hook"], "post_act")
 
     def test_round_trip_via_file(self):
         data = self._scores_data()
@@ -314,6 +321,7 @@ class TestIBCircuitNeuron(unittest.TestCase):
         should be inferred as 'post_act'.
         """
         data = self._scores_data()
+        del data["mlp_hook"]  # an older file that does not record the hook
         mock_cfg = MagicMock()
         mock_cfg.hidden_size = 64  # d_model — intentionally different
         mock_cfg.intermediate_size = self.D_MLP  # d_mlp == tensor length
@@ -322,13 +330,213 @@ class TestIBCircuitNeuron(unittest.TestCase):
         mock_ac = MagicMock()
         mock_ac.from_pretrained.return_value = mock_cfg
         with patch.dict("sys.modules", {"transformers": MagicMock(AutoConfig=mock_ac)}):
-            # Re-import to pick up the patched transformers
-            import importlib
+            hs, ms, meta = _load_ib(data, model_name="mock/model")
+        self.assertEqual(meta["mlp_hook"], "post_act")
+        self.assertTrue(meta["mlp_neuron_level"])
 
-            sl_fresh = score_loader
-            importlib.reload(sl_fresh)
-            hs, ms, meta = sl_fresh._load_ibcircuit_neuron(data, model_name="mock/model")
-        self.assertIn(meta["mlp_hook"], ("post_act", "unknown"))  # unknown if reload fails
+    def test_mlp_hook_inferred_mlp_out_when_tensor_is_d_model(self):
+        """An older file whose MLP tensors are d_model long falls back to node level."""
+        data = self._scores_data()
+        del data["mlp_hook"]
+        mock_cfg = MagicMock()
+        mock_cfg.hidden_size = self.D_MLP  # d_model == tensor length
+        mock_cfg.intermediate_size = 4 * self.D_MLP
+
+        mock_ac = MagicMock()
+        mock_ac.from_pretrained.return_value = mock_cfg
+        with patch.dict("sys.modules", {"transformers": MagicMock(AutoConfig=mock_ac)}):
+            hs, ms, meta = _load_ib(data, model_name="mock/model")
+        self.assertEqual(meta["mlp_hook"], "mlp_out")
+        self.assertFalse(meta["mlp_neuron_level"])
+        for val in ms.values():
+            self.assertIsInstance(val, float)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 3b. IBCircuit score files as discover_circuit writes them (CK-30)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestIBCircuitWriterFormat(unittest.TestCase):
+    """
+    discover_circuit saves IBCircuit neuron scores as a dict under the plural
+    key 'neurons_scores' (the EAP key).  load_scores must pick the format from
+    the value, and must not use d_model-space MLP scores as d_mlp-space ones.
+    """
+
+    N_LAYERS = 3
+    N_HEADS = 2
+    D_HEAD = 8
+    D_MODEL = 16  # 'mlp_out': MLP tensors are d_model long
+    D_MLP = 32  # 'post_act': MLP tensors are d_mlp long
+
+    def _load_file(self, data, model_name=None):
+        with tempfile.NamedTemporaryFile(suffix="_scores.pt", delete=False) as f:
+            path = f.name
+        try:
+            _save_pt(data, path)
+            return load_scores(path, model_name=model_name)
+        finally:
+            os.unlink(path)
+
+    def _data(self, mlp_hook=None, key="neurons_scores", d_mlp=None):
+        data = {
+            "algo": "ibcircuit",
+            "level": "neuron",
+            key: _make_neuron_scores_dict(
+                self.N_LAYERS, self.N_HEADS, self.D_HEAD, d_mlp or self.D_MLP
+            ),
+            "total_neurons": 0,
+        }
+        if mlp_hook is not None:
+            data["mlp_hook"] = mlp_hook
+        return data
+
+    def test_writer_format_loads_without_model_name(self):
+        hs, ms, meta = self._load_file(self._data("post_act"))
+        self.assertEqual(len(hs), self.N_LAYERS * self.N_HEADS)
+        self.assertEqual(len(ms), self.N_LAYERS)
+        self.assertTrue(meta["mlp_neuron_level"])
+        self.assertEqual(meta["mlp_hook"], "post_act")
+        for val in ms.values():
+            self.assertIsInstance(val, torch.Tensor)
+            self.assertEqual(val.shape, (self.D_MLP,))
+
+    def test_singular_key_still_loads(self):
+        """Files written under the older key 'neuron_scores' keep loading."""
+        hs, ms, meta = self._load_file(self._data("post_act", key="neuron_scores"))
+        self.assertEqual(len(hs), self.N_LAYERS * self.N_HEADS)
+        self.assertTrue(meta["mlp_neuron_level"])
+
+    def test_mlp_out_hook_falls_back_to_node_level_mlp(self):
+        """d_model-space MLP scores must not reach down_proj column masking."""
+        data = self._data("mlp_out", d_mlp=self.D_MODEL)
+        hs, ms, meta = self._load_file(data)
+        self.assertFalse(meta["mlp_neuron_level"])
+        self.assertEqual(meta["mlp_hook"], "mlp_out")
+        self.assertEqual(len(ms), self.N_LAYERS)
+        for layer, val in ms.items():
+            self.assertIsInstance(val, float)
+            self.assertAlmostEqual(
+                val, float(data["neurons_scores"][f"MLP {layer}"].abs().sum()), places=4
+            )
+        self.assertEqual(len(hs), self.N_LAYERS * self.N_HEADS)
+
+    def test_no_hook_and_no_model_name_falls_back_to_node_level_mlp(self):
+        """An older file cannot say which space its MLP tensors are in."""
+        hs, ms, meta = self._load_file(self._data(None))
+        self.assertFalse(meta["mlp_neuron_level"])
+        self.assertEqual(meta["mlp_hook"], "unknown")
+        for val in ms.values():
+            self.assertIsInstance(val, float)
+
+    def test_2d_tensor_under_neurons_scores_is_eap(self):
+        """The EAP format (2-D tensor, same key) still needs model_name."""
+        data = {
+            "algo": "eap-ig",
+            "level": "neuron",
+            "neurons_scores": _make_neurons_scores_tensor(),
+        }
+        with self.assertRaisesRegex(ValueError, "model_name is required"):
+            self._load_file(data, model_name=None)
+
+    def test_unusable_neuron_scores_value_names_keys_and_type(self):
+        data = {"algo": "ibcircuit", "level": "neuron", "neurons_scores": [1.0, 2.0]}
+        with self.assertRaises(ValueError) as ctx:
+            self._load_file(data)
+        msg = str(ctx.exception)
+        self.assertIn("neurons_scores", msg)
+        self.assertIn("list", msg)
+
+
+class TestIBCircuitDiscoverToLoad(unittest.TestCase):
+    """
+    A real IBCircuit neuron-level discovery on a tiny random HookedTransformer
+    (CPU, no downloads), then load_scores on the file discover_circuit wrote.
+    """
+
+    N_LAYERS = 2
+    N_HEADS = 4
+    D_HEAD = 4
+    D_MODEL = 16
+    D_MLP = 32
+
+    def _discover(self, tmp_dir, mlp_hook=None):
+        # circuitkit is already imported at the top of this module, as it must be
+        # before transformer_lens (it installs the TransformerLens patches).
+        from transformer_lens import HookedTransformer, HookedTransformerConfig
+
+        from circuitkit.api import discover_circuit
+
+        torch.manual_seed(0)
+        cfg = HookedTransformerConfig(
+            n_layers=self.N_LAYERS,
+            d_model=self.D_MODEL,
+            d_head=self.D_HEAD,
+            n_heads=self.N_HEADS,
+            d_mlp=self.D_MLP,
+            d_vocab=20,
+            n_ctx=8,
+            act_fn="gelu",
+            normalization_type="LN",
+            device="cpu",
+            seed=0,
+        )
+        model = HookedTransformer(cfg)
+        # The tiny model has no tokenizer; IBCircuit only uses it to log the top predictions.
+        model.to_string = lambda ids: "tok"
+
+        batch = {
+            "tokens": torch.randint(0, 20, (4, 6)),
+            "labels": torch.randint(0, 20, (4,)),
+            "answer_positions": torch.full((4,), 5),
+        }
+        task_spec = MagicMock()
+        task_spec.build_dataloader.return_value = [batch]
+
+        discovery = {
+            "algorithm": "ibcircuit",
+            "task": "ioi",
+            "level": "neuron",
+            "scope": "both",
+            "num_epochs": 3,
+            "batch_size": 4,
+        }
+        if mlp_hook is not None:
+            discovery["mlp_hook"] = mlp_hook
+        out = os.path.join(tmp_dir, "circuit.pt")
+        config = {
+            "model": {"name": "tiny-random", "device": "cpu"},
+            "discovery": discovery,
+            "pruning": {"target_sparsity": 0.3},
+            "output_path": out,
+        }
+        with patch("circuitkit.api._get_task", return_value=task_spec):
+            discover_circuit(config, _model=model)
+        return os.path.join(tmp_dir, "circuit_scores.pt")
+
+    def test_default_mlp_hook_loads_with_node_level_mlp(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            scores_path = self._discover(tmp_dir)
+            hs, ms, meta = load_scores(scores_path)
+        self.assertEqual(len(hs), self.N_LAYERS * self.N_HEADS)
+        self.assertEqual(len(ms), self.N_LAYERS)
+        # IBCircuit's default hook is 'mlp_out': d_model-space scores, no column masking.
+        self.assertEqual(meta["mlp_hook"], "mlp_out")
+        self.assertFalse(meta["mlp_neuron_level"])
+        for val in ms.values():
+            self.assertIsInstance(val, float)
+
+    def test_post_act_mlp_hook_loads_with_neuron_level_mlp(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            scores_path = self._discover(tmp_dir, mlp_hook="post_act")
+            hs, ms, meta = load_scores(scores_path)
+        self.assertEqual(len(hs), self.N_LAYERS * self.N_HEADS)
+        self.assertEqual(meta["mlp_hook"], "post_act")
+        self.assertTrue(meta["mlp_neuron_level"])
+        for val in ms.values():
+            self.assertIsInstance(val, torch.Tensor)
+            self.assertEqual(val.shape, (self.D_MLP,))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -547,7 +755,7 @@ class TestLoadScoresErrorPaths(unittest.TestCase):
             path = f.name
         try:
             _save_pt(data, path)
-            with self.assertRaises(ValueError):
+            with self.assertRaisesRegex(ValueError, "neurons_scores"):
                 load_scores(path)
         finally:
             os.unlink(path)
@@ -608,7 +816,12 @@ class TestNonFiniteWarnings(unittest.TestCase):
     def test_inf_mlp_tensor_does_not_crash(self):
         raw = _make_neuron_scores_dict(2, 2, d_head=8, d_mlp=16)
         raw["MLP 0"] = torch.full((16,), float("inf"))
-        data = {"algo": "ibcircuit", "level": "neuron", "neuron_scores": raw}
+        data = {
+            "algo": "ibcircuit",
+            "level": "neuron",
+            "neurons_scores": raw,
+            "mlp_hook": "post_act",
+        }
         with tempfile.NamedTemporaryFile(suffix="_scores.pt", delete=False) as f:
             path = f.name
         try:
@@ -643,7 +856,8 @@ class TestOutputContract(unittest.TestCase):
         data = {
             "algo": "ibcircuit",
             "level": "neuron",
-            "neuron_scores": _make_neuron_scores_dict(3, 3, d_head=8, d_mlp=16),
+            "neurons_scores": _make_neuron_scores_dict(3, 3, d_head=8, d_mlp=16),
+            "mlp_hook": "post_act",
             "total_neurons": 3 * 3 * 8 + 3 * 16,
         }
         f = tempfile.NamedTemporaryFile(suffix="_scores.pt", delete=False)

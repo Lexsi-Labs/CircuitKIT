@@ -1,7 +1,8 @@
 """Apply CircuitKIT's TransformerLens patch series at import time.
 
 The ``*.patch`` files in this directory add Gemma-4, Sarvam-MoE and Cohere support
-to ``transformer-lens==3.8.0`` (see README.md here). :func:`install` puts an import
+to ``transformer-lens==3.8.0`` and fix local-checkpoint and GPT-NeoX / Pythia loading
+(see README.md here). :func:`install` puts an import
 hook on ``sys.meta_path`` that serves each patched ``transformer_lens`` module from
 its installed source with the series applied in memory. Nothing on disk changes,
 so ``pip install circuitkit`` needs no extra step. ``import circuitkit`` installs

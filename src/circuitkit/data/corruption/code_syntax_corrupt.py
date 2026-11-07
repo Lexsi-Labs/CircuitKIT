@@ -59,7 +59,7 @@ class CodeSyntaxCorrupt(CorruptionStrategy):
         rng: Optional[random.Random] = None,
         **_unused: Any,
     ) -> CorruptionResult:
-        rng = rng or random.Random(hash(record.record_id) & 0xFFFFFFFF)
+        rng = rng or self._record_rng(record)
         prompt = record.clean_prompt
         # Try operator flip first (length-preserving)
         candidates = [op for op in _OPERATOR_FLIPS if op in prompt]

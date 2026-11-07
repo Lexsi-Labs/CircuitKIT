@@ -26,7 +26,8 @@ metadata : Dict[str, Any]
       'level'           : 'node' or 'neuron'
       'algo'            : e.g. 'eap-ig', 'ibcircuit'
       'mlp_neuron_level': bool — True when mlp_scores values are Tensors
-      'mlp_hook'        : 'post_act' or 'mlp_out' (neuron-level EAP only)
+      'mlp_hook'        : 'post_act' or 'mlp_out' (neuron-level EAP and IBCircuit);
+                          'unknown' for older IBCircuit files that do not record it
       'n_heads_loaded'  : int
       'n_mlp_loaded'    : int
 
@@ -38,14 +39,23 @@ api.py saves the _scores.pt file with the following keys depending on case:
     {'algo', 'level'='node', 'node_scores': Dict[str, float]}
 
   Neuron-level EAP / EAP-IG:
-    {'algo', 'level'='neuron', 'neurons_scores': Tensor(n_forward, max_d),
-     'total_neurons': int}
+    {'algo', 'level'='neuron', 'node_scores': Dict[str, float],
+     'neurons_scores': Tensor(n_forward, max_d), 'total_neurons': int}
     Requires model_name to reconstruct the graph forward-index mapping.
 
   Neuron-level IBCircuit:
-    {'algo', 'level'='neuron', 'neuron_scores': Dict[str, Tensor],
-     'total_neurons': int}
-    Does not require model_name.
+    {'algo', 'level'='neuron', 'neurons_scores': Dict[str, Tensor],
+     'mlp_hook': 'post_act' | 'mlp_out', 'total_neurons': int}
+    Does not require model_name.  Older files have no 'mlp_hook' key, and
+    some used the singular key 'neuron_scores'; both still load.
+
+  Both neuron-level formats use the key 'neurons_scores'.  The loader tells
+  them apart by the type of the value (a dict is IBCircuit, a 2-D tensor is
+  EAP / EAP-IG), not by the key.
+
+IBCircuit scores are sigmoid mask values in (0, 1) where a higher value means
+the component is kept, so they rank the same way as the EAP scores: the
+selector takes the largest absolute scores first.
 
 MLP score space and down_proj column masking
 --------------------------------------------
@@ -102,7 +112,9 @@ def load_scores(
     model_name  : HuggingFace model identifier (e.g. "meta-llama/Meta-Llama-3-8B").
                   Required only for neuron-level EAP / EAP-IG scores, where the
                   graph forward-index structure must be reconstructed from the
-                  model's architecture config.  Ignored for all other formats.
+                  model's architecture config.  For neuron-level IBCircuit it
+                  is only used to infer the MLP hook of older files that do not
+                  record one.  Ignored for node-level files.
 
     Returns
     -------
@@ -138,11 +150,17 @@ def load_scores(
         head_scores, mlp_scores, metadata = _load_node_level(data)
 
     elif level == "neuron":
-        # Two neuron-level sub-formats distinguished by which key holds scores.
-        if "neuron_scores" in data:
+        # Two neuron-level sub-formats, told apart by the type of the value.
+        # IBCircuit writes 'neurons_scores' (older files: 'neuron_scores').
+        neuron_scores = data.get("neurons_scores")
+        if neuron_scores is None:
+            neuron_scores = data.get("neuron_scores")
+        if isinstance(neuron_scores, dict):
             # IBCircuit neuron: dict of {name: Tensor}
-            head_scores, mlp_scores, metadata = _load_ibcircuit_neuron(data, model_name)
-        elif "neurons_scores" in data:
+            head_scores, mlp_scores, metadata = _load_ibcircuit_neuron(
+                neuron_scores, data, model_name
+            )
+        elif isinstance(neuron_scores, torch.Tensor) and neuron_scores.dim() == 2:
             # EAP / EAP-IG neuron: raw 2-D tensor + graph index reconstruction
             if model_name is None:
                 raise ValueError(
@@ -154,9 +172,12 @@ def load_scores(
             head_scores, mlp_scores, metadata = _load_eap_neuron(data, model_name)
         else:
             raise ValueError(
-                f"Neuron-level scores file has unrecognised keys.\n"
-                f"Expected 'neuron_scores' (IBCircuit) or 'neurons_scores' (EAP).\n"
-                f"Found: {list(data.keys())}"
+                f"Neuron-level scores file has no usable neuron scores.\n"
+                f"Expected 'neurons_scores' to be a dict of tensors (IBCircuit) or a "
+                f"2-D tensor (EAP / EAP-IG); the older IBCircuit key 'neuron_scores' "
+                f"is also read.\n"
+                f"Found keys: {list(data.keys())}; the scores have type "
+                f"{type(neuron_scores).__name__}."
             )
     else:
         raise ValueError(
@@ -218,23 +239,28 @@ def _load_node_level(
 
 
 def _load_ibcircuit_neuron(
+    raw: Dict[str, torch.Tensor],
     data: Dict,
     model_name: Optional[str],
 ) -> Tuple[Dict, Dict, Dict]:
     """
     Handle neuron-level IBCircuit scores.
 
-    Expected key: 'neuron_scores' — Dict[str, Tensor] where:
+    ``raw`` is the dict stored under 'neurons_scores' (older files:
+    'neuron_scores'), ``data`` the whole file:
       Attention entries  "A{L}.{H}" → Tensor of shape [d_head]
-      MLP entries        "MLP {L}"  → Tensor of shape [d_mlp] or [d_model]
+      MLP entries        "MLP {L}"  → Tensor of shape [d_mlp] (mlp_hook='post_act')
+                                      or [d_model] (mlp_hook='mlp_out', the default)
 
     Attention tensors are aggregated to a scalar per head (absolute sum).
-    MLP tensors are returned as-is; the caller can verify dimensions against
-    the model's d_mlp when the HF model is loaded.
+    MLP tensors stay neuron-level only when they are in d_mlp space, because
+    only then do they index the columns of down_proj.  The space is read from
+    the file's 'mlp_hook' key; for files without one it is inferred from the
+    tensor length when model_name is given.  Otherwise (mlp_hook='mlp_out', or
+    it cannot be told) each MLP layer falls back to one node-level scalar.
     """
-    raw: Dict[str, torch.Tensor] = data.get("neuron_scores", {})
     if not raw:
-        raise ValueError("IBCircuit neuron scores file has an empty 'neuron_scores' dict.")
+        raise ValueError("IBCircuit neuron scores file has an empty neuron scores dict.")
 
     head_scores: Dict[Tuple[int, int], float] = {}
     mlp_scores: Dict[int, Union[float, torch.Tensor]] = {}
@@ -264,39 +290,55 @@ def _load_ibcircuit_neuron(
     mlp_neuron_level = any(
         isinstance(v, torch.Tensor) and v.numel() > 1 for v in mlp_scores.values()
     )
-    if not mlp_neuron_level:
+    mlp_hook = data.get("mlp_hook", "unknown")
+    if mlp_neuron_level:
+        # Which space are the MLP tensors in?  The file says so; older files
+        # are inferred from the tensor length when model_name is available.
+        if mlp_hook not in ("post_act", "mlp_out") and model_name is not None:
+            try:
+                from transformers import AutoConfig
+
+                hf_cfg = AutoConfig.from_pretrained(model_name)
+                d_model_hf = hf_cfg.hidden_size
+                d_mlp_hf = getattr(hf_cfg, "intermediate_size", 4 * d_model_hf)
+                sample_len = next(
+                    v.numel() for v in mlp_scores.values() if isinstance(v, torch.Tensor)
+                )
+                if sample_len == d_mlp_hf:
+                    mlp_hook = "post_act"
+                elif sample_len == d_model_hf:
+                    mlp_hook = "mlp_out"
+            except Exception as exc:
+                logger.info(f"[score_loader] Could not infer mlp_hook for IBCircuit neuron: {exc}")
+
+        if mlp_hook != "post_act":
+            # d_model-space (or unknown-space) scores cannot be mapped to down_proj
+            # columns, and masking with them would pick the wrong neurons.  Use one
+            # scalar per MLP layer, which is always safe.
+            if mlp_hook == "mlp_out":
+                logger.info(
+                    "[score_loader] WARNING: IBCircuit MLP tensors are d_model-length "
+                    "(mlp_hook='mlp_out') → cannot use for down_proj column masking. "
+                    "Falling back to node-level MLP treatment."
+                )
+            else:
+                mlp_hook = "unknown"
+                logger.info(
+                    "[score_loader] WARNING: Cannot tell which space the IBCircuit MLP "
+                    "tensors are in (no 'mlp_hook' in the file and no model_name given). "
+                    "Falling back to node-level MLP treatment (no column masking)."
+                )
+            mlp_neuron_level = False
+            mlp_scores = {
+                k: float(v.abs().sum().item()) if isinstance(v, torch.Tensor) else float(v)
+                for k, v in mlp_scores.items()
+            }
+    else:
         # Convert to floats for node-level treatment
         mlp_scores = {
             k: float(v.item()) if isinstance(v, torch.Tensor) else float(v)
             for k, v in mlp_scores.items()
         }
-
-    # Try to infer mlp_hook from tensor length when model_name is available.
-    mlp_hook = "unknown"
-    if model_name is not None and mlp_neuron_level and mlp_scores:
-        try:
-            from transformers import AutoConfig
-
-            hf_cfg = AutoConfig.from_pretrained(model_name)
-            d_model_hf = hf_cfg.hidden_size
-            d_mlp_hf = getattr(hf_cfg, "intermediate_size", 4 * d_model_hf)
-            sample_len = next(v.numel() for v in mlp_scores.values() if isinstance(v, torch.Tensor))
-            if sample_len == d_mlp_hf:
-                mlp_hook = "post_act"
-            elif sample_len == d_model_hf:
-                mlp_hook = "mlp_out"
-                mlp_neuron_level = False
-                logger.info(
-                    "[score_loader] WARNING: IBCircuit MLP tensors are d_model-length "
-                    "→ cannot use for down_proj column masking. "
-                    "Falling back to node-level MLP treatment."
-                )
-                mlp_scores = {
-                    k: float(v.abs().sum().item()) if isinstance(v, torch.Tensor) else float(v)
-                    for k, v in mlp_scores.items()
-                }
-        except Exception as exc:
-            logger.info(f"[score_loader] Could not infer mlp_hook for IBCircuit neuron: {exc}")
 
     metadata = {
         "mlp_neuron_level": mlp_neuron_level,

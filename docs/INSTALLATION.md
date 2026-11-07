@@ -39,7 +39,7 @@ transformers>=5.15,<6, ordered-set, pyyaml, networkx,
 matplotlib, ipywidgets, scikit-learn, evaluate,
 sacrebleu, rouge_score, bert-score, accelerate,
 sentence-transformers, click, rich, torch-pruning>=1.0,
-transformer-lens==3.8.0 (CircuitKIT applies its Gemma-4 / Sarvam-MoE / Cohere patches at import)
+transformer-lens==3.8.0 (CircuitKIT applies its Gemma-4 / Sarvam-MoE / Cohere patches and the Pythia / GPT-NeoX loading fix at import)
 ```
 
 Install core only:

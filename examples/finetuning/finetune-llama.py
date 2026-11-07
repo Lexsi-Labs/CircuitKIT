@@ -385,8 +385,8 @@ def _build_parser() -> argparse.ArgumentParser:
     mdl = p.add_argument_group("model loading")
     mdl.add_argument(
         "--dtype",
-        default="float16",
-        choices=["float16", "bfloat16", "float32"],
+        default="bfloat16",
+        choices=["bfloat16", "float32"],
         help="Model dtype for inference and training.",
     )
     mdl.add_argument(

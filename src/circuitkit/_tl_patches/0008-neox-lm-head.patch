@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Pratinav Seth <pratinav.seth@lexsi.ai>
+Date: Sat, 10 Oct 2026 12:00:00 +0530
+Subject: [PATCH] neox: read the unembedding from lm_head when embed_out is gone
+
+transformers renamed GPTNeoXForCausalLM.embed_out to lm_head (TransformerLens
+reports the change at 5.13 in one place and 5.14 in another). 3.8.0 reads
+embed_out only, so every GPT-NeoX / Pythia checkpoint fails in
+convert_neox_weights with AttributeError on the transformers versions CircuitKIT
+requires (>=5.15). Same change as the HookedTransformer half of the upstream fix
+released in 3.9.0; hasattr-based, so it does not depend on the exact version.
+
+diff --git a/transformer_lens/pretrained/weight_conversions/neox.py b/transformer_lens/pretrained/weight_conversions/neox.py
+index 70d8a6b..76827ed 100644
+--- a/transformer_lens/pretrained/weight_conversions/neox.py
++++ b/transformer_lens/pretrained/weight_conversions/neox.py
+@@ -54,6 +54,9 @@ def convert_neox_weights(neox, cfg: HookedTransformerConfig):
+     state_dict["ln_final.w"] = neox.gpt_neox.final_layer_norm.weight
+     state_dict["ln_final.b"] = neox.gpt_neox.final_layer_norm.bias
+ 
+-    state_dict["unembed.W_U"] = neox.embed_out.weight.T
++    # transformers renamed GPTNeoXForCausalLM.embed_out to lm_head (5.13/5.14);
++    # read whichever the installed transformers exposes.
++    unembed = neox.lm_head if hasattr(neox, "lm_head") else neox.embed_out
++    state_dict["unembed.W_U"] = unembed.weight.T
+     state_dict["unembed.b_U"] = torch.zeros(cfg.d_vocab, dtype=cfg.dtype)
+     return state_dict

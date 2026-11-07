@@ -132,8 +132,6 @@ def test_eap_ig_activations_llama_has_nonzero_scores():
     import tempfile
     from pathlib import Path
 
-    # Keep the local checkpoint path neutral: TransformerLens uses path-name
-    # heuristics for Llama/Gemma and rejects ambiguous local directory names.
     with tempfile.TemporaryDirectory(prefix="ck-model-") as directory:
         root = Path(directory)
         src = _tiny("llama", root / "model")

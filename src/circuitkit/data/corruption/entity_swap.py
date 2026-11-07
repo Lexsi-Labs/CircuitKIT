@@ -72,7 +72,7 @@ class EntitySwap(CorruptionStrategy):
         candidates: Optional[List[str]] = None,
         **_unused: Any,
     ) -> CorruptionResult:
-        rng = rng or random.Random(hash(record.record_id) & 0xFFFFFFFF)
+        rng = rng or self._record_rng(record)
         prompt = record.clean_prompt
         words = _word_tokens(prompt)
         ents = _capitalised(words)

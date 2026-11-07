@@ -1184,6 +1184,113 @@ class TestBuildRandomIbcircuitNeuronPruningDict:
 
 
 # ---------------------------------------------------------------------------
+# discover_circuit: IBCircuit neuron-level scores side-car (CK-26)
+# ---------------------------------------------------------------------------
+
+
+class TestIbcircuitNeuronNodeScores:
+    def test_sidecar_has_node_scores_and_meta_has_neuron_counts(self, tmp_path):
+        """The IBCircuit neuron branch writes node_scores (largest absolute neuron
+        score per component) next to neurons_scores, so Circuit.from_artifact gets
+        scores, and records the neuron counts the circuit graph needs."""
+        from circuitkit.api import discover_circuit
+        from circuitkit.circuit import Circuit
+
+        neuron_scores = {
+            "A0.0": torch.tensor([0.1, 0.9]),
+            "A0.1": torch.tensor([0.2, 0.3]),
+            "MLP 0": torch.tensor([0.4, 0.7, 0.6, 0.05]),  # largest not last
+        }
+        ib_model = MagicMock(
+            level="neuron",
+            scope="both",
+            mlp_hook="mlp_out",
+            mask_type="gaussian",
+            batch_size=1,
+            n_layers=1,
+            n_heads=2,
+        )
+        ib_model.attn_ib_weights.state_dict.return_value = {}
+        ib_model.mlp_ib_weights.state_dict.return_value = {}
+        out = tmp_path / "circuit.pt"
+        config = {
+            "model": {"name": "gpt2"},
+            "discovery": {
+                "algorithm": "ibcircuit",
+                "task": "ioi",
+                "level": "neuron",
+                "scope": "both",
+            },
+            "pruning": {"target_sparsity": 0.3},
+            "output_path": str(out),
+        }
+        with (
+            patch("circuitkit.api._get_task"),
+            patch("circuitkit.api._validate_ibcircuit_dataloader"),
+            patch(
+                "circuitkit.backends.ibcircuit.trainer.run_ib_discovery",
+                return_value=(neuron_scores, ib_model),
+            ),
+        ):
+            result = discover_circuit(config, _model=MagicMock())
+
+        assert result["_meta"]["neurons_per_head"] == 2
+        assert result["_meta"]["neurons_per_mlp"] == 4
+        sidecar = torch.load(tmp_path / "circuit_scores.pt", weights_only=True)
+        assert sidecar["node_scores"] == pytest.approx({"A0.0": 0.9, "A0.1": 0.3, "MLP 0": 0.7})
+        assert set(sidecar["neurons_scores"]) == set(neuron_scores)
+        loaded = Circuit.from_artifact(out)
+        assert loaded.scores == pytest.approx(sidecar["node_scores"])
+        # There is no scores JSON, so the graph's title comes from the side-car.
+        assert (loaded.algorithm, loaded.task, loaded.model_name) == ("ibcircuit", "ioi", "gpt2")
+
+
+class TestEapNeuronPrunedComponents:
+    def test_graph_marks_only_the_fully_pruned_component(self, tmp_path):
+        """EAP neuron discovery records the neuron counts, so Circuit.plot marks a
+        head whose 8 neurons were all pruned, and not an MLP with 6 of 8 pruned."""
+        from circuitkit.api import discover_circuit
+        from circuitkit.backends.eap.graph import Graph
+        from circuitkit.circuit import Circuit
+
+        real_from_model = Graph.from_model
+        tiny_cfg = {"n_layers": 2, "n_heads": 2, "d_model": 8, "d_mlp": 16}
+
+        def fake_attribute(model, graph, *args, **kwargs):
+            # Everything scores 1.0 except the neurons that should be pruned first.
+            graph.neurons_scores[:] = 1.0
+            head = graph.nodes["a0.h0"]
+            graph.neurons_scores[graph.forward_index(head, attn_slice=False), :8] = 0.01
+            mlp = graph.nodes["m0"]
+            graph.neurons_scores[graph.forward_index(mlp, attn_slice=False), :6] = 0.02
+
+        out = tmp_path / "circuit.pt"
+        config = {
+            "model": {"name": "gpt2"},
+            "discovery": {"algorithm": "eap", "task": "ioi", "level": "neuron"},
+            "pruning": {"target_sparsity": 0.3, "scope": "both"},
+            "output_path": str(out),
+        }
+        with (
+            patch("circuitkit.api._get_task"),
+            patch.object(Graph, "from_model", lambda model, **kw: real_from_model(tiny_cfg, **kw)),
+            patch("circuitkit.api.attribute_node", side_effect=fake_attribute),
+        ):
+            result = discover_circuit(config, _model=MagicMock())
+
+        # 2 layers x (2 heads + 1 MLP) x 8 neurons = 48; 30% = 14 = 8 (a0.h0) + 6 (m0).
+        assert result["_meta"]["neurons_per_head"] == 8
+        assert result["_meta"]["neurons_per_mlp"] == 8
+        assert len(result["heads"][(0, 0)]) == 8 and len(result["mlp"][0]) == 6
+
+        loaded = Circuit.from_artifact(out)
+        # There is no scores JSON, so the graph's title comes from the side-car.
+        assert (loaded.algorithm, loaded.task, loaded.model_name) == ("eap", "ioi", "gpt2")
+        out_graph = loaded.plot(str(tmp_path / "graph.json"))
+        assert {n["id"] for n in out_graph["nodes"] if not n["in_circuit"]} == {"a0.h0"}
+
+
+# ---------------------------------------------------------------------------
 # load_circuit
 # ---------------------------------------------------------------------------
 
