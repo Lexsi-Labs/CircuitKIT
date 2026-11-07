@@ -21,7 +21,10 @@ the module skips cleanly rather than erroring if the data layer is absent.
 
 from __future__ import annotations
 
+import os
 import random
+import subprocess
+import sys
 
 import pytest
 
@@ -598,6 +601,32 @@ class TestBaseBridges:
         out = TokenSwap().apply(paired, rng=random.Random(1))
         # Native pairs are returned untouched (same object identity).
         assert out is paired
+
+    def test_default_rng_gives_the_same_corruption_in_every_process(self):
+        # With no rng, corrupt() seeds from record_id. String hashes change
+        # with PYTHONHASHSEED, so a hash()-based seed gave a different
+        # corruption on each run of `circuitkit data prepare`.
+        script = (
+            "from circuitkit.data.corruption.entity_swap import EntitySwap\n"
+            "from circuitkit.data.corruption.operand_swap import OperandSwap\n"
+            "from circuitkit.data.corruption.token_swap import TokenSwap\n"
+            "from circuitkit.data.normalized import ContrastiveRecord, ContrastSource\n"
+            "rec = ContrastiveRecord(record_id='000001', clean_prompt="
+            "'Alice gave Bob 12 apples and then Carol took 7 oranges from Dave. 12 + 7 =', "
+            "clean_answer=' 19', contrast_source=ContrastSource.GENERATED)\n"
+            "for s in (EntitySwap(), OperandSwap(), TokenSwap()):\n"
+            "    print(s.corrupt(rec).corrupt_prompt)\n"
+        )
+
+        def run(seed: str) -> str:
+            env = {**os.environ, "PYTHONHASHSEED": seed}
+            return subprocess.run(
+                [sys.executable, "-c", script], env=env, capture_output=True, text=True, check=True
+            ).stdout
+
+        outputs = {run(seed) for seed in ("1", "2", "3")}
+        assert len(outputs) == 1
+        assert "None" not in outputs.pop()
 
     def test_corrupt_example_dict_bridge_preserves_extra_keys(self):
         example = {"prompt": "The accountant said that", "answer": " he", "extra": 123}

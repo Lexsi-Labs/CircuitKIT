@@ -108,6 +108,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+<<<<<<< HEAD
 - **Saved neuron-level circuits keep their label**. `Circuit.save` wrote a `_scores.json` with no
   task, model or algorithm, and `from_artifact` reads that file first, so the graph title said
   "unknown / unknown". The file now carries them, and files without them still load.
@@ -157,6 +158,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `np.argmax`, which returns the index of a NaN, so a failed evaluation was reported as the best
   transfer. They now skip NaN cells. When every evaluation failed, `best_transfer` is `None` (like
   `worst_transfer`) and `effect_sizes()` returns NaN bounds instead of raising `ValueError`.
+=======
+- Corruption strategies called without an `rng` (as `circuitkit data prepare` does) seeded from
+  `hash(record_id)`, which changes with every Python process, so the same dataset was corrupted
+  differently on each run. They now seed from a crc32 of `record_id`.
+>>>>>>> ck26
 - Hyperparameter checks: `eval.pillars: []` is now an error (it would run nothing), and an
   ACDC grid point too large to compute (`tao_exps: [400]`) is reported as tau >= 1 instead of
   being skipped.

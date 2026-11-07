@@ -66,7 +66,7 @@ class OperandSwap(CorruptionStrategy):
         max_attempts: int = 8,
         **_unused: Any,
     ) -> CorruptionResult:
-        rng = rng or random.Random(hash(record.record_id) & 0xFFFFFFFF)
+        rng = rng or self._record_rng(record)
         match = _ARITHMETIC_RE.search(record.clean_prompt)
         if not match:
             return CorruptionResult(None, None, notes="no arithmetic pattern", succeeded=False)

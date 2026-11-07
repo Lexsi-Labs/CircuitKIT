@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import abc
 import random
+import zlib
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional, Type
@@ -78,6 +79,16 @@ class CorruptionStrategy(abc.ABC):
     def fits(self, record: ContrastiveRecord) -> bool:
         """Default: strategy applies to anything not natively paired."""
         return record.contrast_source != ContrastSource.NATIVE_PAIR
+
+    @staticmethod
+    def _record_rng(record: ContrastiveRecord) -> random.Random:
+        """Default RNG for ``corrupt`` when the caller passes none.
+
+        Seeded from ``record_id`` with crc32, not ``hash()``: string hashes
+        change with every Python process, so the same record would get a
+        different corruption on each run.
+        """
+        return random.Random(zlib.crc32(record.record_id.encode("utf-8")))
 
     @abc.abstractmethod
     def corrupt(self, record: ContrastiveRecord, **kwargs: Any) -> CorruptionResult:

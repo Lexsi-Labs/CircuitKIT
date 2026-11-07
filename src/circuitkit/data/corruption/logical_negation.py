@@ -61,7 +61,7 @@ class LogicalNegation(CorruptionStrategy):
         rng: Optional[random.Random] = None,
         **_unused: Any,
     ) -> CorruptionResult:
-        rng = rng or random.Random(hash(record.record_id) & 0xFFFFFFFF)
+        rng = rng or self._record_rng(record)
         prompt = record.clean_prompt
         # If the prompt already contains "not"/"no"/"n't", remove the first.
         for pat in _NOT_PATTERNS:
