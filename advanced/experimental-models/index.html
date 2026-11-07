@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/favicon.ico">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
     
     
       
@@ -31,10 +31,10 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -2024,11 +2024,17 @@ trusted once the real-weight <strong>parity gate</strong> passes on your machine
 </div>
 <div class="admonition note">
 <p class="admonition-title">Local checkpoint folders</p>
-<p>TransformerLens 3.8 uses <code>llama</code> and <code>gemma</code> substrings in a local checkpoint
-path for loader selection before it reads <code>config.json</code>. CircuitKIT rejects
-ambiguous local paths with a rename/symlink suggestion; use a neutral folder
-name such as <code>./checkpoint</code>. Local SmolLM3 checkpoint folders are not
-supported by the current port; load <code>HuggingFaceTB/SmolLM3-3B</code> by Hub ID.</p>
+<p>While CircuitKIT's in-memory TransformerLens patch series is active
+(<code>transformer-lens==3.8.0</code>, with <code>import circuitkit</code> before the first
+<code>import transformer_lens</code>), a local checkpoint folder loads from its
+<code>config.json</code> whatever it is called (a fine-tune in
+<code>meta-llama-Llama-3.2-1B_sft/</code> is not mistaken for base Llama-3.2-1B).
+Without the series, a folder whose path contains "llama" or "gemma" is
+refused. Local Gemma checkpoints, fine-tunes included, are refused until
+CircuitKIT moves to TransformerLens 4: TransformerLens 3.8 has Gemma configs
+for Hub names only, and loading the Hub ID gives the base weights. Local SmolLM3
+checkpoint folders are not supported by the current port; load
+<code>HuggingFaceTB/SmolLM3-3B</code> by Hub ID.</p>
 </div>
 <h2 id="gemma-4-and-sarvam-moe-discovery-only-transformerlens-ports">Gemma-4 and Sarvam-MoE: discovery-only TransformerLens ports<a class="headerlink" href="#gemma-4-and-sarvam-moe-discovery-only-transformerlens-ports" title="Permanent link">&para;</a></h2>
 <p>The Gemma-4 and Sarvam-MoE patches provide a <strong>discovery-only</strong> TransformerLens
@@ -2812,10 +2818,10 @@ yet.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.top", "navigation.footer", "navigation.prune", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.top", "navigation.footer", "navigation.prune", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "content.action.edit"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.a5f9d56c.min.js"></script>
       
         <script src="../../assets/circuitkit.js"></script>
       

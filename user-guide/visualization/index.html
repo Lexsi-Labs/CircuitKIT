@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/favicon.ico">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
     
     
       
@@ -31,10 +31,10 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -1606,13 +1606,14 @@ export to standalone HTML.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">pipe</span><span class="o">.</span><span class="n">visualize</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"graph"</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s2">"./circuit.html"</span><span class="p">)</span>
 </code></pre></div></p>
 <h2 id="mode-1-graph-view">Mode 1: Graph view<a class="headerlink" href="#mode-1-graph-view" title="Permanent link">&para;</a></h2>
-<p>Renders the circuit as a directed graph: nodes are attention heads and MLP layers, edges represent information flow weighted by attribution score.</p>
+<p>Renders the circuit as a directed graph: nodes are attention heads and MLP layers, edges join circuit nodes of adjacent layers, weighted by node importance. They are not measured connections.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">fig</span> <span class="o">=</span> <span class="n">ck</span><span class="o">.</span><span class="n">visualize_circuit</span><span class="p">(</span><span class="n">circuit</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"graph"</span><span class="p">)</span>
 </code></pre></div>
 <ul>
 <li>Nodes coloured by type (blue = attention head, amber = MLP)</li>
 <li>Node size proportional to importance score</li>
-<li>Edges only for components at or above sparsity threshold</li>
+<li>Edges are drawn only between components in the circuit (pruned components have none)</li>
+<li>A graph with more than 20,000 edges opens with the threshold raised so it draws at most 20,000 (the page says how many are shown); move the threshold to 0 to show all</li>
 <li>Hover tooltips with layer, head index, and importance score</li>
 </ul>
 <p>Graph mode delegates to <code>Circuit.plot</code>, which takes only an optional output path.
@@ -1848,10 +1849,10 @@ comparison), use <code>display_circuit_analysis</code> from <code>circuitkit.vis
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.top", "navigation.footer", "navigation.prune", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.top", "navigation.footer", "navigation.prune", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "content.action.edit"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.a5f9d56c.min.js"></script>
       
         <script src="../../assets/circuitkit.js"></script>
       
