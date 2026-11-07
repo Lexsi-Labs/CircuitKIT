@@ -237,6 +237,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `examples/visualization/` duplicate) loaded `elkjs` from jsDelivr with no
   pinned version and `d3` with no Subresource Integrity. Pinned `elkjs` to
   `0.12.0` and added SRI (`integrity`/`crossorigin`) for both scripts.
+<<<<<<< HEAD
 - `Circuit.plot()` without the visualisation dependencies (or any other failure to build the graph) only logged at
   `INFO`, so a caller who asked for a file got nothing and no notice). It now emits a `RuntimeWarning`
   (not a `UserWarning`, which importing `circuitkit.api` ignores) and still returns `None`. A circuit with no node
@@ -257,6 +258,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The graph HTML's tooltips wrote node names and edge endpoints into `innerHTML` unescaped, so a crafted scores
   file (circuit artifacts are shared between users) could run script when a node was hovered). Every value
   from the payload is now HTML-escaped before it reaches a tooltip.
+=======
+- `final_answer_swap` swaps only a whole number when it falls back to the bare result in the
+  prompt. With a question-only prompt it swapped the digits inside a larger number (`spent 15`
+  became `spent 17` for a result of 5), so the corrupt prompt no longer matched its answer.
+>>>>>>> ck28
 
 ## [Unreleased] (next release)
 

@@ -475,6 +475,30 @@ class TestFinalAnswerSwap:
         # The trailing "#### N" marker is kept consistent with the new answer.
         assert res.corrupt_answer.strip() in res.corrupt_prompt
 
+    @pytest.mark.parametrize("seed", range(6))
+    def test_prompt_fallback_swaps_whole_numbers_only(self, seed):
+        # Question-only prompt (the math adapter's layout): the final step is not in it, so the
+        # fallback looks for the bare result. "5" must not be swapped inside "15".
+        sol = "Lisa has <<20-15=5>>5 left.\n#### 5"
+        rec = _rec(
+            clean_prompt="Lisa had 20 dollars and spent 15. How much is left?",
+            clean_answer=" 5",
+            meta={"solution_text": sol},
+        )
+        res = FinalAnswerSwap().corrupt(rec, rng=random.Random(seed))
+        _assert_success(res)
+        assert res.corrupt_prompt == rec.clean_prompt
+
+        rec = _rec(
+            clean_prompt="Lisa spent 15 and has 5 left. How much is left?",
+            clean_answer=" 5",
+            meta={"solution_text": sol},
+        )
+        res = FinalAnswerSwap().corrupt(rec, rng=random.Random(seed))
+        _assert_success(res)
+        new = res.corrupt_answer.strip()
+        assert res.corrupt_prompt == f"Lisa spent 15 and has {new} left. How much is left?"
+
     def test_answer_only_numeric_mode(self):
         rec = _rec(clean_prompt="The answer is", clean_answer="42")
         res = FinalAnswerSwap().corrupt(rec, rng=random.Random(3))
