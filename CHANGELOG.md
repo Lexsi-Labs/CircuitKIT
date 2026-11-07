@@ -109,6 +109,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 - **Saved neuron-level circuits keep their label**. `Circuit.save` wrote a `_scores.json` with no
   task, model or algorithm, and `from_artifact` reads that file first, so the graph title said
   "unknown / unknown". The file now carries them, and files without them still load.
@@ -163,6 +164,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `hash(record_id)`, which changes with every Python process, so the same dataset was corrupted
   differently on each run. They now seed from a crc32 of `record_id`.
 >>>>>>> ck26
+=======
+- Pillar 6: `summarize_transfer_matrix()` started its best/worst search at -1 and 2.0, so when
+  every cross-task ratio was above 2.0 (a circuit more faithful on the target than on its own
+  task) `worst_transfer` was `None`. The search now starts at -inf and +inf.
+>>>>>>> ck27
 - Hyperparameter checks: `eval.pillars: []` is now an error (it would run nothing), and an
   ACDC grid point too large to compute (`tao_exps: [400]`) is reported as tau >= 1 instead of
   being skipped.
