@@ -486,8 +486,10 @@ class TestFinalAnswerSwap:
             meta={"solution_text": sol},
         )
         res = FinalAnswerSwap().corrupt(rec, rng=random.Random(seed))
-        _assert_success(res)
-        assert res.corrupt_prompt == rec.clean_prompt
+        # The result is not in the prompt as a number of its own, so nothing is edited.
+        # That is a failure, not an answer-only pair that claims success.
+        _assert_noop(res)
+        assert "unchanged" in res.notes
 
         rec = _rec(
             clean_prompt="Lisa spent 15 and has 5 left. How much is left?",
@@ -498,6 +500,20 @@ class TestFinalAnswerSwap:
         _assert_success(res)
         new = res.corrupt_answer.strip()
         assert res.corrupt_prompt == f"Lisa spent 15 and has {new} left. How much is left?"
+
+    def test_unchanged_prompt_leaves_the_record_unpaired(self):
+        """apply() on a question-only math record keeps it unpaired and records why."""
+        rec = _rec(
+            clean_prompt="Lisa had 20 dollars and spent 15. How much is left?",
+            clean_answer=" 5",
+            meta={"solution_text": "Lisa has <<20-15=5>>5 left.\n#### 5"},
+        )
+        out = FinalAnswerSwap().apply(rec, rng=random.Random(0))
+
+        assert out.corrupt_prompt is None and out.corrupt_answer is None
+        assert out.contrast_source == rec.contrast_source
+        assert out.meta["_strategy_name"] == "final_answer_swap"
+        assert "unchanged" in out.meta["_strategy_error"]
 
     def test_answer_only_numeric_mode(self):
         rec = _rec(clean_prompt="The answer is", clean_answer="42")

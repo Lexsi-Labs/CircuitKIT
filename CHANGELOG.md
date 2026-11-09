@@ -153,6 +153,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   edge-level discovery, or from `ibcircuit` or `acdc`, were computed with the incomparable vector
   included and differ from what this version gives. Recompute them. `r1_seed_consistency` can now
   be `None`.** Runs from node-level discovery with a listed algorithm are unchanged.
+- **`final_answer_swap` reports a failure when it cannot edit the prompt**. In math mode, a record
+  whose final calculation and result are not in the prompt as an editable number (typically the math
+  adapter's question-only prompt) produced a pair with identical prompts and a different answer,
+  marked as succeeded. Identical prompts carry no activation difference, so `NormalizedTaskSpec`
+  later dropped every such record, or raised "All N records were filtered out". The strategy now
+  returns `succeeded=False` with the reason in `notes` (`apply()` keeps the record unpaired and sets
+  `_strategy_error`), as `llm_counterfactual` already does for identical output. Records with no
+  `solution_text` still use the documented answer-only mode.
+  Callers that read `succeeded` now see `False` for those records.
 - **Saved neuron-level circuits keep their label**. `Circuit.save` wrote a `_scores.json` with no
   task, model or algorithm, and `from_artifact` reads that file first, so the graph title said
   "unknown / unknown". The file now carries them, and files without them still load.
