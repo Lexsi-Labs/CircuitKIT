@@ -277,7 +277,7 @@ class FineTuneEditHandler:
         if not params:
             raise RuntimeError("Model exposes no trainable parameters.")
 
-        optimiser = torch.optim.AdamW(params, lr=lr)
+        optimiser = torch.optim.AdamW(params, lr=lr, weight_decay=self.cfg.weight_decay)
         self.model.train()
 
         for _ in range(steps):

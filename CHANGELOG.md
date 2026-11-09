@@ -133,6 +133,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   return, and an edge scored after a pruning one would have been scored against a smaller graph. The
   full graph is now restored before each edge and on return, as the node-level version already does.
   Scores do not change.
+- **`FineTuneEditHandler` passes its `weight_decay` to AdamW**. The setting (default 0.0) was stored
+  and never used, so every edit ran with AdamW's own default of 0.01 on all parameters of the model.
 - **Saved neuron-level circuits keep their label**. `Circuit.save` wrote a `_scores.json` with no
   task, model or algorithm, and `from_artifact` reads that file first, so the graph title said
   "unknown / unknown". The file now carries them, and files without them still load.
