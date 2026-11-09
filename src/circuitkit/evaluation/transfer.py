@@ -87,7 +87,10 @@ class TransferMatrix:
         # explicitly here or every task lookup fails with "registered tasks: []".
         _bootstrap_builtin_tasks()
 
-        self.matrix = np.zeros((self.n_tasks, self.n_tasks))
+        # NaN means "no result". A cell that is skipped (the diagonal with
+        # skip_diagonal=True) or whose evaluation fails must not read as a real
+        # transfer score of 0.0.
+        self.matrix = np.full((self.n_tasks, self.n_tasks), np.nan)
 
         # Create save directory if needed. Each source circuit MUST be
         # persisted to a distinct path so the evaluation phase can load the
@@ -192,7 +195,15 @@ class TransferMatrix:
                     )
 
                     # Transfer score = circuit (ablation) performance on the target task.
-                    transfer_score = result.ablation_score or 0.0
+                    # A missing score (Pillar 2 invalid) is a failed evaluation, not 0.0.
+                    transfer_score = result.ablation_score
+                    if transfer_score is None:
+                        self.logger.error(
+                            f"Evaluation of {source_task}->{target_task} returned no "
+                            f"ablation score; recording NaN"
+                        )
+                        self.matrix[src_idx, tgt_idx] = np.nan
+                        continue
                     self.matrix[src_idx, tgt_idx] = transfer_score
 
                     self._eval_scores[(source_task, target_task)] = {

@@ -123,6 +123,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   current working directory at import time and kept `logs/circuitkit_YYYYMMDD.log` open, so importing
   `circuitkit.api` from a read-only directory failed with `PermissionError: [Errno 13] Permission denied: 'logs'`.
   Nothing read that file. Logs now go to the console only; pass `log_file` to `setup_logging` for a file.
+- **A transfer-matrix cell with no result is NaN, not 0.0**. `TransferMatrix.build` stored
+  `result.ablation_score or 0.0`, so an evaluation whose ablation score was missing (Pillar 2 invalid)
+  was recorded as a transfer of 0.0, counted as successful, and could be reported as the worst
+  transfer. The matrix also started as zeros, so with `skip_diagonal=True` the skipped diagonal read
+  as 0.0 too. Both now give NaN, which `analyze()` and the plots already skip.
+- **`attribute(..., method="exact")` leaves the graph as it found it**. `evaluate_graph` prunes the graph
+  in place and `get_scores_exact` never added the edges back, so 6 edges were still switched off on
+  return, and an edge scored after a pruning one would have been scored against a smaller graph. The
+  full graph is now restored before each edge and on return, as the node-level version already does.
+  Scores do not change.
 - **Saved neuron-level circuits keep their label**. `Circuit.save` wrote a `_scores.json` with no
   task, model or algorithm, and `from_artifact` reads that file first, so the graph title said
   "unknown / unknown". The file now carries them, and files without them still load.

@@ -52,8 +52,15 @@ def get_scores_exact(
     """
     graph.in_graph |= graph.real_edge_mask  # All edges that are real are now in the graph
     baseline = evaluate_baseline(model, dataloader, metric).mean().item()
+    # evaluate_graph() prunes the graph in place and never adds anything back, so
+    # restore the full graph before each edge and again on return. Every edge is
+    # then scored against the same baseline, and the caller gets the graph it passed in.
+    full_in_graph = graph.in_graph.clone()
+    full_nodes_in_graph = graph.nodes_in_graph.clone()
     edges = graph.edges.values() if quiet else tqdm(graph.edges.values())
     for edge in edges:
+        graph.in_graph[:] = full_in_graph
+        graph.nodes_in_graph[:] = full_nodes_in_graph
         edge.in_graph = False
         intervened_performance = (
             evaluate_graph(
@@ -70,7 +77,9 @@ def get_scores_exact(
             .item()
         )
         edge.score = intervened_performance - baseline
-        edge.in_graph = True
+
+    graph.in_graph[:] = full_in_graph
+    graph.nodes_in_graph[:] = full_nodes_in_graph
 
     # This is just to make the return type the same as all of the others; we've actually already updated the score matrix
     return graph.scores

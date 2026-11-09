@@ -563,3 +563,56 @@ class TestTransferMatrixEdgeCases:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+class TestBuildRecordsNoResultAsNaN:
+    """``build()`` stores NaN, never 0.0, for a cell that has no transfer score."""
+
+    @staticmethod
+    def _build(evaluations, skip_diagonal=False):
+        """Run build() with discovery and evaluation mocked.
+
+        ``evaluations`` is a list, one entry per evaluate_circuit call in order:
+        a float is the ablation score, None is a missing score, an Exception
+        is raised.
+        """
+        from unittest.mock import MagicMock, patch
+
+        from circuitkit.evaluation.transfer import TransferMatrix
+
+        def fake_evaluate(**_kwargs):
+            item = next(items)
+            if isinstance(item, Exception):
+                raise item
+            return MagicMock(ablation_score=item)
+
+        items = iter(evaluations)
+        tm = TransferMatrix(["a", "b"])
+        with (
+            patch("circuitkit.tasks.bootstrap._bootstrap_builtin_tasks"),
+            patch("circuitkit.tasks.registry.get_task"),
+            patch("circuitkit.api.discover_circuit"),
+            patch("circuitkit.api.evaluate_circuit", side_effect=fake_evaluate),
+        ):
+            tm.build(model=MagicMock(), discovery_cfg_template={}, skip_diagonal=skip_diagonal)
+        return tm
+
+    def test_missing_ablation_score_is_nan_not_zero(self):
+        tm = self._build([0.9, None, RuntimeError("boom"), 0.8])
+
+        assert tm.matrix[0, 0] == 0.9 and tm.matrix[1, 1] == 0.8
+        assert np.isnan(tm.matrix[0, 1])  # ablation_score None
+        assert np.isnan(tm.matrix[1, 0])  # evaluation raised
+
+        analysis = tm.analyze()
+        assert analysis["num_successful"] == 2
+        assert analysis["worst_transfer"] == ("b", "b", 0.8)
+
+    def test_skipped_diagonal_is_nan_not_zero(self):
+        tm = self._build([0.7, 0.6], skip_diagonal=True)
+
+        assert np.isnan(np.diag(tm.matrix)).all()
+        analysis = tm.analyze()
+        assert analysis["num_successful"] == 2
+        assert analysis["worst_transfer"] == ("b", "a", 0.6)
+        assert analysis["overall_mean"] == pytest.approx(0.65)

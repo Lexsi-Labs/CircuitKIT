@@ -295,3 +295,41 @@ class TestGetScoresExactSignature:
             )
 
         assert fake_eval_graph.call_count == len(graph.edges)
+
+
+class TestGetScoresExactRestoresGraph:
+    def test_graph_is_unchanged_after_the_call(self):
+        """get_scores_exact must hand back the graph it was given.
+
+        evaluate_graph prunes the graph in place and never adds anything back.
+        The fake below prunes the same way, so a leftover from one edge shows
+        up as edges that are off when the function returns, or as an edge
+        scored against a smaller graph than the others.
+        """
+        from circuitkit.backends.eap import attribute as attribute_module
+
+        graph = Graph.from_model(TINY_CFG)
+        graph.in_graph |= graph.real_edge_mask
+        full_in_graph = graph.in_graph.clone()
+        full_nodes_in_graph = graph.nodes_in_graph.clone()
+        entry_states = []
+
+        def pruning_evaluate_graph(model, g, *args, **kwargs):
+            entry_states.append(g.in_graph.clone())
+            g.prune()
+            return torch.zeros(1)
+
+        with (
+            patch.object(attribute_module, "evaluate_graph", side_effect=pruning_evaluate_graph),
+            patch.object(attribute_module, "evaluate_baseline", return_value=torch.zeros(1)),
+        ):
+            attribute_module.get_scores_exact(
+                MagicMock(), graph, DataLoader([0]), MagicMock(), quiet=True
+            )
+
+        assert torch.equal(graph.in_graph, full_in_graph)
+        assert torch.equal(graph.nodes_in_graph, full_nodes_in_graph)
+        # Each edge is scored with exactly that one edge removed.
+        assert len(entry_states) == len(graph.edges)
+        for state in entry_states:
+            assert int(full_in_graph.sum() - state.sum()) == 1
