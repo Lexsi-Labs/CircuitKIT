@@ -122,6 +122,15 @@ class GenericDataLoader(Dataset):
         return result
 
 
+def _num_examples(discovery_cfg: Dict[str, Any]) -> Any:
+    """The example cap from a discovery config: top-level ``num_examples``, else
+    ``data_params.num_examples`` (where ``ck.discover(n_examples=...)`` and
+    ``Pipeline.discover`` put it). ``None`` when neither is set."""
+    if discovery_cfg.get("num_examples") is not None:
+        return discovery_cfg["num_examples"]
+    return (discovery_cfg.get("data_params") or {}).get("num_examples")
+
+
 class GenericTaskSpec:
     """
     Generic task specification that works with arbitrary datasets.
@@ -727,8 +736,8 @@ class GenericTaskSpec:
                     f"integer (e.g. 16)."
                 )
 
-        # Check num_examples if present
-        num_examples = discovery_cfg.get("num_examples")
+        # Check num_examples if present (top level or data_params, see _num_examples)
+        num_examples = _num_examples(discovery_cfg)
         if num_examples is not None:
             if not isinstance(num_examples, int) or num_examples <= 0:
                 raise ValueError(
@@ -830,8 +839,9 @@ class GenericTaskSpec:
                 f"Filter: {self.metadata_filter or discovery_cfg.get('metadata_filter')}"
             )
 
-        # Limit to num_examples if specified
-        num_examples = discovery_cfg.get("num_examples")
+        # Limit to num_examples if specified. ck.discover / Pipeline.discover put
+        # n_examples in data_params.num_examples; a top-level key still wins.
+        num_examples = _num_examples(discovery_cfg)
         if num_examples:
             seed = discovery_cfg.get("seed", 42)
             rng = random.Random(seed)
