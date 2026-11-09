@@ -77,6 +77,40 @@ def _load_finetuning_data_from_csv(
     return clean_texts, query_strings
 
 
+def prompt_text_before_answer(model, tokens, end_idx: int) -> str:
+    """Return the prompt text up to and including the position that predicts the answer.
+
+    Paired-text dataloaders score ``logits[input_length - 1]``, so the text they
+    cache must stop at the last token *before* the answer. Decoding a whole
+    generated row instead leaves the answer token (and any BOS or padding the
+    generator added) in the text, and the metric then reads the logits at the
+    answer itself. A leading BOS is dropped because the pair tokenizer adds its
+    own.
+
+    Args:
+        model: HookedTransformer-like object with ``to_string`` and ``tokenizer``.
+        tokens: 1-D tensor of token ids for one row, as produced by the task's
+            data generator (may start with BOS and end with the answer or padding).
+        end_idx: Index in ``tokens`` of the last prompt token, i.e. the position
+            whose next-token prediction is the answer.
+
+    Returns:
+        The decoded prompt, without BOS, the answer, or padding.
+
+    Raises:
+        ValueError: If ``end_idx`` is outside the row.
+    """
+    end_idx = int(end_idx)
+    if not 0 <= end_idx < len(tokens):
+        raise ValueError(
+            f"end_idx {end_idx} is outside a row of {len(tokens)} tokens; the data "
+            f"generator must return the position that predicts the answer."
+        )
+    bos = getattr(model.tokenizer, "bos_token_id", None)
+    start = 1 if bos is not None and end_idx > 0 and int(tokens[0]) == bos else 0
+    return model.to_string(tokens[start : end_idx + 1])
+
+
 def _find_task_cache(
     cache_dir: Path,
     prefix: str,

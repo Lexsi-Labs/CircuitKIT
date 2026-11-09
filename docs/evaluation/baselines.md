@@ -55,7 +55,7 @@ print(pipe.report.baseline_comparison)
 
 **Circuit vs. magnitude:** If the magnitude baseline is close to the circuit score, the discovery algorithm may be largely selecting high-weight components — which magnitude selection also does. This suggests the algorithm is not providing much value beyond a simple weight-norm heuristic.
 
-**Typical values from the CircuitKIT audit:**
+**Typical values from the CircuitKIT audit** (the IOI row was measured before the `ioi` scored position was corrected and not re-measured; see [where the prompts end](causal-patching.md#where-the-ioi-and-double_io-prompts-end)):
 
 | Model | Task | Circuit | Random | Magnitude |
 |-------|------|:-------:|:------:|:---------:|

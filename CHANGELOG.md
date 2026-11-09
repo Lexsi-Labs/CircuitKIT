@@ -51,6 +51,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Faithfulness scores no longer clip silently.** `patching_score` and `ablation_score` keep their
+  meaning (the ratio clipped to 0 to 1), so existing callers read the same thing. Added next to
+  them: `FaithfulnessReport.patching_raw_ratio` and `.ablation_raw_ratio` (read from
+  `metadata["patching_raw_ratio"]` / `metadata["ablation_raw_ratio"]`, which were already written),
+  the keys `pillar_1_patching_raw_ratio` and `pillar_2_ablation_raw_ratio` in `summary()`, and an
+  `out_of_range` flag in the Pillar 1 and Pillar 2 result dicts. When the raw ratio is above 1 or
+  below 0 the pillar logs a warning, and the printed report shows it, for example
+  `Score: 1.0000  (OUT OF RANGE: raw ratio 5.8420 is above 1: ...)`. In range, the printed line is
+  `Score: 0.9309  (raw ratio 0.9309)`. `circuitkit evaluate` prints the raw ratio after each score.
 - Importing `transformer_lens` before `circuitkit` now raises `ImportError` instead
   of warning and continuing with the Gemma-4 / Sarvam-MoE / Cohere patches absent.
 - TransformerLens compatibility now targets **3.8.0 only**; the former 2.18 path
@@ -232,6 +241,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `base_model`; their `inputs` are correct, so read the parent from the model entry in `inputs`.
   `make_provenance` now raises `ValueError` for a `base_model` that is not a model entry in `inputs`
   or a `base_model_relation` outside `finetune`, `adapter`, `quantized`, `merge`.
+- **Behaviour change: every `ioi` and `double_io` result from the paired-text path differs from earlier versions, and cached results are recomputed.** IOI numbers published before this version are not comparable with numbers from it. Old cache files are not reused.
+- **`ioi` and `double_io` scored the wrong token on the paired-text path** (EAP family, CD-T, and
+  `ck.faithfulness` on these tasks). The cached prompt kept the answer name at its end, so the
+  metric's `logits[input_length - 1]` was read at the name itself and not at the token that predicts
+  it. `ioi` did this on every row and also carried a literal BOS in the text, giving two BOS tokens.
+  `double_io` did it on every row shorter than the longest in the batch, and wrote the padding
+  tokens into the text. Prompts now stop at the predicting token
+  (`circuitkit.tasks.specs.prompt_text_before_answer`, used by `ioi`, the deprecated legacy `ioi`
+  spec and `double_io`). ACDC and IBCircuit already read the right position and are unchanged. The
+  other built-in tasks were checked on GPT-2 where their data is available offline (`greater_than`,
+  `sva`, `hypernymy`, `gender_bias`, `capital_country`, `glue`, `wmdp`, `boolq`, `gsm8k`) and do not
+  have this mistake.
+- **Numbers that change.** Every `ioi` and `double_io` number from the paths above changes: node
+  and neuron scores, the discovered circuit, both pillar scores, and anything built on them
+  (pruning, quantization, transfer). Measured on GPT-2, 32 prompts, seed 0, CPU:
+
+    | Printed number | Before | After |
+    |---|---|---|
+    | `ioi` mean logit difference (clean) | 1.0551 | 3.8719 |
+    | `double_io` mean logit difference (clean) | 1.5072 | 2.2064 |
+    | docs quickstart (`eap-ig`, 30% pruned, default data): patching score | 0.9465 | 0.9432 |
+    | docs quickstart: ablation score | 0.6439 | 0.0000 (raw -0.0737) |
+    | `ioi`, `eap`, 30% pruned: patching score | 0.9764 | 0.9309 |
+    | same circuit: ablation score | 0.0027 | 0.0000 (raw -0.1553) |
+    | reversed control, 30% pruned: patching score | 0.5911 | 0.0000 (raw -0.0147) |
+    | reversed control, 30% pruned: ablation score | 0.9084 | 0.0000 (raw -0.7333) |
+    | `ioi`, `eap`, 80% pruned: patching score | 1.0000 (raw 1.0419) | 0.8341 |
+    | same circuit: ablation score | 0.0000 (raw -0.1247) | 0.0000 (raw -0.3082) |
+    | reversed control, 80% pruned: patching score | 0.6425 | 0.0000 (raw -0.0099) |
+    | reversed control, 80% pruned: ablation score | 0.0581 | 0.0000 (raw -0.3292) |
+
+  Before the fix the reversed control beat the discovered circuit on ablation (0.9084 against
+  0.0027). After it, patching separates the two clearly; zero ablation still does not on GPT-2
+  `ioi`, where both raw ratios are below 0. The audit tables in the docs (IOI rows for the
+  EAP family) and the stored outputs of notebooks 01, 02, 03 and 06 were produced before the fix
+  and have not been re-measured; the docs pages now say so.
+- **Task cache file names.** `ioi` and `double_io` caches are now
+  `ioi_prompt_<model>_<n>_seed<seed>.csv` and `double_io_prompt_<model>_<n>_seed<seed>.csv`. Files
+  under the old names hold prompts that end with the answer; they are no longer read for discovery
+  or for finetuning data and can be deleted. Finetuning text built from the old `ioi` cache had the
+  answer name twice.
 - Hyperparameter checks: `eval.pillars: []` is now an error (it would run nothing), and an
   ACDC grid point too large to compute (`tao_exps: [400]`) is reported as tau >= 1 instead of
   being skipped.

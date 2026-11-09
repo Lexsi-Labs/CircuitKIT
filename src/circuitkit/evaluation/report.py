@@ -44,17 +44,20 @@ class FaithfulnessReport:
     Attributes:
         patching_score: Pillar 1 - Causal Patching validity.
             Normalized faithfulness ratio F = (y_circuit - y_corrupt) /
-            (y_clean - y_corrupt), clamped at 1.0. 1.0 = circuit fully recovers
-            the clean (full-model) behavior; 0.0 = circuit no better than the
-            corrupt baseline (it may be negative if the patched circuit
-            underperforms the corrupt baseline). NOT the raw logit-diff metric.
+            (y_clean - y_corrupt), clipped to [0.0, 1.0]. 1.0 = circuit fully
+            recovers the clean (full-model) behavior; 0.0 = circuit no better
+            than the corrupt baseline. NOT the raw logit-diff metric.
             Measures how well the circuit explains model behavior via intervention.
+            The unclipped ratio is ``patching_raw_ratio``: read it when this
+            score is exactly 0.0 or 1.0, because two circuits that both clip to
+            the same end can be far apart.
 
         ablation_score: Pillar 2 - Faithfulness under ablation.
             Normalized faithfulness ratio F = (y_circuit - y_corrupt) /
-            (y_clean - y_corrupt), clamped at 1.0, computed on the ablated
-            circuit. 1.0 = ablated circuit fully recovers clean behavior;
+            (y_clean - y_corrupt), clipped to [0.0, 1.0], computed on the
+            ablated circuit. 1.0 = ablated circuit fully recovers clean behavior;
             0.0 = no better than the corrupt baseline. NOT the raw metric.
+            The unclipped ratio is ``ablation_raw_ratio``.
 
         stability: Pillar 3 - Stability and robustness to distribution shift.
             Optional dict with keys like:
@@ -113,6 +116,38 @@ class FaithfulnessReport:
 
     # Metadata
     metadata: Dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def patching_raw_ratio(self) -> Optional[float]:
+        """Unclipped Pillar 1 ratio, or ``None`` if it was not recorded.
+
+        Stored in ``metadata["patching_raw_ratio"]``. It can be above 1 (the
+        circuit scores higher than the full model) or below 0 (lower than the
+        corrupt baseline); ``patching_score`` shows those as 1.0 and 0.0.
+        """
+        return self.metadata.get("patching_raw_ratio")
+
+    @property
+    def ablation_raw_ratio(self) -> Optional[float]:
+        """Unclipped Pillar 2 ratio, or ``None`` if it was not recorded.
+
+        Stored in ``metadata["ablation_raw_ratio"]``. See ``patching_raw_ratio``.
+        """
+        return self.metadata.get("ablation_raw_ratio")
+
+    @staticmethod
+    def _score_line(score: Optional[float], raw_ratio: Optional[float]) -> str:
+        """Format a pillar score for printing, with the raw ratio when one is known."""
+        from .pillars.causal_patching import describe_raw_ratio
+
+        if score is None:
+            return "  Score: N/A"
+        if raw_ratio is None:
+            return f"  Score: {score:.4f}"
+        note = describe_raw_ratio(raw_ratio)
+        if note:
+            return f"  Score: {score:.4f}  (OUT OF RANGE: {note})"
+        return f"  Score: {score:.4f}  (raw ratio {raw_ratio:.4f})"
 
     def to_json(self, path: Path) -> None:
         """
@@ -191,18 +226,15 @@ class FaithfulnessReport:
             "=" * 60,
         ]
 
-        p_score = f"{self.patching_score:.4f}" if self.patching_score is not None else "N/A"
-        a_score = f"{self.ablation_score:.4f}" if self.ablation_score is not None else "N/A"
-
         # Pillar 1 & 2
         lines.extend(
             [
                 "",
                 "PILLAR 1: Causal Patching Validity",
-                f"  Score: {p_score}",
+                self._score_line(self.patching_score, self.patching_raw_ratio),
                 "",
                 "PILLAR 2: Ablation Faithfulness",
-                f"  Score: {a_score}",
+                self._score_line(self.ablation_score, self.ablation_raw_ratio),
             ]
         )
 
@@ -286,6 +318,13 @@ class FaithfulnessReport:
         return "\n".join(lines)
 
     def summary(self) -> Dict[str, Optional[float]]:
+        """Return the two basic pillar scores, their average and the raw ratios.
+
+        ``pillar_1_patching``, ``pillar_2_ablation`` and ``overall_average`` are
+        the scores clipped to [0, 1]. ``pillar_1_patching_raw_ratio`` and
+        ``pillar_2_ablation_raw_ratio`` are the unclipped ratios (``None`` when
+        not recorded).
+        """
         avg = None
         if self.patching_score is not None and self.ablation_score is not None:
             avg = (self.patching_score + self.ablation_score) / 2
@@ -294,6 +333,8 @@ class FaithfulnessReport:
             "pillar_1_patching": self.patching_score,
             "pillar_2_ablation": self.ablation_score,
             "overall_average": avg,
+            "pillar_1_patching_raw_ratio": self.patching_raw_ratio,
+            "pillar_2_ablation_raw_ratio": self.ablation_raw_ratio,
         }
 
     @staticmethod

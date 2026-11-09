@@ -31,9 +31,19 @@ from .._algorithm_families import (
     unsupported_algorithm_message,
 )
 from .._chat import resolve_chat_template
-from ..specs import _find_task_cache, _load_finetuning_data_from_csv, require_single_token_answers
+from ..specs import (
+    _find_task_cache,
+    _load_finetuning_data_from_csv,
+    prompt_text_before_answer,
+    require_single_token_answers,
+)
 
 logger = get_logger("task.ioi")
+
+# Cache files carry prompts that stop before the answer. The prefix differs from
+# the one used when the cached text still ended with the answer name, so those
+# older files are neither reloaded for discovery nor picked up for finetuning.
+_CACHE_PREFIX = "ioi_prompt"
 
 
 class IOITaskSpec:
@@ -209,7 +219,7 @@ class IOITaskSpec:
         cache_dir.mkdir(parents=True, exist_ok=True)
 
         model_name = getattr(model.cfg, "model_name", "unknown_model").replace("/", "_")
-        cache_file = cache_dir / f"ioi_{model_name}_{num_examples}_seed{seed}.csv"
+        cache_file = cache_dir / f"{_CACHE_PREFIX}_{model_name}_{num_examples}_seed{seed}.csv"
 
         if cache_file.exists():
             logger.info(f"Loading cached IOI data for {model_name} from {cache_file}")
@@ -229,8 +239,12 @@ class IOITaskSpec:
                 correct_idx = ioi_data["validation_labels"][i].item()
                 incorrect_idx = ioi_data["validation_wrong_labels"][i].item()
 
-                clean_text = model.to_string(clean_tokens)
-                corrupted_text = model.to_string(corrupted_tokens)
+                # Stop at the token that predicts the answer (the "to"), so the
+                # metric's logits[input_length - 1] reads the prediction of the
+                # name and not the logits at the name itself.
+                end_idx = ioi_data["end_idxs"][i]
+                clean_text = prompt_text_before_answer(model, clean_tokens, end_idx)
+                corrupted_text = prompt_text_before_answer(model, corrupted_tokens, end_idx)
 
                 eap_data.append(
                     {
@@ -357,7 +371,7 @@ class IOITaskSpec:
         model_name_safe = model_name.replace("/", "_")
         cache_dir = Path(cfg.get("cache_dir", "./cache/ioi"))
 
-        cache_path = _find_task_cache(cache_dir, self.name, model_name_safe)
+        cache_path = _find_task_cache(cache_dir, _CACHE_PREFIX, model_name_safe)
         if cache_path is None:
             raise FileNotFoundError(
                 f"No '{self.name}' cache found for model '{model_name}' "

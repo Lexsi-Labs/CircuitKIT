@@ -31,7 +31,12 @@ from transformer_lens import HookedTransformer
 
 from ...backends.eap.graph import Graph
 from ..evaluate import evaluate_baseline, evaluate_graph
-from .causal_patching import _DEGENERATE_DENOM_EPS, _faithfulness_ratio, _mean_metric
+from .causal_patching import (
+    _DEGENERATE_DENOM_EPS,
+    _faithfulness_ratio,
+    _mean_metric,
+    describe_raw_ratio,
+)
 from circuitkit.utils.device import get_device, empty_cache
 
 logger = logging.getLogger(__name__)
@@ -100,7 +105,7 @@ class Pillar2_Ablation:
 
         Returns:
             dict with keys:
-            - 'score' (float): Normalized faithfulness ratio, clamped at 1.0.
+            - 'score' (float): Normalized faithfulness ratio, clamped to [0.0, 1.0].
                 1.0 = ablated circuit fully recovers clean behavior;
                 0.0 = circuit no better than the corrupt baseline.
                 If the denominator is degenerate, 0.0 with the flag below set.
@@ -111,6 +116,8 @@ class Pillar2_Ablation:
             - 'corrupt_score' (float): Mean raw metric on the corrupt baseline.
             - 'degenerate_denominator' (bool): True if |clean - corrupt| ~ 0,
                 making the ratio undefined; 'score' is then a 0.0 sentinel.
+            - 'out_of_range' (bool): True if 'raw_ratio' is outside [0.0, 1.0],
+                so 'score' was clipped. A warning is logged in that case.
 
         Raises:
             AssertionError: If model.cfg.use_attn_result is False.
@@ -234,13 +241,17 @@ class Pillar2_Ablation:
                 "corrupt_score": corrupt_score,
                 "degenerate_denominator": ratio["degenerate_denominator"],
                 "inverted_denominator": False,
+                "out_of_range": ratio["out_of_range"],
             }
 
             logger.info(
                 f"Pillar 2 Score (Ablation - {intervention} faithfulness ratio): "
-                f"{result['score']:.4f} (raw metric: {raw_score:.4f}, "
+                f"{result['score']:.4f} (raw ratio: {ratio['raw_ratio']:.4f}, "
+                f"raw metric: {raw_score:.4f}, "
                 f"clean: {clean_score:.4f}, corrupt: {corrupt_score:.4f})"
             )
+            if ratio["out_of_range"]:
+                logger.warning(f"Pillar 2: {describe_raw_ratio(ratio['raw_ratio'])}.")
             return result
 
         except Exception as e:

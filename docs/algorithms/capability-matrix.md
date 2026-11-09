@@ -42,6 +42,8 @@ Measured at `bfloat16`, `ig_steps=5` (the previous default), `batch_size=4`. Red
 
 ## Validated combinations (from the audit paper)
 
+The IOI `eap-ig` rows were measured before the `ioi` scored position was corrected and not re-measured; see [where the prompts end](../evaluation/causal-patching.md#where-the-ioi-and-double_io-prompts-end). The `acdc` row is not affected.
+
 | Model | Task | Algorithm | Result |
 |---|---|---|---|
 | GPT-2 | IOI | eap-ig | ablation_score 0.91 |

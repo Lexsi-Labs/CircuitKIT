@@ -153,7 +153,7 @@ These are rough at-a-glance guides only; each pillar page carries the authoritat
 | Better than magnitude (Pillar 5) | No | Yes by ≥ 0.10 |
 
 **`patching_score`** (Pillar 1) = normalized faithfulness ratio from causal patching,
-(y_circuit − y_corrupt) / (y_clean − y_corrupt), clamped at 1.0.  
+(y_circuit − y_corrupt) / (y_clean − y_corrupt), clipped to the range 0 to 1. The unclipped value is `patching_raw_ratio` ([details](causal-patching.md#the-raw-ratio-and-scores-outside-0-to-1)).  
 **`ablation_score`** (Pillar 2) = the same normalized ratio computed on the ablated circuit.
 
 ## Optional: Intervention reliability (7th auxiliary pillar)

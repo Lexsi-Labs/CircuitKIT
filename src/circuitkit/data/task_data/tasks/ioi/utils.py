@@ -207,11 +207,16 @@ def get_ioi_data_only(num_examples, device, model, seed=42):
 
     Returns:
         Dictionary containing:
-        - validation_data: Clean token sequences [num_examples, seq_len-1]
-        - validation_patch_data: Corrupted token sequences [num_examples, seq_len-1]
+        - validation_data: Clean token sequences [num_examples, seq_len]. Each
+          row is the whole sentence: BOS first, the answer name last.
+        - validation_patch_data: Corrupted token sequences [num_examples, seq_len]
         - validation_labels: Correct answer token IDs [num_examples]
         - validation_wrong_labels: Incorrect answer token IDs [num_examples]
-        - end_idxs: Answer positions [num_examples]
+        - end_idxs: Per row, the index of the token that predicts the answer
+          (the one just before the answer name) [num_examples]. Read logits
+          here, or cut the row here with
+          ``circuitkit.tasks.specs.prompt_text_before_answer`` before turning
+          it into prompt text; the last column is the answer itself.
     """
 
     if model is None:

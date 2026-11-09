@@ -4,6 +4,14 @@ This page answers the question [scope.md](scope.md) does not: an algorithm is *s
 
 > [scope.md](scope.md) tells you which algorithms are validated. This page tells you how faithful they actually were on real checkpoints.
 
+!!! warning "IOI numbers on this page predate a correction"
+    The IOI numbers below for the EAP family (`eap`, `eap-ig` and the research-tier variants)
+    were measured while the `ioi` task read its metric at the answer name instead of at the
+    token that predicts it, and with scores clipped to the range 0 to 1. They have not been
+    re-measured and should not be compared with current runs. The `acdc` and `ibcircuit`
+    numbers are not affected. See
+    [where the prompts end](../evaluation/causal-patching.md#where-the-ioi-and-double_io-prompts-end).
+
 ## Methodology
 
 - **Models**: GPT-2 (124M), Llama-3.2-1B-Instruct, Llama-3.2-3B-Instruct, Gemma-2-2B-it

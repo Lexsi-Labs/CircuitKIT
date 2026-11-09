@@ -39,7 +39,9 @@ from .._chat import resolve_chat_template  # noqa: E402 - import after intention
 from ..specs import (  # noqa: E402 - import after intentional pre-import setup
     _find_task_cache,
     _load_finetuning_data_from_csv,
+    prompt_text_before_answer,
 )
+from .ioi import _CACHE_PREFIX  # noqa: E402 - same cache files as the current spec
 
 logger = get_logger("task.ioi_legacy")
 
@@ -176,7 +178,7 @@ class IOITaskSpec:
         # Cache file path includes model_name along with num_examples and seed for uniqueness
         # This ensures that cached data is only reused for the exact same model
         model_name = getattr(model.cfg, "model_name", "unknown_model").replace("/", "_")
-        cache_file = cache_dir / f"ioi_{model_name}_{num_examples}_seed{seed}.csv"
+        cache_file = cache_dir / f"{_CACHE_PREFIX}_{model_name}_{num_examples}_seed{seed}.csv"
 
         # Check if cached data exists
         if cache_file.exists():
@@ -201,8 +203,12 @@ class IOITaskSpec:
                 incorrect_idx = ioi_data["validation_wrong_labels"][i].item()
 
                 # Convert tokens back to text
-                clean_text = model.to_string(clean_tokens)
-                corrupted_text = model.to_string(corrupted_tokens)
+                # Stop at the token that predicts the answer (the "to"), so the
+                # metric's logits[input_length - 1] reads the prediction of the
+                # name and not the logits at the name itself.
+                end_idx = ioi_data["end_idxs"][i]
+                clean_text = prompt_text_before_answer(model, clean_tokens, end_idx)
+                corrupted_text = prompt_text_before_answer(model, corrupted_tokens, end_idx)
 
                 eap_data.append(
                     {
@@ -359,7 +365,7 @@ class IOITaskSpec:
         model_name_safe = model_name.replace("/", "_")
         cache_dir = Path(cfg.get("cache_dir", "./cache/ioi"))
 
-        cache_path = _find_task_cache(cache_dir, self.name, model_name_safe)
+        cache_path = _find_task_cache(cache_dir, _CACHE_PREFIX, model_name_safe)
         if cache_path is None:
             raise FileNotFoundError(
                 f"No '{self.name}' cache found for model '{model_name}' "
