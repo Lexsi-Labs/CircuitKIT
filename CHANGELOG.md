@@ -119,7 +119,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`NormalizedTaskSpec` EAP loader honours `n_examples`**. The EAP / ACDC branch never read
   `num_examples` (only the IBCircuit branch did), so every record was used. The EAP CSV is now capped
   after the seeded shuffle and the degenerate-pair filters, and the cap is part of the cache file name.
-
+- **Importing CircuitKIT no longer writes a `logs/` folder.** Every CircuitKIT logger created `logs/` in the
+  current working directory at import time and kept `logs/circuitkit_YYYYMMDD.log` open, so importing
+  `circuitkit.api` from a read-only directory failed with `PermissionError: [Errno 13] Permission denied: 'logs'`.
+  Nothing read that file. Logs now go to the console only; pass `log_file` to `setup_logging` for a file.
 - **Saved neuron-level circuits keep their label**. `Circuit.save` wrote a `_scores.json` with no
   task, model or algorithm, and `from_artifact` reads that file first, so the graph title said
   "unknown / unknown". The file now carries them, and files without them still load.
