@@ -458,7 +458,7 @@ class TestEapTokenization:
         import circuitkit.backends.eap.eap_utils as _eu
 
         original_gam = _eu.get_attention_mask
-        _eu.get_attention_mask = lambda tok, tokens, x: torch.ones_like(tokens)
+        _eu.get_attention_mask = lambda tok, tokens, x, **kw: torch.ones_like(tokens)
         try:
             eap_utils.tokenize_plus(fake_model, ["hi"], templated=True)
             assert captured["prepend_bos"] is False, (
@@ -487,7 +487,7 @@ class TestEapTokenization:
         import circuitkit.backends.eap.eap_utils as _eu
 
         original_gam = _eu.get_attention_mask
-        _eu.get_attention_mask = lambda tok, tokens, x: torch.ones_like(tokens)
+        _eu.get_attention_mask = lambda tok, tokens, x, **kw: torch.ones_like(tokens)
         try:
             eap_utils.tokenize_plus(fake_model, ["hi"])  # templated defaults to False
             assert captured["prepend_bos"] is True
