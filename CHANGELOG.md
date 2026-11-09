@@ -116,6 +116,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`GenericTaskSpec` honours `n_examples`**. `ck.discover(n_examples=N)` and `Pipeline.discover`
   put N in `data_params.num_examples`, but `GenericTaskSpec` read only a top-level `num_examples`, so
   YAML / CSV / JSONL tasks used every row. It now reads the top level first, then `data_params`.
+- **`NormalizedTaskSpec` EAP loader honours `n_examples`**. The EAP / ACDC branch never read
+  `num_examples` (only the IBCircuit branch did), so every record was used. The EAP CSV is now capped
+  after the seeded shuffle and the degenerate-pair filters, and the cap is part of the cache file name.
 
 - **Saved neuron-level circuits keep their label**. `Circuit.save` wrote a `_scores.json` with no
   task, model or algorithm, and `from_artifact` reads that file first, so the graph title said

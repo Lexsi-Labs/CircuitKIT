@@ -163,20 +163,31 @@ class NormalizedTaskSpec:
             context="the corrupt prompt equals the clean prompt",
         )
 
-        data_params = discovery_cfg.get("data_params", {})
+        data_params = discovery_cfg.get("data_params", {}) or {}
         seed = data_params.get("seed", discovery_cfg.get("seed", 42))
-        return self._build_eap_dataloader(model, batch_size, seed)
+        # ck.discover / Pipeline.discover put n_examples in data_params.num_examples.
+        # Without a cap every record was used, whatever n_examples said.
+        num_examples = discovery_cfg.get("num_examples") or data_params.get("num_examples")
+        return self._build_eap_dataloader(
+            model, batch_size, seed, max_records=int(num_examples) if num_examples else None
+        )
 
-    def _build_eap_dataloader(self, model, batch_size: int, seed: int = 42):
+    def _build_eap_dataloader(
+        self, model, batch_size: int, seed: int = 42, max_records: Optional[int] = None
+    ):
         from .eap_dataset import EAPDiscoveryDataset
 
         align_tag = self.ds.meta.get("_alignment", {}).get("align_strategy", "unk")
         cache_path = (
             self.cache_dir
-            / f"{_safe_name(self.name)}_{len(self.ds)}_{align_tag}_seed{seed}.csv"
+            / (
+                f"{_safe_name(self.name)}_{len(self.ds)}_{align_tag}_seed{seed}"
+                + (f"_max{max_records}" if max_records else "")
+                + ".csv"
+            )
         )
         if not cache_path.exists():
-            self._materialise_eap_csv(model, cache_path, seed)
+            self._materialise_eap_csv(model, cache_path, seed, max_records=max_records)
         else:
             logger.info(f"Reusing cached EAP CSV: {cache_path}")
         ds = EAPDiscoveryDataset(str(cache_path))
@@ -407,7 +418,9 @@ class NormalizedTaskSpec:
 
     # ------ Internals -------------------------------------------------
 
-    def _materialise_eap_csv(self, model, out_path: Path, seed: int = 42) -> None:
+    def _materialise_eap_csv(
+        self, model, out_path: Path, seed: int = 42, max_records: Optional[int] = None
+    ) -> None:
         """Convert the NormalizedDataset to the CSV format EAPDiscoveryDataset wants.
 
         ``seed`` controls the order records are written to the CSV. The
@@ -497,6 +510,8 @@ class NormalizedTaskSpec:
                     "incorrect_idx": incorrect_idx,
                 }
             )
+        if max_records is not None:
+            rows = rows[:max_records]  # records were seed-shuffled above
         if not rows:
             raise RuntimeError(
                 f"All {len(self.ds)} records were filtered out: "
