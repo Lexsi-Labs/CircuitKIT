@@ -113,6 +113,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tokenizer.padding_side`, which is `right` for most HF tokenizers. In a left-padded batch with
   unequal lengths the leading pads kept mask 1 and were attended to as real tokens. The mask is now
   built for the side the batch was padded on. Right-padded batches are unchanged.
+- **`GenericTaskSpec` honours `n_examples`**. `ck.discover(n_examples=N)` and `Pipeline.discover`
+  put N in `data_params.num_examples`, but `GenericTaskSpec` read only a top-level `num_examples`, so
+  YAML / CSV / JSONL tasks used every row. It now reads the top level first, then `data_params`.
 
 - **Saved neuron-level circuits keep their label**. `Circuit.save` wrote a `_scores.json` with no
   task, model or algorithm, and `from_artifact` reads that file first, so the graph title said
