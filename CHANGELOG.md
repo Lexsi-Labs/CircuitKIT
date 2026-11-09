@@ -141,6 +141,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `ValueError` before anything is changed; bfloat16 and float32 work as before.
 - **`FineTuneEditHandler` passes its `weight_decay` to AdamW**. The setting (default 0.0) was stored
   and never used, so every edit ran with AdamW's own default of 0.01 on all parameters of the model.
+- **Pillar 7 R1 only compares score vectors that mean the same thing**. The primary graph's node
+  scores were always the first vector, but after edge-level discovery it has none (`Graph.from_model`
+  defaults to `node_scores=False`), and `_node_score_vector` turned that into all zeros. The seed
+  re-runs map an algorithm that is not in `_ALGO_METHOD_MAP` (`ibcircuit`, `acdc`) to plain EAP, so
+  its primary scores were compared with EAP scores. R1 now leaves the primary vector out in both
+  cases and says so in a warning, and compares the re-run seeds only. With fewer than two comparable
+  vectors `r1_seed_consistency` is `None` and `reliability_index` is the harmonic mean of R2 and R3,
+  not a made-up 0.0 that pulls the index toward a number that means nothing.
+  **Behaviour change: R1 and `reliability_index` values you published earlier for runs from
+  edge-level discovery, or from `ibcircuit` or `acdc`, were computed with the incomparable vector
+  included and differ from what this version gives. Recompute them. `r1_seed_consistency` can now
+  be `None`.** Runs from node-level discovery with a listed algorithm are unchanged.
 - **Saved neuron-level circuits keep their label**. `Circuit.save` wrote a `_scores.json` with no
   task, model or algorithm, and `from_artifact` reads that file first, so the graph title said
   "unknown / unknown". The file now carries them, and files without them still load.
