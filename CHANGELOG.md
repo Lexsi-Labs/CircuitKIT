@@ -133,6 +133,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   return, and an edge scored after a pruning one would have been scored against a smaller graph. The
   full graph is now restored before each edge and on return, as the node-level version already does.
   Scores do not change.
+- **float16 models are refused where weights are trained with Adam**. `FineTuneEditHandler`,
+  `CircuitTuner`, `CureClueUnlearner` and `CircuitLoRA.finetune` train weights in place with
+  Adam/AdamW, with no float32 master copy and no loss scaling. In float16 `eps=1e-8` and the squared
+  gradient of any gradient below about 5e-3 round to 0, so the first step turns the weights into
+  NaN/inf (`run_finetuning` already refuses float16 for the same reason). They now raise
+  `ValueError` before anything is changed; bfloat16 and float32 work as before.
 - **`FineTuneEditHandler` passes its `weight_decay` to AdamW**. The setting (default 0.0) was stored
   and never used, so every edit ran with AdamW's own default of 0.01 on all parameters of the model.
 - **Saved neuron-level circuits keep their label**. `Circuit.save` wrote a `_scores.json` with no

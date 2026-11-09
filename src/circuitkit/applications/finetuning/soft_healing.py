@@ -16,6 +16,8 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from transformer_lens import HookedTransformer
 
+from circuitkit.applications.common_utils._dtype import reject_float16
+
 
 import logging
 
@@ -114,8 +116,8 @@ class CircuitLoRA(nn.Module):
         self.score_threshold = score_threshold
 
         # Capture the base model dtype so LoRA layers are created to match it
-        # (bf16 / fp16 models would otherwise hit a dtype mismatch in the
-        # hook-based forward).
+        # (bf16 models would otherwise hit a dtype mismatch in the hook-based
+        # forward). finetune() refuses float16: Adam cannot train float16 parameters.
         try:
             self._model_dtype = next(iter(model.parameters())).dtype
         except StopIteration:
@@ -407,6 +409,8 @@ class CircuitLoRA(nn.Module):
         if not lora_params:
             warnings.warn("No LoRA parameters to train. Check circuit_scores and threshold.")
             return {"train_loss": [], "val_loss": [], "total_params": 0}
+
+        reject_float16(lora_params, "CircuitLoRA.finetune")
 
         device = self.model.cfg.device
         self.model.to(device)

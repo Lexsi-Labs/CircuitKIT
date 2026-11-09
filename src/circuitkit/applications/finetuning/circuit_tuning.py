@@ -33,6 +33,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from circuitkit.applications.common_utils._dtype import reject_float16
+
 logger = logging.getLogger(__name__)
 
 
@@ -90,9 +92,10 @@ class _LoRALinear(nn.Module):
         d_in, d_out = weight.shape  # TL layout: (d_model, d_mlp)
         self.weight = weight  # frozen reference
         self.scaling = alpha / rank
-        # Match the wrapped weight's dtype (bf16 / fp16 on reduced-precision
-        # models); a default-fp32 LoRA matrix raises a dtype mismatch when the
-        # contribution is added to the bf16 hook_pre activation.
+        # Match the wrapped weight's dtype (bf16 on reduced-precision models); a
+        # default-fp32 LoRA matrix raises a dtype mismatch when the contribution is
+        # added to the bf16 hook_pre activation. float16 is refused in fit(): AdamW
+        # cannot train float16 parameters.
         self.lora_A = nn.Parameter(
             torch.empty(d_in, rank, device=weight.device, dtype=weight.dtype)
         )
@@ -289,6 +292,7 @@ class CircuitTuner:
             for a in adapters.values()
             for p in a.parameters()
         ]
+        reject_float16(all_ada_params, "CircuitTuner")
         opt = torch.optim.AdamW(all_ada_params, lr=self.cfg.lr)
 
         retain_ids = self._sample_retain_ids(self.cfg.n_retain_prefixes)
