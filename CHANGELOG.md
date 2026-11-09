@@ -217,6 +217,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pillar 6: `summarize_transfer_matrix()` started its best/worst search at -1 and 2.0, so when
   every cross-task ratio was above 2.0 (a circuit more faithful on the target than on its own
   task) `worst_transfer` was `None`. The search now starts at -inf and +inf.
+- `lexsi_provenance.json` and the `provenance` key of `*_scores.json`: `base_model` is now the
+  immediate parent, the `ref` of the `kind: "model"` entry in `inputs` (the model that was
+  loaded). It used to copy the parent's own `base_model`, so an export of a model loaded from a
+  folder with its own record named the parent's parent. Older ancestors are reached through
+  `inputs[].provenance`. Records for models loaded from a Hub id are unchanged.
+  `make_provenance` rejects a `base_model` that is not a model entry in `inputs`. New optional
+  key `base_model_relation`: `finetune` for pruned or edited exports, `quantized` for quantized
+  exports, left out for discovery scores. See
+  [docs/api-reference/provenance.md](docs/api-reference/provenance.md).
+  **Behaviour change in a record other tools read:** any code that reads `base_model` from these
+  files to find the original foundation model now gets the immediate parent instead, and must follow
+  `inputs[].provenance` to reach older ancestors. Records already written keep their old
+  `base_model`; their `inputs` are correct, so read the parent from the model entry in `inputs`.
+  `make_provenance` now raises `ValueError` for a `base_model` that is not a model entry in `inputs`
+  or a `base_model_relation` outside `finetune`, `adapter`, `quantized`, `merge`.
 - Hyperparameter checks: `eval.pillars: []` is now an error (it would run nothing), and an
   ACDC grid point too large to compute (`tao_exps: [400]`) is reported as tau >= 1 instead of
   being skipped.

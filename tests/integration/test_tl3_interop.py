@@ -176,7 +176,8 @@ def test_export_writes_edited_weights(arch, tmp_path):
     assert prov["version"] == ck.__version__
     assert prov["params"]["weights"] == "current"
     assert prov["inputs"][0]["ref"] == src and prov["inputs"][0]["provenance"] == PARENT
-    assert prov["base_model"] == PARENT["base_model"]
+    # the immediate parent (the folder that was loaded), not the parent's parent
+    assert prov["base_model"] == src and prov["base_model_relation"] == "finetune"
 
 
 def test_export_of_folded_model_warns_and_keeps_original_weights(tmp_path):

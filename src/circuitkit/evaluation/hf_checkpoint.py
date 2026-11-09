@@ -793,6 +793,7 @@ def save_pruned_checkpoint(
         output_path,
         "export_checkpoint.pruning",
         inputs=[model_input(model)],
+        base_model_relation="finetune",  # same architecture, edited weights
         params={
             "weights": weights,
             "pruned": pruned_artifact if isinstance(pruned_artifact, list) else "neuron-level",
@@ -1001,7 +1002,10 @@ def save_quantized_checkpoint(
             overwrite=overwrite,
         )
         write_provenance(
-            output_path, "export_checkpoint.quantization", inputs=[model_input(hf_model)]
+            output_path,
+            "export_checkpoint.quantization",
+            inputs=[model_input(hf_model)],
+            base_model_relation="quantized",
         )
         return output_path
 
@@ -1079,7 +1083,12 @@ def save_quantized_checkpoint(
         # configs so a downstream server (vLLM) can load them.
         _copy_processor_configs(tokenizer_name, output_path)
 
-    write_provenance(output_path, "export_checkpoint.quantization", inputs=[model_input(hf_model)])
+    write_provenance(
+        output_path,
+        "export_checkpoint.quantization",
+        inputs=[model_input(hf_model)],
+        base_model_relation="quantized",
+    )
     return output_path
 
 
