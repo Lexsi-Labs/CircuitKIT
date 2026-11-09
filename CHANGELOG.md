@@ -108,6 +108,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **EAP tokenization masks left-padded batches correctly**. `tokenize_plus` padded on `padding_side`
+  (left by default for `NormalizedTaskSpec` pairs) but built the attention mask from
+  `tokenizer.padding_side`, which is `right` for most HF tokenizers. In a left-padded batch with
+  unequal lengths the leading pads kept mask 1 and were attended to as real tokens. The mask is now
+  built for the side the batch was padded on. Right-padded batches are unchanged.
+
 - **Saved neuron-level circuits keep their label**. `Circuit.save` wrote a `_scores.json` with no
   task, model or algorithm, and `from_artifact` reads that file first, so the graph title said
   "unknown / unknown". The file now carries them, and files without them still load.

@@ -172,7 +172,13 @@ def tokenize_plus(
     )
     if max_length is not None:
         model.cfg.n_ctx = old_n_ctx
-    attention_mask = get_attention_mask(model.tokenizer, tokens, True)
+    # Build the mask for the side the tokens were actually padded on. Without
+    # padding_side, TransformerLens falls back to tokenizer.padding_side, which is
+    # "right" for most HF tokenizers; a left-padded batch then keeps mask=1 on its
+    # leading pads and the model attends to them as if they were real tokens.
+    attention_mask = get_attention_mask(
+        model.tokenizer, tokens, True, padding_side=effective_padding_side
+    )
     input_lengths = attention_mask.sum(1)
     n_pos = attention_mask.size(1)
     # For left-padded batches all real tokens end at position n_pos-1.
