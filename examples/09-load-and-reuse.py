@@ -16,12 +16,14 @@ Run:
 
 import os
 
-import torch
-from transformer_lens import HookedTransformer
-
+# circuitkit must be imported before transformer_lens: it installs the compatibility patches.
+# isort: off
 import circuitkit as ck
 from circuitkit import Pipeline
 from circuitkit.api import discover_circuit
+import torch
+from transformer_lens import HookedTransformer
+# isort: on
 
 OUTPUT_PATH = "./results/reuse_demo_circuit.pt"
 CONFIG = {
