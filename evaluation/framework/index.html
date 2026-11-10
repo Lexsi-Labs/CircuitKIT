@@ -1983,7 +1983,7 @@
 </tbody>
 </table>
 <p><strong><code>patching_score</code></strong> (Pillar 1) = normalized faithfulness ratio from causal patching,
-(y_circuit − y_corrupt) / (y_clean − y_corrupt), clamped at 1.0.<br />
+(y_circuit − y_corrupt) / (y_clean − y_corrupt), clipped to the range 0 to 1. The unclipped value is <code>patching_raw_ratio</code> (<a href="../causal-patching/#the-raw-ratio-and-scores-outside-0-to-1">details</a>).<br />
 <strong><code>ablation_score</code></strong> (Pillar 2) = the same normalized ratio computed on the ablated circuit.</p>
 <h2 id="optional-intervention-reliability-7th-auxiliary-pillar">Optional: Intervention reliability (7th auxiliary pillar)<a class="headerlink" href="#optional-intervention-reliability-7th-auxiliary-pillar" title="Permanent link">&para;</a></h2>
 <p>An auxiliary measurement, separate from the six core pillars: across re-runs with different seeds, does the circuit produce a consistent <em>downstream effect</em> (circuit-vs-baseline metric)? This differs from Pillar 3 Stability, which instead scores whether the same <em>nodes</em> are selected across seeds.</p>

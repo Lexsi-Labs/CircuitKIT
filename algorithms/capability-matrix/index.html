@@ -1898,6 +1898,7 @@
 </tbody>
 </table>
 <h2 id="validated-combinations-from-the-audit-paper">Validated combinations (from the audit paper)<a class="headerlink" href="#validated-combinations-from-the-audit-paper" title="Permanent link">&para;</a></h2>
+<p>The GPT-2 IOI <code>eap-ig</code> row was re-measured on 2026-10-11 (Tesla T4, seed 42, 256 examples, 30% pruned; command on the <a href="../../trust/results/#gpt-2-ioi-re-measured">Audit Results</a> page) and reports the patching score, the <a href="../../evaluation/causal-patching/#which-measure-to-compare-circuits-with">measure for comparing circuits</a>. The Llama and Gemma IOI rows were measured before the <code>ioi</code> scored position was corrected and not re-measured (gated models). The <code>acdc</code> row is not affected.</p>
 <table>
 <thead>
 <tr>
@@ -1912,25 +1913,25 @@
 <td>GPT-2</td>
 <td>IOI</td>
 <td>eap-ig</td>
-<td>ablation_score 0.91</td>
+<td>patching_score 0.945 (zero-ablation ratio -0.276; was ablation_score 0.91 before the correction)</td>
 </tr>
 <tr>
 <td>Llama-1B</td>
 <td>IOI</td>
 <td>eap-ig</td>
-<td>ablation_score 0.88</td>
+<td>ablation_score 0.88 <em>(before the correction, not re-measured)</em></td>
 </tr>
 <tr>
 <td>Llama-3B</td>
 <td>IOI</td>
 <td>eap-ig</td>
-<td>ablation_score 0.85</td>
+<td>ablation_score 0.85 <em>(before the correction, not re-measured)</em></td>
 </tr>
 <tr>
 <td>Gemma-2B</td>
 <td>IOI</td>
 <td>eap-ig</td>
-<td>ablation_score 0.87</td>
+<td>ablation_score 0.87 <em>(before the correction, not re-measured)</em></td>
 </tr>
 <tr>
 <td>Llama-1B</td>

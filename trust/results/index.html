@@ -1226,6 +1226,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Stable-tier results (EAP family)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gpt-2-ioi-re-measured" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GPT-2 IOI, re-measured
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#llama-and-gemma-ioi-before-not-re-measured" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Llama and Gemma IOI (before, not re-measured)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1533,6 +1561,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Stable-tier results (EAP family)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gpt-2-ioi-re-measured" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GPT-2 IOI, re-measured
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#llama-and-gemma-ioi-before-not-re-measured" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Llama and Gemma IOI (before, not re-measured)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1609,43 +1665,97 @@
 <blockquote>
 <p><a href="../scope/">scope.md</a> tells you which algorithms are validated. This page tells you how faithful they actually were on real checkpoints.</p>
 </blockquote>
+<div class="admonition warning">
+<p class="admonition-title">Which numbers on this page are current</p>
+<p>Two corrections changed every <code>ioi</code> number from the EAP family: the task now reads its metric
+at the token that predicts the answer, and padding is masked on the side that was padded
+(see <a href="../../evaluation/causal-patching/#where-the-ioi-and-double_io-prompts-end">where the prompts end</a>).</p>
+<ul>
+<li><strong>Re-measured on 2026-10-11:</strong> the GPT-2 IOI rows for <code>eap-ig</code>, <code>eap</code>, <code>eap-ig-activations</code>
+  and <code>eap-clean-corrupted</code>. They are in the tables marked <em>re-measured</em>, with the command.</li>
+<li><strong>Measured before the corrections and not re-measured:</strong> every Llama and Gemma IOI number and
+  the BoolQ row. The models are gated and were not available to the re-measurement run. These
+  cells are marked <em>(before)</em>. Do not compare them with current runs.</li>
+<li><strong>Not affected:</strong> the <code>acdc</code> and <code>ibcircuit</code> rows, which build their own batches and already
+  read the predicting position.</li>
+</ul>
+</div>
 <h2 id="methodology">Methodology<a class="headerlink" href="#methodology" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Models</strong>: GPT-2 (124M), Llama-3.2-1B-Instruct, Llama-3.2-3B-Instruct, Gemma-2-2B-it</li>
 <li><strong>Tasks</strong>: IOI, SVA, Gender Bias, Greater-Than, BoolQ — the 5 core evaluation tasks</li>
-<li><strong>Metrics</strong>: Each pillar produces a normalised faithfulness ratio in [0, 1]. The table below reports the normalized faithfulness ratio (<code>ablation_score</code>, Pillar 2) — higher is more faithful.</li>
+<li><strong>Metrics</strong>: Each pillar produces a faithfulness ratio clipped to [0, 1]. The re-measured tables report the patching score (Pillar 1), which is <a href="../../evaluation/causal-patching/#which-measure-to-compare-circuits-with">the measure for comparing circuits</a>, with the zero-ablation ratio (Pillar 2) next to it. The tables marked <em>(before)</em> report <code>ablation_score</code> as the audit recorded it.</li>
 <li><strong>All runs</strong>: Single seed (seed 42), 256 examples. EAP-family rows use <code>eap-ig</code> defaults; <code>acdc</code> and <code>ibcircuit</code> use their own defaults and required data regime.</li>
 </ul>
 <h2 id="stable-tier-results-eap-family">Stable-tier results (EAP family)<a class="headerlink" href="#stable-tier-results-eap-family" title="Permanent link">&para;</a></h2>
+<h3 id="gpt-2-ioi-re-measured">GPT-2 IOI, re-measured<a class="headerlink" href="#gpt-2-ioi-re-measured" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
 <th>Algorithm</th>
-<th>GPT-2 IOI</th>
-<th>Llama-1B IOI</th>
-<th>Llama-3B IOI</th>
-<th>Gemma-2B IOI</th>
+<th style="text-align: center;">Patching score</th>
+<th style="text-align: center;">Zero-ablation ratio (clipped score)</th>
+<th style="text-align: center;"><code>ablation_score</code> before the corrections</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>eap-ig</code></td>
-<td><strong>0.91</strong></td>
-<td><strong>0.88</strong></td>
-<td><strong>0.85</strong></td>
-<td><strong>0.87</strong></td>
+<td style="text-align: center;"><strong>0.945</strong></td>
+<td style="text-align: center;">-0.276 (0.0)</td>
+<td style="text-align: center;">0.91</td>
 </tr>
 <tr>
 <td><code>eap</code></td>
-<td>0.84</td>
+<td style="text-align: center;"><strong>0.971</strong></td>
+<td style="text-align: center;">0.113 (0.113)</td>
+<td style="text-align: center;">0.84</td>
+</tr>
+</tbody>
+</table>
+<p>Measured 2026-10-11 on one Tesla T4 and reproduced on 2026-11-10 with the same command on CPU and on one RTX 6000 Ada (<code>eap-ig</code> 0.9446 and -0.2763, <code>eap</code> 0.9710 and 0.1132 on both). Model <code>gpt2</code>, task <code>ioi</code>, seed 42, 256 discovery examples and
+256 evaluation examples, node level, 30% pruned (46 of 156 components removed), <code>float32</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">model</span> <span class="o">=</span> <span class="n">ck</span><span class="o">.</span><span class="n">load_model</span><span class="p">(</span><span class="s2">"gpt2"</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">"float32"</span><span class="p">)</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">circuit</span> <span class="o">=</span> <span class="n">ck</span><span class="o">.</span><span class="n">discover</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"ioi"</span><span class="p">,</span> <span class="n">algorithm</span><span class="o">=</span><span class="s2">"eap-ig"</span><span class="p">,</span> <span class="n">n_examples</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">sparsity</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">report</span> <span class="o">=</span> <span class="n">ck</span><span class="o">.</span><span class="n">faithfulness</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">circuit</span><span class="p">,</span> <span class="s2">"ioi"</span><span class="p">,</span> <span class="n">n_examples</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">report</span><span class="o">.</span><span class="n">patching_score</span><span class="p">,</span> <span class="n">report</span><span class="o">.</span><span class="n">ablation_raw_ratio</span>
+</code></pre></div>
+<p><strong>Read:</strong> both algorithms recover about 95% of the clean-minus-corrupt logit difference under
+patching (clean 4.29, corrupt -0.10). The old <code>ablation_score</code> values of 0.84 to 0.91 do not
+survive: with zero ablation the same circuits score between -0.28 and 0.11. Run time was not
+compared in this run.</p>
+<h3 id="llama-and-gemma-ioi-before-not-re-measured">Llama and Gemma IOI (before, not re-measured)<a class="headerlink" href="#llama-and-gemma-ioi-before-not-re-measured" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Algorithm</th>
+<th>Llama-1B IOI <em>(before)</em></th>
+<th>Llama-3B IOI <em>(before)</em></th>
+<th>Gemma-2B IOI <em>(before)</em></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>eap-ig</code></td>
+<td>0.88</td>
+<td>0.85</td>
+<td>0.87</td>
+</tr>
+<tr>
+<td><code>eap</code></td>
 <td>0.81</td>
 <td>0.79</td>
 <td>0.80</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Read:</strong> <code>eap-ig</code> produces the most faithful circuits across all model families, averaging 0.85–0.91. Vanilla <code>eap</code> is ~0.05–0.07 lower but ~30% faster.</p>
+<p>These are <code>ablation_score</code> values measured before the corrections. Given what happened to the GPT-2
+column, expect them to change.</p>
 <h2 id="by-task-eap-ig-llama-1b">By task (eap-ig, Llama-1B)<a class="headerlink" href="#by-task-eap-ig-llama-1b" title="Permanent link">&para;</a></h2>
+<p>The IOI and BoolQ rows were measured before the corrections and not re-measured (<code>ioi</code>: scored
+position; <code>boolq</code>: pads left, so it attended to padding on a right-padding tokenizer). The SVA,
+Gender Bias and Greater-Than rows are not touched by the position correction; the padding
+correction reaches them only on a tokenizer that pads left.</p>
 <table>
 <thead>
 <tr>
@@ -1660,7 +1770,7 @@
 </thead>
 <tbody>
 <tr>
-<td>IOI</td>
+<td>IOI <em>(before)</em></td>
 <td>0.91</td>
 <td>0.89</td>
 <td>0.88 (Spearman)</td>
@@ -1696,7 +1806,7 @@
 <td>—</td>
 </tr>
 <tr>
-<td>BoolQ</td>
+<td>BoolQ <em>(before)</em></td>
 <td>0.79</td>
 <td>0.76</td>
 <td>0.75</td>
@@ -1706,7 +1816,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Read:</strong> IOI and Gender Bias produce the most faithful circuits (0.86–0.91). BoolQ is the hardest task — circuit faithfulness is lower (0.73–0.79), likely because the task requires more distributed computation.</p>
+<p><strong>Read:</strong> as recorded by the audit, IOI and Gender Bias produced the most faithful circuits (0.86–0.91) and BoolQ the least (0.73–0.79). The IOI and BoolQ ends of that comparison rest on numbers that have not been re-measured.</p>
 <div class="admonition note">
 <p class="admonition-title">Missing values (—)</p>
 <p>Generalization (Pillar 6) requires a <code>target_task</code>. It was only run for IOI (target: SVA). Baselines data for non-IOI tasks is preliminary — treat as directional.</p>
@@ -1733,27 +1843,34 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Read:</strong> ACDC and IBCircuit produce lower faithfulness scores but also smaller circuits. On this score they are not at parity with the EAP family. The audit scored them on GPT-2 IOI only.</p>
+<p><strong>Read:</strong> ACDC and IBCircuit produce smaller circuits. These two numbers are <code>ablation_score</code> values and are not on the same measure as the re-measured EAP rows above, so the two tables cannot be ranked against each other. The audit scored them on GPT-2 IOI only.</p>
 <h2 id="research-tier-results-eap-variants">Research-tier results (EAP variants)<a class="headerlink" href="#research-tier-results-eap-variants" title="Permanent link">&para;</a></h2>
+<p>GPT-2 IOI, re-measured 2026-10-11 with the command above (<code>algorithm=</code> changed; seed 42, 256 examples, 30% pruned, Tesla T4):</p>
 <table>
 <thead>
 <tr>
 <th>Algorithm</th>
-<th>GPT-2 IOI</th>
+<th style="text-align: center;">Patching score</th>
+<th style="text-align: center;">Zero-ablation ratio (clipped score)</th>
+<th style="text-align: center;"><code>ablation_score</code> before the corrections</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>eap-ig-activations</code></td>
-<td>0.89</td>
+<td style="text-align: center;">0.971</td>
+<td style="text-align: center;">0.006 (0.006)</td>
+<td style="text-align: center;">0.89</td>
 </tr>
 <tr>
 <td><code>eap-clean-corrupted</code></td>
-<td>0.87</td>
+<td style="text-align: center;">0.977</td>
+<td style="text-align: center;">-0.029 (0.0)</td>
+<td style="text-align: center;">0.87</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Read:</strong> These EAP variants score close to <code>eap-ig</code> on GPT-2 IOI, but — unlike <code>eap</code> and <code>eap-ig</code> — they have not been validated on Llama, Gemma, or Qwen, so they remain Research tier. Do not assume the GPT-2 numbers transfer to other model families.</p>
+<p><strong>Read:</strong> These EAP variants score close to <code>eap-ig</code> on GPT-2 IOI under patching, but — unlike <code>eap</code> and <code>eap-ig</code> — they have not been validated on Llama, Gemma, or Qwen, so they remain Research tier. Do not assume the GPT-2 numbers transfer to other model families.</p>
 <h2 id="how-to-read-this-honest-caveats">How to read this — honest caveats<a class="headerlink" href="#how-to-read-this-honest-caveats" title="Permanent link">&para;</a></h2>
 <ul>
 <li>This is a <strong>smoke-grade audit</strong>, not a benchmark paper: limited model families, single seed, 256 examples per run. Treat scores as directional, not exact.</li>

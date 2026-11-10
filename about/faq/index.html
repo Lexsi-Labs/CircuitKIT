@@ -1214,7 +1214,7 @@
 <hr />
 <h2 id="evaluation">Evaluation<a class="headerlink" href="#evaluation" title="Permanent link">&para;</a></h2>
 <p><strong>What is a "good" circuit quality score?</strong></p>
-<p>A patching score (P1) ≥ 0.75 is generally considered a strong circuit. GPT-2 IOI with the default <code>eap-ig</code> reaches ~0.9 in our audit (see <a href="../../trust/results/">Audit Results</a>). Below 0.60, the circuit is not faithfully explaining the behavior. See <a href="../../evaluation/causal-patching/">Causal Patching</a> for interpretation guidance.</p>
+<p>A patching score (P1) ≥ 0.75 is generally considered a strong circuit. GPT-2 IOI with the default <code>eap-ig</code> gives a patching score of 0.945 (seed 42, 256 examples, 30% pruned, Tesla T4, re-measured 2026-10-11). The Llama and Gemma IOI numbers on the <a href="../../trust/results/">Audit Results</a> page were measured before the <code>ioi</code> scored position was corrected and have not been re-measured. See <a href="../../evaluation/causal-patching/">Causal Patching</a> for interpretation guidance.</p>
 <p><strong>Why is Pillar 6 (Generalization) marked preliminary?</strong></p>
 <p>Pillar 6 measures whether a circuit transfers to related tasks. The implementation is complete but has not been validated at scale across multiple model families and task pairs. The score may be unreliable. It will be promoted to full status in v1.1.</p>
 <p><strong>Can I run only a subset of pillars?</strong></p>

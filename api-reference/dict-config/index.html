@@ -721,6 +721,8 @@
       
         
       
+        
+      
     
     
     
@@ -1218,6 +1220,34 @@
     
   
     Applications
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../provenance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provenance record
   
 
     
@@ -1830,7 +1860,8 @@ requested, is in <code>.metadata["random_avg"]</code>.</p>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="p">{</span><span class="s2">"model"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"name"</span><span class="p">:</span> <span class="s2">"gpt2"</span><span class="p">},</span> <span class="s2">"discovery"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"task"</span><span class="p">:</span> <span class="s2">"ioi"</span><span class="p">},</span> <span class="s2">"pruning"</span><span class="p">:</span> <span class="p">{}},</span>
 <a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">scores_path</span><span class="o">=</span><span class="s2">"./gpt2_ioi_scores.pt"</span><span class="p">,</span>
 <a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="p">)</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="nb">print</span><span class="p">(</span><span class="n">report</span><span class="o">.</span><span class="n">ablation_score</span><span class="p">)</span>   <span class="c1"># e.g. 0.83</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="nb">print</span><span class="p">(</span><span class="n">report</span><span class="o">.</span><span class="n">patching_score</span><span class="p">)</span>       <span class="c1"># clipped to 0-1</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="nb">print</span><span class="p">(</span><span class="n">report</span><span class="o">.</span><span class="n">patching_raw_ratio</span><span class="p">)</span>   <span class="c1"># not clipped</span>
 </code></pre></div>
 <hr />
 <h2 id="load_circuit"><code>load_circuit</code><a class="headerlink" href="#load_circuit" title="Permanent link">&para;</a></h2>

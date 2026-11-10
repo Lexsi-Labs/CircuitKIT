@@ -1286,12 +1286,23 @@
 <a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="s2">"pruning"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"target_sparsity"</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">,</span> <span class="s2">"scope"</span><span class="p">:</span> <span class="s2">"both"</span><span class="p">},</span>
 <a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="s2">"output_path"</span><span class="p">:</span> <span class="s2">"./circuit.pt"</span><span class="p">,</span>
 <a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="p">})</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">patching_score</span><span class="p">)</span>   <span class="c1"># Pillar 1 (causal patching), e.g. 0.48</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">ablation_score</span><span class="p">)</span>    <span class="c1"># Pillar 2 (ablation), e.g. 0.83</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="c1"># results is a FaithfulnessReport; the full-faithfulness path also populates</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="c1"># .stability / .robustness / .baseline_comparison / .generalization /</span>
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="c1"># .intervention_reliability. See results.summary() for a formatted view.</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">patching_score</span><span class="p">)</span>      <span class="c1"># Pillar 1 (causal patching): 1.0, clipped</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">patching_raw_ratio</span><span class="p">)</span>  <span class="c1"># 1.035: just above the full model</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">ablation_score</span><span class="p">)</span>      <span class="c1"># Pillar 2 (zero ablation): 0.0, clipped</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">ablation_raw_ratio</span><span class="p">)</span>  <span class="c1"># -0.21: below the corrupt baseline, see the note below</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="c1"># results is a FaithfulnessReport; the full-faithfulness path also populates</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="c1"># .stability / .robustness / .baseline_comparison / .generalization /</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="c1"># .intervention_reliability. See results.summary() for a formatted view.</span>
 </code></pre></div>
+<p>These values were measured on 2026-10-11 by running Steps 2 and 3 exactly as printed, on one Tesla T4:
+<code>gpt2</code>, <code>eap-ig</code>, <code>ioi</code>, 32 discovery examples, 30% pruned (46 of 156 components removed). Step 3
+states no seed or example count, so the defaults apply: seed 42 and 256 evaluation examples. The
+same steps on a CPU gave 1.029 and -0.20. An earlier CPU figure printed here (0.94 and -0.07) was
+not reproduced.</p>
+<p>Both scores are clipped to the range 0 to 1. On GPT-2 <code>ioi</code>, zero ablation takes the model below
+the corrupt baseline, so <code>ablation_score</code> prints as 0.0 even for a good circuit; judge this circuit
+by <code>patching_score</code> and read <a href="../../evaluation/causal-patching/#the-raw-ratio-and-scores-outside-0-to-1">the raw ratio</a> before drawing a conclusion from a
+score of exactly 0.0 or 1.0.</p>
 <h2 id="step-4-prune-and-export">Step 4: Prune and export<a class="headerlink" href="#step-4-prune-and-export" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">circuitkit</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ck</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>

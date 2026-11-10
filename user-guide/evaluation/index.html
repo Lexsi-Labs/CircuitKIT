@@ -1879,9 +1879,10 @@
 <a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>    <span class="s2">"eval"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"pillars"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"patching"</span><span class="p">,</span> <span class="s2">"ablation"</span><span class="p">,</span> <span class="s2">"baselines"</span><span class="p">]},</span>
 <a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="p">})</span>
 <a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="c1"># results is a FaithfulnessReport:</span>
-<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="c1">#   results.patching_score  -&gt; 0.48   (Pillar 1)</span>
-<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="c1">#   results.ablation_score  -&gt; 0.83   (Pillar 2)</span>
-<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="c1">#   results.baseline_comparison        (Pillar 5, incl. circuit-vs-random)</span>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="c1">#   results.patching_score      (Pillar 1, clipped to 0-1)</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="c1">#   results.ablation_score      (Pillar 2, clipped to 0-1; 0.0 on GPT-2 ioi with zero ablation)</span>
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="c1">#   results.patching_raw_ratio, results.ablation_raw_ratio   (not clipped)</span>
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="c1">#   results.baseline_comparison        (Pillar 5, incl. circuit-vs-random)</span>
 </code></pre></div>
 <p>With Pipeline:
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">pipe</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">(</span><span class="s2">"gpt2"</span><span class="p">,</span> <span class="n">task</span><span class="o">=</span><span class="s2">"ioi"</span><span class="p">)</span>
@@ -2040,8 +2041,10 @@
 </tbody>
 </table>
 <p><strong><code>report.patching_score</code></strong> (Pillar 1) = normalized faithfulness ratio under
-patching, <code>(y_circuit − y_corrupt) / (y_clean − y_corrupt)</code> clamped at 1.0;
-1.0 means the circuit fully recovers full-model behavior.<br />
+patching, <code>(y_circuit − y_corrupt) / (y_clean − y_corrupt)</code> clipped to the range 0 to 1;
+1.0 means the circuit fully recovers full-model behavior. The unclipped value is
+<code>report.patching_raw_ratio</code> (and <code>report.ablation_raw_ratio</code>); the report says when it is
+outside the range. See <a href="../../evaluation/causal-patching/#the-raw-ratio-and-scores-outside-0-to-1">the raw ratio</a>.<br />
 <strong><code>report.ablation_score</code></strong> (Pillar 2) = the same normalized ratio computed on
 the ablated circuit.</p>
 <h2 id="optional-intervention-reliability">Optional: Intervention reliability<a class="headerlink" href="#optional-intervention-reliability" title="Permanent link">&para;</a></h2>

@@ -1058,6 +1058,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-raw-ratio-and-scores-outside-0-to-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The raw ratio, and scores outside 0 to 1
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The raw ratio, and scores outside 0 to 1">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-control-circuit-to-compare-against" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A control circuit to compare against
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-the-ioi-and-double_io-prompts-end" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where the ioi and double_io prompts end
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#interpreting-the-score" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1712,6 +1751,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-raw-ratio-and-scores-outside-0-to-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The raw ratio, and scores outside 0 to 1
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The raw ratio, and scores outside 0 to 1">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-control-circuit-to-compare-against" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A control circuit to compare against
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-the-ioi-and-double_io-prompts-end" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where the ioi and double_io prompts end
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#interpreting-the-score" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1813,6 +1891,121 @@
 <p><code>evaluate_graph</code> gives you the raw per-sample metric under the patching intervention — <strong>not</strong> the 0-1 faithfulness ratio. The normalization against the clean and corrupt baselines happens inside <code>Pillar1_CausalPatching.run</code>, which is what populates <code>report.patching_score</code>. If you call <code>evaluate_graph</code> directly, you still need to normalize yourself: <code>(raw_metric - corrupt_baseline) / (clean_baseline - corrupt_baseline)</code>.</p>
 </div>
 <hr />
+<h2 id="the-raw-ratio-and-scores-outside-0-to-1">The raw ratio, and scores outside 0 to 1<a class="headerlink" href="#the-raw-ratio-and-scores-outside-0-to-1" title="Permanent link">&para;</a></h2>
+<p><code>report.patching_score</code> and <code>report.ablation_score</code> are the ratio clipped to the range 0 to 1.
+The unclipped value is kept next to them:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">report</span> <span class="o">=</span> <span class="n">ck</span><span class="o">.</span><span class="n">faithfulness</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">circuit</span><span class="p">,</span> <span class="s2">"ioi"</span><span class="p">)</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">report</span><span class="o">.</span><span class="n">patching_score</span>        <span class="c1"># clipped to [0, 1]</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">report</span><span class="o">.</span><span class="n">patching_raw_ratio</span>    <span class="c1"># (circuit - corrupt) / (clean - corrupt), not clipped</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">report</span><span class="o">.</span><span class="n">ablation_raw_ratio</span>    <span class="c1"># same, for Pillar 2</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">report</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span>             <span class="c1"># includes pillar_1_patching_raw_ratio and pillar_2_ablation_raw_ratio</span>
+</code></pre></div>
+<p>The raw ratio is also in <code>report.metadata["patching_raw_ratio"]</code> and
+<code>report.metadata["ablation_raw_ratio"]</code>, which is where the JSON report stores it, and each
+pillar's result dict has <code>raw_ratio</code> and an <code>out_of_range</code> flag.</p>
+<p>A raw ratio can leave the range in two ways:</p>
+<ul>
+<li><strong>Above 1</strong>: the circuit scores higher on the metric than the full model. Removing components
+  can raise a logit difference, so this does not mean the circuit is "more than faithful".</li>
+<li><strong>Below 0</strong>: the circuit scores lower than the corrupt baseline. Zero ablation often does this,
+  because zeroed activations push the model somewhere neither the clean nor the corrupt run goes.</li>
+</ul>
+<p>When that happens the pillar logs a warning, and the printed report says so:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>PILLAR 2: Ablation Faithfulness
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>  Score: 0.0000  (OUT OF RANGE: raw ratio -0.7333 is below 0: the circuit scores lower than the corrupt baseline, and the score is floored at 0)
+</code></pre></div>
+<p>Read the raw ratio whenever a score is exactly 0.0 or 1.0. Two circuits that both clip to the same
+end can be far apart, and a clipped 1.0 is not evidence that a pruned checkpoint still does the
+task. The values are <code>None</code> for reports that did not record a ratio.</p>
+<h3 id="a-control-circuit-to-compare-against">A control circuit to compare against<a class="headerlink" href="#a-control-circuit-to-compare-against" title="Permanent link">&para;</a></h3>
+<p>A faithfulness score means more next to a deliberately bad circuit of the same size. Reverse the
+ranking, so the components the algorithm scored highest are the ones removed:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.circuit</span><span class="w"> </span><span class="kn">import</span> <span class="n">Circuit</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">top</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">circuit</span><span class="o">.</span><span class="n">scores</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">control</span> <span class="o">=</span> <span class="n">Circuit</span><span class="p">(</span><span class="n">circuit</span><span class="o">.</span><span class="n">nodes</span><span class="p">,</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">top</span> <span class="o">-</span> <span class="nb">abs</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">circuit</span><span class="o">.</span><span class="n">scores</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>                  <span class="n">task</span><span class="o">=</span><span class="s2">"ioi"</span><span class="p">,</span> <span class="n">algorithm</span><span class="o">=</span><span class="s2">"eap"</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="s2">"node"</span><span class="p">)</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">bad</span> <span class="o">=</span> <span class="n">ck</span><span class="o">.</span><span class="n">faithfulness</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">control</span><span class="p">,</span> <span class="s2">"ioi"</span><span class="p">)</span>
+</code></pre></div>
+<p>Measured on GPT-2, <code>ioi</code>, <code>eap</code>, 32 examples, seed 0, CPU. Raw ratios; the clipped score is in
+brackets where it differs:</p>
+<table>
+<thead>
+<tr>
+<th>Circuit</th>
+<th>Pruned</th>
+<th style="text-align: center;">Pillar 1 patching</th>
+<th style="text-align: center;">Pillar 2 zero ablation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>discovered</td>
+<td>30%</td>
+<td style="text-align: center;">0.931</td>
+<td style="text-align: center;">-0.155 (0.0)</td>
+</tr>
+<tr>
+<td>reversed control</td>
+<td>30%</td>
+<td style="text-align: center;">-0.015 (0.0)</td>
+<td style="text-align: center;">-0.733 (0.0)</td>
+</tr>
+<tr>
+<td>discovered</td>
+<td>80%</td>
+<td style="text-align: center;">0.834</td>
+<td style="text-align: center;">-0.308 (0.0)</td>
+</tr>
+<tr>
+<td>reversed control</td>
+<td>80%</td>
+<td style="text-align: center;">-0.010 (0.0)</td>
+<td style="text-align: center;">-0.329 (0.0)</td>
+</tr>
+</tbody>
+</table>
+<p>Patching separates the discovered circuit from the control by a wide margin. Zero ablation does
+not on this model and task: both circuits fall below the corrupt baseline, and at 80% pruned the
+two raw ratios are nearly equal. Do not use the zero-ablation score alone to accept a GPT-2 <code>ioi</code>
+circuit; use patching and the control comparison. Mean ablation was not measured here.</p>
+<h3 id="where-the-ioi-and-double_io-prompts-end">Where the <code>ioi</code> and <code>double_io</code> prompts end<a class="headerlink" href="#where-the-ioi-and-double_io-prompts-end" title="Permanent link">&para;</a></h3>
+<p>Both tasks score the logit difference at the last prompt token, the one that predicts the name
+("... gave a drink to"). The cached prompt text stops there. Before this was corrected the prompt
+kept the answer name at its end (for <code>ioi</code> on every row, with a second BOS token at the start; for
+<code>double_io</code> on every row shorter than the longest, followed by padding tokens written out as
+text), so the metric was read at the name itself. On GPT-2, 32 prompts, seed 0, the mean logit
+difference is:</p>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th style="text-align: center;">At the name (before)</th>
+<th style="text-align: center;">At the predicting position (now)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ioi</code></td>
+<td style="text-align: center;">1.06</td>
+<td style="text-align: center;">3.87</td>
+</tr>
+<tr>
+<td><code>double_io</code></td>
+<td style="text-align: center;">1.51</td>
+<td style="text-align: center;">2.21</td>
+</tr>
+</tbody>
+</table>
+<p>Every <code>ioi</code> and <code>double_io</code> score measured on the paired-text path (the EAP family and CD-T, and
+<code>ck.faithfulness</code> on those tasks) before the correction is on the old position and is not
+comparable with new ones. ACDC and IBCircuit already used the predicting position. Finetuning
+data built from the discovery cache also changes: it used to append the answer to a prompt that
+already ended with it.</p>
+<p>Cache files are now named <code>ioi_prompt_&lt;model&gt;_&lt;n&gt;_seed&lt;seed&gt;.csv</code> and
+<code>double_io_prompt_&lt;model&gt;_&lt;n&gt;_seed&lt;seed&gt;.csv</code>. Files written under the old names
+(<code>ioi_&lt;model&gt;_...</code>, <code>double_io_&lt;model&gt;_...</code>) are no longer read and can be deleted.</p>
+<hr />
 <h2 id="interpreting-the-score">Interpreting the Score<a class="headerlink" href="#interpreting-the-score" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1840,7 +2033,8 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Typical values in the CircuitKIT audit:</strong></p>
+<p><strong>Typical values in the CircuitKIT audit</strong> (the two IOI rows were measured before the scored
+position was corrected, see above, and have not been re-measured):</p>
 <table>
 <thead>
 <tr>

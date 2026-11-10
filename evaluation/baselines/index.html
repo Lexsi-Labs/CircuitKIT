@@ -1825,22 +1825,28 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Via Pipeline</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">pipe</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">pillars</span><span class="o">=</span><span class="p">[</span><span class="s2">"baselines"</span><span class="p">],</span> <span class="n">n_examples</span><span class="o">=</span><span class="mi">256</span><span class="p">)</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">pipe</span><span class="o">.</span><span class="n">report</span><span class="o">.</span><span class="n">baseline_comparison</span><span class="p">)</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># {</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1">#   "circuit_score": 0.83,</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1">#   "baselines": {</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1">#     "random":    {"score": 0.31, "percentage": 267.7, "improvement": 2.68},</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="c1">#     "magnitude": {"score": 0.48, "percentage": 172.9, "improvement": 1.73},</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="c1">#   },</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1">#   "best_baseline_score": 0.48,</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="c1">#   "circuit_advantage": 0.35,       # circuit_score - best_baseline_score</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="c1">#   "circuit_sparsity": 0.02,</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="c1">#   "summary": "Circuit substantially outperforms random baseline (2.68x improvement)",</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="c1">#   "baseline_types": ["random", "magnitude"],</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="c1"># }</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># GPT-2, ioi, eap-ig, seed 42, 256 examples, 30% pruned (Tesla T4, 2026-10-11):</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># {</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1">#   "circuit_score": 4.044,          # mean logit difference, not a 0-to-1 ratio</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1">#   "baselines": {</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="c1">#     "random":    {"score": 1.172, "score_std": 1.288, "n_draws": 5,</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="c1">#                   "percentage": 345.0, "improvement": 3.45, "z_score": 2.23, ...},</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1">#     "magnitude": {"score": -0.493, "percentage": None, "improvement": None, ...},</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="c1">#   },</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="c1">#   "best_baseline_score": 1.172,</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="c1">#   "circuit_advantage": 2.872,      # circuit_score - best_baseline_score</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="c1">#   "circuit_sparsity": 0.696,</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="c1">#   "summary": "Circuit substantially outperforms random baseline (3.45x improvement)",</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="c1">#   "baseline_types": ["random", "magnitude"],</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="c1"># }</span>
 </code></pre></div>
 <hr />
 <h2 id="interpreting-the-results">Interpreting the Results<a class="headerlink" href="#interpreting-the-results" title="Permanent link">&para;</a></h2>
-<p><strong>Key metric:</strong> <code>circuit_score - baselines["random"]["score"]</code> (the "baseline gap")</p>
+<p>The scores in <code>baseline_comparison</code> are the task metric itself (for <code>ioi</code>, a mean logit
+difference). To put them on the 0-to-1 scale of the patching score, divide the distance from the
+corrupt baseline by <code>clean - corrupt</code>; both are printed in the Pillar 1 log line. The table below
+is on that scale.</p>
+<p><strong>Key metric:</strong> the circuit's ratio minus the random baseline's ratio (the "baseline gap")</p>
 <table>
 <thead>
 <tr>
@@ -1868,7 +1874,12 @@
 </tbody>
 </table>
 <p><strong>Circuit vs. magnitude:</strong> If the magnitude baseline is close to the circuit score, the discovery algorithm may be largely selecting high-weight components — which magnitude selection also does. This suggests the algorithm is not providing much value beyond a simple weight-norm heuristic.</p>
-<p><strong>Typical values from the CircuitKIT audit:</strong></p>
+<p><strong>Measured values.</strong> The GPT-2 IOI row was re-measured on 2026-10-11: <code>gpt2</code>, <code>ioi</code>, <code>eap-ig</code>,
+seed 42, 256 discovery and 256 evaluation examples, 30% pruned, <code>float32</code>, one Tesla T4, with</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">circuit</span> <span class="o">=</span> <span class="n">ck</span><span class="o">.</span><span class="n">discover</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"ioi"</span><span class="p">,</span> <span class="n">algorithm</span><span class="o">=</span><span class="s2">"eap-ig"</span><span class="p">,</span> <span class="n">n_examples</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">sparsity</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">report</span> <span class="o">=</span> <span class="n">ck</span><span class="o">.</span><span class="n">faithfulness</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">circuit</span><span class="p">,</span> <span class="s2">"ioi"</span><span class="p">,</span> <span class="n">pillars</span><span class="o">=</span><span class="p">[</span><span class="s2">"patching"</span><span class="p">,</span> <span class="s2">"ablation"</span><span class="p">,</span> <span class="s2">"baselines"</span><span class="p">],</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>                         <span class="n">n_examples</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+</code></pre></div>
 <table>
 <thead>
 <tr>
@@ -1877,15 +1888,25 @@
 <th style="text-align: center;">Circuit</th>
 <th style="text-align: center;">Random</th>
 <th style="text-align: center;">Magnitude</th>
+<th>Status</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>GPT-2</td>
 <td>IOI</td>
+<td style="text-align: center;">0.945</td>
+<td style="text-align: center;">0.290 (mean of 5 draws)</td>
+<td style="text-align: center;">-0.089</td>
+<td>re-measured 2026-10-11</td>
+</tr>
+<tr>
+<td>GPT-2</td>
+<td>IOI</td>
 <td style="text-align: center;">0.83</td>
 <td style="text-align: center;">0.31</td>
 <td style="text-align: center;">0.48</td>
+<td>before the <code>ioi</code> scored position was corrected; superseded by the row above</td>
 </tr>
 <tr>
 <td>GPT-2</td>
@@ -1893,6 +1914,7 @@
 <td style="text-align: center;">0.79</td>
 <td style="text-align: center;">0.28</td>
 <td style="text-align: center;">0.45</td>
+<td>audit value; not affected by the correction</td>
 </tr>
 <tr>
 <td>Llama-1B</td>
@@ -1900,9 +1922,15 @@
 <td style="text-align: center;">0.71</td>
 <td style="text-align: center;">0.33</td>
 <td style="text-align: center;">0.50</td>
+<td>measured before the padding correction (<code>mmlu</code> pads left) and not re-measured</td>
 </tr>
 </tbody>
 </table>
+<p>In the re-measured row the raw logit differences are 4.044 (circuit), 1.172 (random) and -0.493
+(magnitude), against a clean value of 4.288 and a corrupt value of -0.101. The five random draws
+range from -0.37 to 3.09 (standard deviation 1.29), so one random draw is not a reliable baseline;
+the gap to the mean is 0.65. The magnitude selection scores below the corrupt baseline here, where
+the earlier number had it at 0.48.</p>
 <hr />
 <h2 id="what-failing-pillar-5-means">What Failing Pillar 5 Means<a class="headerlink" href="#what-failing-pillar-5-means" title="Permanent link">&para;</a></h2>
 <p>If the circuit does not beat the random baseline:</p>
@@ -1918,10 +1946,10 @@
 <div class="arithmatex">\[\text{score}(A_{l,h}) = \frac{\|W_{l,h}\|_F}{\sqrt{|W_{l,h}|}}\]</div>
 <p>This is the simplest possible heuristic and acts as a "free" baseline. A good discovery algorithm should substantially outperform magnitude on faithfulness, not just on circuit size.</p>
 <p>From <code>circuitkit.selection</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_selector</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">magnitude_selector</span> <span class="o">=</span> <span class="n">get_selector</span><span class="p">(</span><span class="s2">"magnitude"</span><span class="p">)</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">baseline_scores</span> <span class="o">=</span> <span class="n">magnitude_selector</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"ioi"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"level"</span><span class="p">:</span> <span class="s2">"node"</span><span class="p">})</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_selector</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">magnitude_selector</span> <span class="o">=</span> <span class="n">get_selector</span><span class="p">(</span><span class="s2">"magnitude"</span><span class="p">)</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">baseline_scores</span> <span class="o">=</span> <span class="n">magnitude_selector</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"ioi"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"level"</span><span class="p">:</span> <span class="s2">"node"</span><span class="p">})</span>
 </code></pre></div>
 <hr />
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
