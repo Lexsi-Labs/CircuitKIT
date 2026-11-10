@@ -51,6 +51,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Faithfulness scores no longer clip silently.** `patching_score` and `ablation_score` keep their
+  meaning (the ratio clipped to 0 to 1), so existing callers read the same thing. Added next to
+  them: `FaithfulnessReport.patching_raw_ratio` and `.ablation_raw_ratio` (read from
+  `metadata["patching_raw_ratio"]` / `metadata["ablation_raw_ratio"]`, which were already written),
+  the keys `pillar_1_patching_raw_ratio` and `pillar_2_ablation_raw_ratio` in `summary()`, and an
+  `out_of_range` flag in the Pillar 1 and Pillar 2 result dicts. When the raw ratio is above 1 or
+  below 0 the pillar logs a warning, and the printed report shows it, for example
+  `Score: 1.0000  (OUT OF RANGE: raw ratio 5.8420 is above 1: ...)`. In range, the printed line is
+  `Score: 0.9309  (raw ratio 0.9309)`. `circuitkit evaluate` prints the raw ratio after each score.
 - Importing `transformer_lens` before `circuitkit` now raises `ImportError` instead
   of warning and continuing with the Gemma-4 / Sarvam-MoE / Cohere patches absent.
 - TransformerLens compatibility now targets **3.8.0 only**; the former 2.18 path
@@ -108,6 +117,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **EAP tokenization masks left-padded batches correctly**. `tokenize_plus` padded on `padding_side`
+  (left by default for `NormalizedTaskSpec` pairs) but built the attention mask from
+  `tokenizer.padding_side`, which is `right` for most HF tokenizers. In a left-padded batch with
+  unequal lengths the leading pads kept mask 1 and were attended to as real tokens. The mask is now
+  built for the side the batch was padded on. Right-padded batches are unchanged.
+- **`GenericTaskSpec` honours `n_examples`**. `ck.discover(n_examples=N)` and `Pipeline.discover`
+  put N in `data_params.num_examples`, but `GenericTaskSpec` read only a top-level `num_examples`, so
+  YAML / CSV / JSONL tasks used every row. It now reads the top level first, then `data_params`.
+- **`NormalizedTaskSpec` EAP loader honours `n_examples`**. The EAP / ACDC branch never read
+  `num_examples` (only the IBCircuit branch did), so every record was used. The EAP CSV is now capped
+  after the seeded shuffle and the degenerate-pair filters, and the cap is part of the cache file name.
+- **Importing CircuitKIT no longer writes a `logs/` folder.** Every CircuitKIT logger created `logs/` in the
+  current working directory at import time and kept `logs/circuitkit_YYYYMMDD.log` open, so importing
+  `circuitkit.api` from a read-only directory failed with `PermissionError: [Errno 13] Permission denied: 'logs'`.
+  Nothing read that file. Logs now go to the console only; pass `log_file` to `setup_logging` for a file.
+- **A transfer-matrix cell with no result is NaN, not 0.0**. `TransferMatrix.build` stored
+  `result.ablation_score or 0.0`, so an evaluation whose ablation score was missing (Pillar 2 invalid)
+  was recorded as a transfer of 0.0, counted as successful, and could be reported as the worst
+  transfer. The matrix also started as zeros, so with `skip_diagonal=True` the skipped diagonal read
+  as 0.0 too. Both now give NaN, which `analyze()` and the plots already skip.
+- **`attribute(..., method="exact")` leaves the graph as it found it**. `evaluate_graph` prunes the graph
+  in place and `get_scores_exact` never added the edges back, so 6 edges were still switched off on
+  return, and an edge scored after a pruning one would have been scored against a smaller graph. The
+  full graph is now restored before each edge and on return, as the node-level version already does.
+  Scores do not change.
+- **float16 models are refused where weights are trained with Adam**. `FineTuneEditHandler`,
+  `CircuitTuner`, `CureClueUnlearner` and `CircuitLoRA.finetune` train weights in place with
+  Adam/AdamW, with no float32 master copy and no loss scaling. In float16 `eps=1e-8` and the squared
+  gradient of any gradient below about 5e-3 round to 0, so the first step turns the weights into
+  NaN/inf (`run_finetuning` already refuses float16 for the same reason). They now raise
+  `ValueError` before anything is changed; bfloat16 and float32 work as before.
+- **`FineTuneEditHandler` passes its `weight_decay` to AdamW**. The setting (default 0.0) was stored
+  and never used, so every edit ran with AdamW's own default of 0.01 on all parameters of the model.
+- **Pillar 7 R1 only compares score vectors that mean the same thing**. The primary graph's node
+  scores were always the first vector, but after edge-level discovery it has none (`Graph.from_model`
+  defaults to `node_scores=False`), and `_node_score_vector` turned that into all zeros. The seed
+  re-runs map an algorithm that is not in `_ALGO_METHOD_MAP` (`ibcircuit`, `acdc`) to plain EAP, so
+  its primary scores were compared with EAP scores. R1 now leaves the primary vector out in both
+  cases and says so in a warning, and compares the re-run seeds only. With fewer than two comparable
+  vectors `r1_seed_consistency` is `None` and `reliability_index` is the harmonic mean of R2 and R3,
+  not a made-up 0.0 that pulls the index toward a number that means nothing.
+  **Behaviour change: R1 and `reliability_index` values you published earlier for runs from
+  edge-level discovery, or from `ibcircuit` or `acdc`, were computed with the incomparable vector
+  included and differ from what this version gives. Recompute them. `r1_seed_consistency` can now
+  be `None`.** Runs from node-level discovery with a listed algorithm are unchanged.
+- **`final_answer_swap` reports a failure when it cannot edit the prompt**. In math mode, a record
+  whose final calculation and result are not in the prompt as an editable number (typically the math
+  adapter's question-only prompt) produced a pair with identical prompts and a different answer,
+  marked as succeeded. Identical prompts carry no activation difference, so `NormalizedTaskSpec`
+  later dropped every such record, or raised "All N records were filtered out". The strategy now
+  returns `succeeded=False` with the reason in `notes` (`apply()` keeps the record unpaired and sets
+  `_strategy_error`), as `llm_counterfactual` already does for identical output. Records with no
+  `solution_text` still use the documented answer-only mode.
+  Callers that read `succeeded` now see `False` for those records.
 - **Saved neuron-level circuits keep their label**. `Circuit.save` wrote a `_scores.json` with no
   task, model or algorithm, and `from_artifact` reads that file first, so the graph title said
   "unknown / unknown". The file now carries them, and files without them still load.
@@ -163,6 +226,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pillar 6: `summarize_transfer_matrix()` started its best/worst search at -1 and 2.0, so when
   every cross-task ratio was above 2.0 (a circuit more faithful on the target than on its own
   task) `worst_transfer` was `None`. The search now starts at -inf and +inf.
+- `lexsi_provenance.json` and the `provenance` key of `*_scores.json`: `base_model` is now the
+  immediate parent, the `ref` of the `kind: "model"` entry in `inputs` (the model that was
+  loaded). It used to copy the parent's own `base_model`, so an export of a model loaded from a
+  folder with its own record named the parent's parent. Older ancestors are reached through
+  `inputs[].provenance`. Records for models loaded from a Hub id are unchanged.
+  `make_provenance` rejects a `base_model` that is not a model entry in `inputs`. New optional
+  key `base_model_relation`: `finetune` for pruned or edited exports, `quantized` for quantized
+  exports, left out for discovery scores. See
+  [docs/api-reference/provenance.md](docs/api-reference/provenance.md).
+  **Behaviour change in a record other tools read:** any code that reads `base_model` from these
+  files to find the original foundation model now gets the immediate parent instead, and must follow
+  `inputs[].provenance` to reach older ancestors. Records already written keep their old
+  `base_model`; their `inputs` are correct, so read the parent from the model entry in `inputs`.
+  `make_provenance` now raises `ValueError` for a `base_model` that is not a model entry in `inputs`
+  or a `base_model_relation` outside `finetune`, `adapter`, `quantized`, `merge`.
+- **Behaviour change: every `ioi` and `double_io` result from the paired-text path differs from earlier versions, and cached results are recomputed.** IOI numbers published before this version are not comparable with numbers from it. Old cache files are not reused.
+- **`ioi` and `double_io` scored the wrong token on the paired-text path** (EAP family, CD-T, and
+  `ck.faithfulness` on these tasks). The cached prompt kept the answer name at its end, so the
+  metric's `logits[input_length - 1]` was read at the name itself and not at the token that predicts
+  it. `ioi` did this on every row and also carried a literal BOS in the text, giving two BOS tokens.
+  `double_io` did it on every row shorter than the longest in the batch, and wrote the padding
+  tokens into the text. Prompts now stop at the predicting token
+  (`circuitkit.tasks.specs.prompt_text_before_answer`, used by `ioi`, the deprecated legacy `ioi`
+  spec and `double_io`). ACDC and IBCircuit already read the right position and are unchanged. The
+  other built-in tasks were checked on GPT-2 where their data is available offline (`greater_than`,
+  `sva`, `hypernymy`, `gender_bias`, `capital_country`, `glue`, `wmdp`, `boolq`, `gsm8k`) and do not
+  have this mistake.
+- **Numbers that change.** Every `ioi` and `double_io` number from the paths above changes: node
+  and neuron scores, the discovered circuit, both pillar scores, and anything built on them
+  (pruning, quantization, transfer). Measured on GPT-2, 32 prompts, seed 0, CPU:
+
+    | Printed number | Before | After |
+    |---|---|---|
+    | `ioi` mean logit difference (clean) | 1.0551 | 3.8719 |
+    | `double_io` mean logit difference (clean) | 1.5072 | 2.2064 |
+    | docs quickstart (`eap-ig`, 30% pruned, default data): patching score | 0.9465 | 0.9432 |
+    | docs quickstart: ablation score | 0.6439 | 0.0000 (raw -0.0737) |
+    | `ioi`, `eap`, 30% pruned: patching score | 0.9764 | 0.9309 |
+    | same circuit: ablation score | 0.0027 | 0.0000 (raw -0.1553) |
+    | reversed control, 30% pruned: patching score | 0.5911 | 0.0000 (raw -0.0147) |
+    | reversed control, 30% pruned: ablation score | 0.9084 | 0.0000 (raw -0.7333) |
+    | `ioi`, `eap`, 80% pruned: patching score | 1.0000 (raw 1.0419) | 0.8341 |
+    | same circuit: ablation score | 0.0000 (raw -0.1247) | 0.0000 (raw -0.3082) |
+    | reversed control, 80% pruned: patching score | 0.6425 | 0.0000 (raw -0.0099) |
+    | reversed control, 80% pruned: ablation score | 0.0581 | 0.0000 (raw -0.3292) |
+
+  Before the fix the reversed control beat the discovered circuit on ablation (0.9084 against
+  0.0027). After it, patching separates the two clearly; zero ablation still does not on GPT-2
+  `ioi`, where both raw ratios are below 0. The audit tables in the docs (IOI rows for the
+  EAP family) and the stored outputs of notebooks 01, 02, 03 and 06 were produced before the fix
+  and have not been re-measured; the docs pages now say so.
+- **Task cache file names.** `ioi` and `double_io` caches are now
+  `ioi_prompt_<model>_<n>_seed<seed>.csv` and `double_io_prompt_<model>_<n>_seed<seed>.csv`. Files
+  under the old names hold prompts that end with the answer; they are no longer read for discovery
+  or for finetuning data and can be deleted. Finetuning text built from the old `ioi` cache had the
+  answer name twice.
 - Hyperparameter checks: `eval.pillars: []` is now an error (it would run nothing), and an
   ACDC grid point too large to compute (`tao_exps: [400]`) is reported as tau >= 1 instead of
   being skipped.

@@ -41,6 +41,8 @@ from typing import Dict, List, Optional
 import torch
 import torch.nn.functional as F
 
+from ._dtype import reject_float16
+
 logger = logging.getLogger(__name__)
 
 
@@ -245,6 +247,8 @@ class CureClueUnlearner:
                 trainable_params.append(mlp.W_in)
             if hasattr(mlp, "W_gate"):
                 trainable_params.append(mlp.W_gate)
+
+        reject_float16(trainable_params, "CureClueUnlearner")
 
         # Temporarily enable grad for circuit params only
         original_requires_grad = {id(p): p.requires_grad for p in self.model.parameters()}

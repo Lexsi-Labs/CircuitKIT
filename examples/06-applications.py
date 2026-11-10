@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-05 - Acting on a circuit: pruning, quantization, selective finetuning.
+06 - Acting on a circuit: pruning, quantization, selective finetuning.
 
 Once a circuit is discovered, you can act on it through circuitkit's
 applications. This script demonstrates the three v1.0 applications at
@@ -20,12 +20,14 @@ Run:
 
 import os
 
+# circuitkit must be imported before transformer_lens: it installs the compatibility patches.
+# isort: off
+import circuitkit as ck
+from circuitkit.api import discover_circuit
 import torch
 from transformer_lens import HookedTransformer
 from transformers import AutoModelForCausalLM
-
-import circuitkit as ck
-from circuitkit.api import discover_circuit
+# isort: on
 
 CIRCUIT_CFG = {
     "model": {"name": "gpt2", "precision": "bfloat16"},

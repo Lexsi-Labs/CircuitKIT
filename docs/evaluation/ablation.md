@@ -81,6 +81,8 @@ score = evaluate_graph(model, graph, dataloader, metrics=[metric_fn],
 
 A low score means ablating the out-of-circuit nodes destroys behavior that the circuit was supposed to carry on its own — a sign the circuit is incomplete.
 
+The score is clipped to the range 0 to 1. `report.ablation_raw_ratio` holds the unclipped ratio, and the report says when it is outside the range. With zero ablation it is often below 0, including for good circuits: on GPT-2 `ioi` a discovered circuit and a deliberately bad control both score a clipped 0.0. See [the raw ratio](causal-patching.md#the-raw-ratio-and-scores-outside-0-to-1) for the numbers.
+
 ---
 
 ## Pillar 1 vs. Pillar 2 Together

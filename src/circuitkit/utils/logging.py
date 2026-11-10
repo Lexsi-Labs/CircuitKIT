@@ -10,7 +10,6 @@ import warnings
 from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
-from pathlib import Path
 from typing import Any, Dict, Optional
 
 
@@ -132,7 +131,11 @@ class CircuitKitLogger:
             self.setLevel(level)
 
     def _setup_handlers(self):
-        """Setup console and file handlers."""
+        """Setup the console handler.
+
+        Nothing is written to disk by default: importing CircuitKIT must work from a read-only
+        working directory. Pass ``log_file`` to ``setup_logging`` for a detailed log file.
+        """
         # Avoid propagating to parent loggers to prevent duplicate logs
         self.logger.propagate = False
 
@@ -141,19 +144,6 @@ class CircuitKitLogger:
         console_handler.setLevel(self.logger.level)
         console_handler.setFormatter(CircuitKitFormatter(use_colors=True))
         self.logger.addHandler(console_handler)
-
-        # File handler for detailed logs (with JSON context)
-        log_dir = Path("logs")
-        log_dir.mkdir(exist_ok=True)
-        file_handler = logging.FileHandler(
-            log_dir / f"circuitkit_{datetime.now().strftime('%Y%m%d')}.log"
-        )
-        file_handler.setLevel(logging.DEBUG)
-        file_formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s"
-        )
-        file_handler.setFormatter(file_formatter)
-        self.logger.addHandler(file_handler)
 
     def setLevel(self, level: int):
         """Update the level for the logger and its console handler."""

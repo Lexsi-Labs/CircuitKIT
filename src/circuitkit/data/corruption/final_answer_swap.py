@@ -14,6 +14,9 @@ Two modes:
    the correct answer differs so the differentiable NLL metric has
    signal. This is an operand-swap in the spirit of Stolfo et al. 2023
    but applied to free-form word problems.
+   If the prompt contains nothing to edit (a question-only prompt, where
+   the calculation and its result never appear), the strategy reports a
+   failure rather than an answer-only pair.
 
 2. **Answer-only mode (fallback).** For records where ``clean_answer``
    is a bare numeric / boolean / single-letter answer and no math
@@ -191,6 +194,22 @@ class FinalAnswerSwap(CorruptionStrategy):
                         corrupt_prompt = (
                             clean_prompt[:idx] + new_ans + clean_prompt[idx + len(old_ans) :]
                         )
+                if corrupt_prompt == clean_prompt:
+                    # Nothing in the prompt could be edited (typically a
+                    # question-only prompt, where the result never appears). Math
+                    # mode promises prompts that genuinely differ, and identical
+                    # prompts carry no activation difference, so report a failure
+                    # instead of an answer-only pair marked as succeeded.
+                    return CorruptionResult(
+                        corrupt_prompt=None,
+                        corrupt_answer=None,
+                        notes=(
+                            f"final calculation {swap.old_step!r} and its result {old_ans!r} "
+                            f"do not appear in the prompt as an editable number; the "
+                            f"prompt would be unchanged"
+                        ),
+                        succeeded=False,
+                    )
                 prefix = " " if record.clean_answer.startswith(" ") else ""
                 return CorruptionResult(
                     corrupt_prompt=corrupt_prompt,

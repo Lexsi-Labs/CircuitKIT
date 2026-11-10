@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import torch
 import torch.nn.functional as F
 
+from circuitkit.applications.common_utils._dtype import reject_float16
 from circuitkit.applications.common_utils._tokenization import (
     ScoringError,
     build_teacher_forced,
@@ -55,6 +56,9 @@ class FineTuneEditHandler:
         max_grad_norm: float = 1.0,
         batch_size: int = 1,
     ):
+        if hasattr(model, "parameters"):
+            # _fine_tune trains every parameter with AdamW.
+            reject_float16(model.parameters(), "FineTuneEditHandler")
         self.model = model
         self.device = getattr(getattr(model, "cfg", None), "device", None) or (
             next(model.parameters()).device if hasattr(model, "parameters") else "cpu"
@@ -277,7 +281,7 @@ class FineTuneEditHandler:
         if not params:
             raise RuntimeError("Model exposes no trainable parameters.")
 
-        optimiser = torch.optim.AdamW(params, lr=lr)
+        optimiser = torch.optim.AdamW(params, lr=lr, weight_decay=self.cfg.weight_decay)
         self.model.train()
 
         for _ in range(steps):

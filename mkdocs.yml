@@ -196,6 +196,7 @@ nav:
           - Tasks: api-reference/tasks.md
           - Selectors: api-reference/selectors.md
           - Applications: api-reference/applications.md
+          - Provenance record: api-reference/provenance.md
       - CLI Reference:
           - Overview: cli/overview.md
           - Discovery Commands: cli/discovery.md

@@ -448,8 +448,14 @@ def evaluate(model, artifact, task, num_examples, precision, report_path):
         result.to_json(report_path)
 
         console.print("[bold green]✓ Evaluation completed successfully![/bold green]")
-        console.print(f"Patching score (P1): {result.patching_score}")
-        console.print(f"Ablation score (P2): {result.ablation_score}")
+        console.print(
+            f"Patching score (P1): {result.patching_score} "
+            f"(raw ratio: {result.patching_raw_ratio})"
+        )
+        console.print(
+            f"Ablation score (P2): {result.ablation_score} "
+            f"(raw ratio: {result.ablation_raw_ratio})"
+        )
         random_avg = result.metadata.get("random_avg")
         if random_avg is not None:
             console.print(f"Random-circuit avg:  {random_avg}")

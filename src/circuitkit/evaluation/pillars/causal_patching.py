@@ -79,7 +79,8 @@ def _faithfulness_ratio(circuit: float, clean: float, corrupt: float) -> dict:
         sentinel when either flag is set), 'raw_ratio' (unclamped, full
         signed signal; still computed for the inverted case so the true
         magnitude stays inspectable), 'degenerate_denominator' (bool),
-        'inverted_denominator' (bool).
+        'inverted_denominator' (bool), 'out_of_range' (bool: the ratio is
+        defined but outside [0.0, 1.0], so 'score' differs from 'raw_ratio').
     """
     denom = clean - corrupt
     if abs(denom) < _DEGENERATE_DENOM_EPS:
@@ -88,6 +89,7 @@ def _faithfulness_ratio(circuit: float, clean: float, corrupt: float) -> dict:
             "raw_ratio": 0.0,
             "degenerate_denominator": True,
             "inverted_denominator": False,
+            "out_of_range": False,
         }
     raw_ratio = (circuit - corrupt) / denom
     if denom < 0:
@@ -96,13 +98,39 @@ def _faithfulness_ratio(circuit: float, clean: float, corrupt: float) -> dict:
             "raw_ratio": raw_ratio,
             "degenerate_denominator": False,
             "inverted_denominator": True,
+            "out_of_range": False,
         }
     return {
         "score": max(0.0, min(raw_ratio, 1.0)),
         "raw_ratio": raw_ratio,
         "degenerate_denominator": False,
         "inverted_denominator": False,
+        "out_of_range": not 0.0 <= raw_ratio <= 1.0,
     }
+
+
+def describe_raw_ratio(raw_ratio) -> str:
+    """Say in words where a raw faithfulness ratio falls outside 0 to 1.
+
+    Args:
+        raw_ratio: The unclipped ratio ``(circuit - corrupt) / (clean - corrupt)``,
+            or ``None`` when it was not measured.
+
+    Returns:
+        An empty string when the ratio is missing or inside 0 to 1. Otherwise a
+        short note that names the direction, for logs and printed reports.
+    """
+    if raw_ratio is None or 0.0 <= raw_ratio <= 1.0:
+        return ""
+    if raw_ratio > 1.0:
+        return (
+            f"raw ratio {raw_ratio:.4f} is above 1: the circuit scores higher than the "
+            "full model, and the score is capped at 1"
+        )
+    return (
+        f"raw ratio {raw_ratio:.4f} is below 0: the circuit scores lower than the "
+        "corrupt baseline, and the score is floored at 0"
+    )
 
 
 class Pillar1_CausalPatching:
@@ -162,6 +190,8 @@ class Pillar1_CausalPatching:
             - 'corrupt_score' (float): Mean raw metric on the corrupt baseline.
             - 'degenerate_denominator' (bool): True if |clean - corrupt| ~ 0,
                 making the ratio undefined; 'score' is then a 0.0 sentinel.
+            - 'out_of_range' (bool): True if 'raw_ratio' is outside [0.0, 1.0],
+                so 'score' was clipped. A warning is logged in that case.
 
         Raises:
             AssertionError: If model.cfg.use_attn_result is False.
@@ -268,13 +298,16 @@ class Pillar1_CausalPatching:
                 "corrupt_score": corrupt_score,
                 "degenerate_denominator": ratio["degenerate_denominator"],
                 "inverted_denominator": False,
+                "out_of_range": ratio["out_of_range"],
             }
 
             logger.info(
                 f"Pillar 1 Score (Causal Patching faithfulness ratio): {result['score']:.4f} "
-                f"(raw metric: {raw_score:.4f}, clean: {clean_score:.4f}, "
-                f"corrupt: {corrupt_score:.4f})"
+                f"(raw ratio: {ratio['raw_ratio']:.4f}, raw metric: {raw_score:.4f}, "
+                f"clean: {clean_score:.4f}, corrupt: {corrupt_score:.4f})"
             )
+            if ratio["out_of_range"]:
+                logger.warning(f"Pillar 1: {describe_raw_ratio(ratio['raw_ratio'])}.")
             return result
 
         except Exception as e:

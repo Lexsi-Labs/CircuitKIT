@@ -45,9 +45,14 @@ from .._algorithm_families import (
     unsupported_algorithm_message,
 )
 from .._chat import resolve_chat_template
-from ..specs import _find_task_cache, _load_finetuning_data_from_csv
+from ..specs import _find_task_cache, _load_finetuning_data_from_csv, prompt_text_before_answer
 
 logger = get_logger("task.double_io")
+
+# Cache files carry prompts that stop before the answer. The prefix differs from
+# the one used when the cached text still ended with the answer name, so those
+# older files are neither reloaded for discovery nor picked up for finetuning.
+_CACHE_PREFIX = "double_io_prompt"
 
 
 class DoubleIOTaskSpec:
@@ -162,7 +167,7 @@ class DoubleIOTaskSpec:
         cache_dir.mkdir(parents=True, exist_ok=True)
 
         model_name = getattr(model.cfg, "model_name", "unknown_model").replace("/", "_")
-        cache_file = cache_dir / f"double_io_{model_name}_{num_examples}_seed{seed}.csv"
+        cache_file = cache_dir / f"{_CACHE_PREFIX}_{model_name}_{num_examples}_seed{seed}.csv"
 
         if cache_file.exists():
             logger.info(f"Loading cached DoubleIO data from {cache_file}")
@@ -183,8 +188,16 @@ class DoubleIOTaskSpec:
 
             eap_rows = []
             for i in range(len(dio_data["validation_data"])):
-                clean_text = model.to_string(dio_data["validation_data"][i])
-                corrupted_text = model.to_string(dio_data["validation_patch_data"][i])
+                # Rows are padded to a common length, so cut each one at its own
+                # answer-predicting position: this drops the answer name and the
+                # padding, which a whole-row decode kept on all but the longest rows.
+                end_idx = dio_data["end_idxs"][i]
+                clean_text = prompt_text_before_answer(
+                    model, dio_data["validation_data"][i], end_idx
+                )
+                corrupted_text = prompt_text_before_answer(
+                    model, dio_data["validation_patch_data"][i], end_idx
+                )
                 correct_idx = dio_data["validation_labels"][i].item()
                 incorrect_idx = dio_data["validation_wrong_labels"][i].item()
 
@@ -330,7 +343,7 @@ class DoubleIOTaskSpec:
         model_name_safe = model_name.replace("/", "_")
         cache_dir = Path(cfg.get("cache_dir", "./cache/double_io"))
 
-        cache_path = _find_task_cache(cache_dir, self.name, model_name_safe)
+        cache_path = _find_task_cache(cache_dir, _CACHE_PREFIX, model_name_safe)
         if cache_path is None:
             raise FileNotFoundError(
                 f"No '{self.name}' cache found for model '{model_name}' "

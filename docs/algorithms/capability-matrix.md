@@ -42,12 +42,14 @@ Measured at `bfloat16`, `ig_steps=5` (the previous default), `batch_size=4`. Red
 
 ## Validated combinations (from the audit paper)
 
+The GPT-2 IOI `eap-ig` row was re-measured on 2026-10-11 (Tesla T4, seed 42, 256 examples, 30% pruned; command on the [Audit Results](../trust/results.md#gpt-2-ioi-re-measured) page) and reports the patching score, the [measure for comparing circuits](../evaluation/causal-patching.md#which-measure-to-compare-circuits-with). The Llama and Gemma IOI rows were measured before the `ioi` scored position was corrected and not re-measured (gated models). The `acdc` row is not affected.
+
 | Model | Task | Algorithm | Result |
 |---|---|---|---|
-| GPT-2 | IOI | eap-ig | ablation_score 0.91 |
-| Llama-1B | IOI | eap-ig | ablation_score 0.88 |
-| Llama-3B | IOI | eap-ig | ablation_score 0.85 |
-| Gemma-2B | IOI | eap-ig | ablation_score 0.87 |
+| GPT-2 | IOI | eap-ig | patching_score 0.945 (zero-ablation ratio -0.276; was ablation_score 0.91 before the correction) |
+| Llama-1B | IOI | eap-ig | ablation_score 0.88 *(before the correction, not re-measured)* |
+| Llama-3B | IOI | eap-ig | ablation_score 0.85 *(before the correction, not re-measured)* |
+| Gemma-2B | IOI | eap-ig | ablation_score 0.87 *(before the correction, not re-measured)* |
 | Llama-1B | SVA | eap-ig | ablation_score 0.87 |
 | Llama-1B | Gender Bias | eap-ig | ablation_score 0.90 |
 | GPT-2 | IOI | acdc | ablation_score 0.76 |

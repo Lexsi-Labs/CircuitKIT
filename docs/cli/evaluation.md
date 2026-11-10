@@ -37,8 +37,8 @@ The command writes a JSON report:
 
 ```json
 {
-    "patching_score": 0.71,
-    "ablation_score": 0.83,
+    "patching_score": 0.94,
+    "ablation_score": 0.0,
     "stability": null,
     "robustness": null,
     "baseline_comparison": null,
@@ -156,8 +156,8 @@ python3 -c "
 import json
 with open('./ci/eval_report.json') as f:
     r = json.load(f)
-assert r['ablation_score'] > 0.70, f'Circuit quality below threshold: {r[\"ablation_score\"]}'
-print('Circuit quality check passed:', r['ablation_score'])
+assert r['patching_score'] > 0.70, f'Circuit quality below threshold: {r[\"patching_score\"]}'
+print('Circuit quality check passed:', r['patching_score'], 'raw', r['metadata'].get('patching_raw_ratio'))
 "
 ```
 

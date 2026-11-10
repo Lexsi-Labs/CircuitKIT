@@ -24,8 +24,9 @@ results = evaluate_circuit({
     "eval": {"pillars": ["patching", "ablation", "baselines"]},
 })
 # results is a FaithfulnessReport:
-#   results.patching_score  -> 0.48   (Pillar 1)
-#   results.ablation_score  -> 0.83   (Pillar 2)
+#   results.patching_score      (Pillar 1, clipped to 0-1)
+#   results.ablation_score      (Pillar 2, clipped to 0-1; 0.0 on GPT-2 ioi with zero ablation)
+#   results.patching_raw_ratio, results.ablation_raw_ratio   (not clipped)
 #   results.baseline_comparison        (Pillar 5, incl. circuit-vs-random)
 ```
 
@@ -110,8 +111,10 @@ Rows are **sorted by cost** (cheapest first), not by pillar number.
 | Better than magnitude (Pillar 5) | No | Yes by ≥ 0.10 |
 
 **`report.patching_score`** (Pillar 1) = normalized faithfulness ratio under
-patching, `(y_circuit − y_corrupt) / (y_clean − y_corrupt)` clamped at 1.0;
-1.0 means the circuit fully recovers full-model behavior.  
+patching, `(y_circuit − y_corrupt) / (y_clean − y_corrupt)` clipped to the range 0 to 1;
+1.0 means the circuit fully recovers full-model behavior. The unclipped value is
+`report.patching_raw_ratio` (and `report.ablation_raw_ratio`); the report says when it is
+outside the range. See [the raw ratio](../evaluation/causal-patching.md#the-raw-ratio-and-scores-outside-0-to-1).  
 **`report.ablation_score`** (Pillar 2) = the same normalized ratio computed on
 the ablated circuit.
 

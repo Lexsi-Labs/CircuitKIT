@@ -76,6 +76,34 @@ def _node_score_vector(graph) -> List[float]:
     return scores
 
 
+# Discovery algorithm -> the node-level attribution method the seed re-runs use.
+# An algorithm that is not listed is re-run with plain EAP, so its scores are not
+# comparable with the primary circuit's (see run_intervention_reliability).
+_ALGO_METHOD_MAP = {
+    "eap": "EAP",
+    "eap-ig": "EAP-IG-inputs",
+    "eap-ig-activations": "EAP-IG-activations",
+    "eap-clean-corrupted": "clean-corrupted",
+    "eap-exact": "exact",
+    "atp-gd": "atp-gd",
+    "eap-gp": "eap-gp",
+    "relp": "relp",
+    "peap": "peap",
+    "eap-ifr": "ifr",
+}
+
+
+def _has_node_scores(graph) -> bool:
+    """True when the graph carries node scores that were actually filled in.
+
+    ``Graph.from_model`` defaults to ``node_scores=False`` (no score tensor), and
+    a tensor that was allocated but never written is all NaN. In both cases
+    ``_node_score_vector`` returns a vector that says nothing about the nodes.
+    """
+    scores = getattr(graph, "nodes_scores", None)
+    return scores is not None and not bool(torch.isnan(scores).all())
+
+
 def _rebuild_graph_with_seed(
     model,
     task_spec,
@@ -107,18 +135,6 @@ def _rebuild_graph_with_seed(
     mlp_hook = discovery_cfg.get("mlp_hook", "mlp_out")
     graph = Graph.from_model(model, node_scores=True, neuron_level=False, mlp_hook=mlp_hook)
 
-    _ALGO_METHOD_MAP = {
-        "eap": "EAP",
-        "eap-ig": "EAP-IG-inputs",
-        "eap-ig-activations": "EAP-IG-activations",
-        "eap-clean-corrupted": "clean-corrupted",
-        "eap-exact": "exact",
-        "atp-gd": "atp-gd",
-        "eap-gp": "eap-gp",
-        "relp": "relp",
-        "peap": "peap",
-        "eap-ifr": "ifr",
-    }
     method = _ALGO_METHOD_MAP.get(algo, "EAP")
 
     attribute_node(
@@ -198,10 +214,12 @@ def run_intervention_reliability(
 
     Returns:
         Dict with keys:
-            r1_seed_consistency  : Spearman rho averaged across seed pairs [0,1].
+            r1_seed_consistency  : Spearman rho averaged across seed pairs [-1,1], or None
+                                   when fewer than two comparable score vectors exist
+                                   (then R1 is left out of reliability_index).
             r2_effect_magnitude  : Mean (circuit - baseline) / baseline.
             r3_effect_variance   : 1 - CV across seeds, clamped to [0,1].
-            reliability_index    : Harmonic mean of the three sub-scores.
+            reliability_index    : Harmonic mean of the sub-scores (R2 and R3 only when R1 is None).
             per_seed             : List of per-seed dicts with circuit/baseline/delta.
     """
     if seeds is None:
@@ -227,7 +245,23 @@ def run_intervention_reliability(
         }
     ]
 
-    all_node_vecs: List[List[float]] = [_node_score_vector(graph)]
+    # R1 compares node-score vectors, so every vector must be a real score from the
+    # same attribution method. The primary graph is left out when it has no node
+    # scores (edge-level discovery), or when its algorithm is one the re-runs
+    # cannot reproduce (they would use EAP, so the vectors measure different things).
+    all_node_vecs: List[List[float]] = []
+    algo = discovery_cfg.get("algorithm", "eap").lower()
+    if not _has_node_scores(graph):
+        logger.warning(
+            "Pillar 7: the primary graph has no node scores, so R1 compares the re-run seeds only."
+        )
+    elif algo not in _ALGO_METHOD_MAP:
+        logger.warning(
+            f"Pillar 7: seeds are re-run with EAP, not '{algo}', so the primary graph's "
+            f"scores are not comparable; R1 compares the re-run seeds only."
+        )
+    else:
+        all_node_vecs.append(_node_score_vector(graph))
 
     for seed in seeds[1:]:
         try:
@@ -266,7 +300,9 @@ def run_intervention_reliability(
         for j in range(i + 1, n):
             if len(all_node_vecs[i]) == len(all_node_vecs[j]):
                 rho_pairs.append(_spearman_rho(all_node_vecs[i], all_node_vecs[j]))
-    r1 = float(sum(rho_pairs) / len(rho_pairs)) if rho_pairs else 0.0
+    # No pair means fewer than two comparable score vectors. R1 is then undefined:
+    # report None and leave it out of the index, instead of scoring it 0.0.
+    r1: Optional[float] = float(sum(rho_pairs) / len(rho_pairs)) if rho_pairs else None
 
     # R2: mean normalized effect magnitude (see _r2_effect_magnitude for the
     # near-zero-baseline handling).
@@ -284,13 +320,14 @@ def run_intervention_reliability(
         r3 = max(0.0, min(1.0, 1.0 - cv))
 
     # Harmonic mean of R1_norm, R2, R3 (all in [0,1]).
-    r1_norm = (r1 + 1.0) / 2.0  # Spearman in [-1,1] -> [0,1]
-    components = [r1_norm, r2, r3]
+    components = [r2, r3]
+    if r1 is not None:
+        components.insert(0, (r1 + 1.0) / 2.0)  # Spearman in [-1,1] -> [0,1]
     denom = sum(1.0 / (c + 1e-8) for c in components)
     reliability_index = len(components) / denom
 
     result: Dict[str, Any] = {
-        "r1_seed_consistency": round(r1, 4),
+        "r1_seed_consistency": None if r1 is None else round(r1, 4),
         # Report the clamped, [0,1]-mapped r2 that actually feeds the
         # reliability index — not r2_raw, which is unbounded and would put an
         # out-of-range value under a field the composite treats as [0,1].
@@ -300,8 +337,9 @@ def run_intervention_reliability(
         "n_seeds": len(per_seed_scores),
         "per_seed": per_seed_scores,
     }
+    r1_text = "n/a" if r1 is None else f"{r1:.3f}"
     logger.info(
-        f"Pillar 7 done: R1={r1:.3f} R2={r2:.3f} R3={r3:.3f} "
+        f"Pillar 7 done: R1={r1_text} R2={r2:.3f} R3={r3:.3f} "
         f"reliability={reliability_index:.3f}"
     )
     return result

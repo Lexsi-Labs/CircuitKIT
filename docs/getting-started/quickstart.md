@@ -56,12 +56,25 @@ results = evaluate_circuit({
     "pruning": {"target_sparsity": 0.3, "scope": "both"},
     "output_path": "./circuit.pt",
 })
-print(results.patching_score)   # Pillar 1 (causal patching), e.g. 0.48
-print(results.ablation_score)    # Pillar 2 (ablation), e.g. 0.83
+print(results.patching_score)      # Pillar 1 (causal patching): 1.0, clipped
+print(results.patching_raw_ratio)  # 1.035: just above the full model
+print(results.ablation_score)      # Pillar 2 (zero ablation): 0.0, clipped
+print(results.ablation_raw_ratio)  # -0.21: below the corrupt baseline, see the note below
 # results is a FaithfulnessReport; the full-faithfulness path also populates
 # .stability / .robustness / .baseline_comparison / .generalization /
 # .intervention_reliability. See results.summary() for a formatted view.
 ```
+
+These values were measured on 2026-10-11 by running Steps 2 and 3 exactly as printed, on one Tesla T4:
+`gpt2`, `eap-ig`, `ioi`, 32 discovery examples, 30% pruned (46 of 156 components removed). Step 3
+states no seed or example count, so the defaults apply: seed 42 and 256 evaluation examples. The
+same steps on a CPU gave 1.029 and -0.20. An earlier CPU figure printed here (0.94 and -0.07) was
+not reproduced.
+
+Both scores are clipped to the range 0 to 1. On GPT-2 `ioi`, zero ablation takes the model below
+the corrupt baseline, so `ablation_score` prints as 0.0 even for a good circuit; judge this circuit
+by `patching_score` and read [the raw ratio](../evaluation/causal-patching.md#the-raw-ratio-and-scores-outside-0-to-1) before drawing a conclusion from a
+score of exactly 0.0 or 1.0.
 
 ## Step 4: Prune and export
 

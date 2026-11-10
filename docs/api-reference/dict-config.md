@@ -116,7 +116,8 @@ report = evaluate_circuit(
     {"model": {"name": "gpt2"}, "discovery": {"task": "ioi"}, "pruning": {}},
     scores_path="./gpt2_ioi_scores.pt",
 )
-print(report.ablation_score)   # e.g. 0.83
+print(report.patching_score)       # clipped to 0-1
+print(report.patching_raw_ratio)   # not clipped
 ```
 
 ---
