@@ -23,7 +23,7 @@ Every algorithm has a stability tier, displayed next to its name throughout thes
 
 The CircuitKIT audit paper ("Faithfulness Is Not Actionability", EMNLP Findings 2026) evaluated the core discovery algorithms across 6 faithfulness pillars and found:
 
-- **`eap` and `eap-ig`** produce circuits with high faithfulness (≥0.85 ablation_score for `eap-ig`) across GPT-2, Llama-3.2-3B, and Gemma-2-2B. The IOI part of this was measured before the `ioi` scored position was corrected and not re-measured; see [where the prompts end](../evaluation/causal-patching.md#where-the-ioi-and-double_io-prompts-end).
+- **`eap` and `eap-ig`** recover about 95% of the behaviour on GPT-2 IOI under patching (patching score 0.945 for `eap-ig`, 0.971 for `eap`; seed 42, 256 examples, 30% pruned, re-measured 2026-10-11). The audit's earlier claim of ≥0.85 `ablation_score` for `eap-ig` across GPT-2, Llama-3.2-3B and Gemma-2-2B does not hold on GPT-2 after the `ioi` scored position was corrected (zero-ablation ratio -0.28), and its Llama and Gemma parts were measured before the correction and not re-measured. See [Audit Results](results.md).
 - **ACDC and IBCircuit** produce smaller circuits but with lower faithfulness. The audit scored them on GPT-2 IOI only. ACDC is slow, and IBCircuit has a memory ceiling on multi-billion-parameter models (it can OOM above ~3B parameters on a single GPU at aggressive settings).
 - **Research algorithms** are unvalidated beyond GPT-2 IOI. Do not cite findings from them without independent verification.
 

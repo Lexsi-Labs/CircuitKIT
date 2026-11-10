@@ -42,7 +42,7 @@ Use `chat_template_mode="auto"` (or `"on"`). The model's chat template will be a
 
 **What is a "good" circuit quality score?**
 
-A patching score (P1) ≥ 0.75 is generally considered a strong circuit. GPT-2 IOI with the default `eap-ig` gives a patching score of 0.94 (30% pruned, CPU); the IOI numbers on the [Audit Results](../trust/results.md) page are older and were measured before the `ioi` scored position was corrected and not re-measured; see [where the prompts end](../evaluation/causal-patching.md#where-the-ioi-and-double_io-prompts-end). Below 0.60, the circuit is not faithfully explaining the behavior. See [Causal Patching](../evaluation/causal-patching.md) for interpretation guidance.
+A patching score (P1) ≥ 0.75 is generally considered a strong circuit. GPT-2 IOI with the default `eap-ig` gives a patching score of 0.945 (seed 42, 256 examples, 30% pruned, Tesla T4, re-measured 2026-10-11). The Llama and Gemma IOI numbers on the [Audit Results](../trust/results.md) page were measured before the `ioi` scored position was corrected and have not been re-measured. See [Causal Patching](../evaluation/causal-patching.md) for interpretation guidance.
 
 **Why is Pillar 6 (Generalization) marked preliminary?**
 
