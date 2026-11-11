@@ -23,6 +23,7 @@ The task type sets the default mode; you can override it per run.
 | Downstream-behavior tasks | `"auto"` | `boolq`, `glue`, `mmlu`, `truthfulqa`, `ifeval`, `wmdp`, `gsm8k`, `winogrande_mc` |
 | Diagnostic minimal-pair tasks | `"off"` | `ioi`, `sva`, `greater_than`, `gender_bias`, `capital_country`, `hypernymy`, `double_io` |
 | Cloze tasks | `"off"` | `winogrande` |
+| Chat-model behavior tasks | `"on"` | `multilingual_refusal` |
 | Custom `GenericTaskSpec` / `NormalizedTaskSpec` | `"auto"` | User-defined tasks |
 
 The rationale: diagnostic tasks like IOI are designed around raw token completions, where adding a system prompt or `[INST]` wrapper would change the task semantics. Downstream-behavior tasks like MMLU are typically evaluated on chat models where the template matters.

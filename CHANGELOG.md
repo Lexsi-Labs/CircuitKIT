@@ -17,6 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`multilingual_refusal` task.** Refusal minimal pairs for chat models, one language per run.
+  English pairs come from `binary_align/jailbreak_binary.csv`, which no task used until now. Other
+  languages take a `pairs_path` CSV, because CircuitKIT ships no translations. Prompts go through
+  the chat template by default, with the BOS handling that needs, and a pair that tokenizes to two
+  lengths is dropped. Defaults for `refuse` and `comply` exist for `en`, `hi`, `hi-Latn`, `bn`,
+  `ta`, `ar` and `sw`. EAP family only.
 - **Hyperparameter ranges** (`circuitkit.utils.hparams`). Each hyperparameter now has a *valid*
   range (outside it the value cannot work: `HyperparameterError`, a `ValueError`) and a *sensible*
   range (inside valid, but earlier runs or the literature show it is risky: `HyperparameterWarning`).
