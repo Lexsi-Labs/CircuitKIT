@@ -117,6 +117,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Safety dataset helpers no longer build degenerate pairs by default.** `register_advbench`, `register_harmbench`,
+  `register_sorrybench`, `register_jailbreakbench`, `register_truthfulqa`, `register_stereoset` and
+  `register_all_safety` paired each prompt with itself (`answer_contrastive`), so `discover()` rejected them with
+  "100% of records have a corrupt prompt identical to the clean prompt", including the module's own example. The
+  default is now `pairing_mode="harmful_vs_benign"`, which pairs each harmful prompt with a benign control as the
+  module docstring says. The helpers take `**kwargs` and pass them to `SafetyPromptAdapter.adapt()`
+  (`pairing_mode`, `refusal_token`, `compliance_token`, `benign_controls`). Tasks registered with the old default
+  now get different pairs, so earlier safety-circuit results are not comparable. Contributed by @ShivenduShivu.
 - **EAP tokenization masks left-padded batches correctly**. `tokenize_plus` padded on `padding_side`
   (left by default for `NormalizedTaskSpec` pairs) but built the attention mask from
   `tokenizer.padding_side`, which is `right` for most HF tokenizers. In a left-padded batch with
