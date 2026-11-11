@@ -30,9 +30,10 @@ from circuitkit.tasks._chat import (
 )
 
 try:
-    from jinja2 import Template, TemplateError
+    from jinja2 import TemplateError
+    from jinja2.sandbox import SandboxedEnvironment
 except ImportError:
-    Template = None
+    SandboxedEnvironment = None
     TemplateError = None
 
 logger = logging.getLogger(__name__)
@@ -220,9 +221,11 @@ class GenericTaskSpec:
 
         # Compile template if provided
         self.template = None
-        if prompt_template and Template is not None:
+        if prompt_template and SandboxedEnvironment is not None:
             try:
-                self.template = Template(prompt_template)
+                # Prompts are plain text for a model, not HTML, so autoescape stays off.
+                # The sandbox blocks unsafe attribute access in user-supplied templates.
+                self.template = SandboxedEnvironment(autoescape=False).from_string(prompt_template)
             except TemplateError as e:
                 raise ValueError(
                     f"Invalid Jinja2 'prompt_template': {e}. "

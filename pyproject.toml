@@ -48,7 +48,7 @@ classifiers = [
 # Updated list of dependencies
 dependencies = [
     # Keep base dependencies portable; platform-specific CUDA pins live in optional extras / requirements.txt
-    "torch",
+    "torch>=2.10.0",  # earlier releases have known security advisories
     "einops",
     "plotly",
     "tqdm",
@@ -138,8 +138,8 @@ pruning = [
     # already pulled in by the base install and the `benchmarks` extra.
 ]
 gpu-cu126 = [
-    "torch==2.6.0+cu126",
-    "torchvision==0.21.0+cu126",
+    "torch==2.10.0+cu126",
+    "torchvision==0.25.0+cu126",
 ]
 
 # Platform notes:

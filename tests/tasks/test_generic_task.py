@@ -702,3 +702,25 @@ class TestCorruptionEffectivenessGuard:
     def test_no_identical_is_noop(self):
         from circuitkit.tasks import GenericTaskSpec
         GenericTaskSpec._check_corruption_effectiveness(0, 4, {}, context="x")
+
+
+def test_prompt_template_renders_plain_text_in_sandbox(toy_csv_file):
+    """Prompt templates render unescaped text and cannot reach object internals."""
+    from circuitkit.tasks import GenericTaskSpec
+
+    task = GenericTaskSpec.from_csv(
+        path=str(toy_csv_file),
+        schema={"prompt": "question", "answer": "answer"},
+        metric_fn=lambda *a, **k: None,
+        prompt_template="Q: {{ question }} <&> A:",
+    )
+    assert task._extract_fields({"question": "5 < 6 & 7"})["prompt"] == "Q: 5 < 6 & 7 <&> A:"
+
+    unsafe = GenericTaskSpec.from_csv(
+        path=str(toy_csv_file),
+        schema={"prompt": "question", "answer": "answer"},
+        metric_fn=lambda *a, **k: None,
+        prompt_template="{{ question.__class__.__mro__ }}",
+    )
+    # A sandbox violation falls back to the raw prompt instead of leaking internals.
+    assert unsafe._extract_fields({"question": "raw"})["prompt"] == "raw"
