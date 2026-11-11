@@ -12,7 +12,6 @@ concurrency:
 
 permissions:
   contents: read
-  pull-requests: read
 
 env:
   PYPI_PROJECT_NAME: circuitkit
@@ -34,13 +33,13 @@ jobs:
       pypi-exists: ${{ steps.plan.outputs.pypi-exists }}
     steps:
       - name: Check out the trusted merged source
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ github.event.pull_request.merge_commit_sha || github.ref }}
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
 
@@ -202,12 +201,12 @@ jobs:
       RELEASE_TAG: ${{ needs.plan.outputs.version }}
     steps:
       - name: Check out exact release source
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ needs.plan.outputs.source-ref }}
           fetch-depth: 0
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
 
@@ -343,7 +342,7 @@ jobs:
           fi
 
       - name: Send release notes to Slack
-        uses: slackapi/slack-github-action@v1.24.0
+        uses: slackapi/slack-github-action@e28cf165c92ffef168d23c5c9000cffc8a25e117 # v1.24.0
         continue-on-error: true
         with:
           channel-id: "lexsi-labs-circuitkit-release" #${{ vars.SLACK_CHANNEL }}
