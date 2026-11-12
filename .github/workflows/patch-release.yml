@@ -20,7 +20,10 @@ env:
 jobs:
   plan:
     name: Inspect release state
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    # Releases come only from Lexsi-Labs/CircuitKIT. A fork or copy of this repo
+    # inherits the workflow, and there the release job (which pushes the tag and
+    # publishes to PyPI) must not run. Skipping `plan` skips `release`.
+    if: github.repository == 'Lexsi-Labs/CircuitKIT' && (github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true)
     runs-on: ubuntu-latest
     outputs:
       action: ${{ steps.plan.outputs.action }}
