@@ -117,6 +117,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Safety dataset helpers no longer build degenerate pairs by default.** `register_advbench`, `register_harmbench`,
+  `register_sorrybench`, `register_jailbreakbench`, `register_truthfulqa` and
+  `register_all_safety` paired each prompt with itself (`answer_contrastive`), so `discover()` rejected them with
+  "100% of records have a corrupt prompt identical to the clean prompt", including the module's own example. The
+  default is now `pairing_mode="harmful_vs_benign"`, which pairs each harmful prompt with a benign control as the
+  module docstring says. The helpers take `**kwargs` and pass them to `SafetyPromptAdapter.adapt()`
+  (`pairing_mode`, `refusal_token`, `compliance_token`, `benign_controls`). Tasks registered with the old default
+  now get different pairs, so earlier safety-circuit results are not comparable. TruthfulQA is not a harm dataset,
+  so refusal-vs-compliance pairing carries little signal there (see the helper docstring). `register_stereoset`
+  still cannot register: StereoSet rows have no prompt column, so it now raises a clear error and
+  `register_all_safety` reports it as failed. Contributed by @ShivenduShivu.
+- **Prompt templates are rendered in a Jinja sandbox.** `GenericTaskSpec` compiles `prompt_template` with
+  `SandboxedEnvironment` (autoescape stays off, output is unchanged for normal templates). A template the sandbox
+  or renderer rejects falls back to the raw prompt and now logs a warning naming the exception type.
+- **Torch floor raised to 2.10.0; `gpu-cu126` extra and install docs match it** (`torch==2.10.0+cu126`,
+  `torchvision==0.25.0+cu126`).
 - **EAP tokenization masks left-padded batches correctly**. `tokenize_plus` padded on `padding_side`
   (left by default for `NormalizedTaskSpec` pairs) but built the attention mask from
   `tokenizer.padding_side`, which is `right` for most HF tokenizers. In a left-padded batch with

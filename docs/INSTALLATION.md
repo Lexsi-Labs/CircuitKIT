@@ -82,7 +82,7 @@ Pinned CUDA 12.6 wheels:
 pip install -e .[gpu-cu126] --extra-index-url https://download.pytorch.org/whl/cu126
 ```
 
-Includes: `torch==2.6.0+cu126`, `torchvision==0.21.0+cu126`
+Includes: `torch==2.10.0+cu126`, `torchvision==0.25.0+cu126`
 
 Alternative CUDA versions available via PyTorch's wheel index:
 - CUDA 12.1: `cu121`
@@ -214,7 +214,7 @@ pip install -e . --no-cache-dir
 
 ```bash
 pip install -e .
-pip install torch==2.6.0+cu126 -f https://download.pytorch.org/whl/cu126
+pip install torch==2.10.0+cu126 -f https://download.pytorch.org/whl/cu126
 ```
 
 ### Issue: `pygraphviz` compilation fails

@@ -12,7 +12,6 @@ concurrency:
 
 permissions:
   contents: read
-  pull-requests: read
 
 env:
   PYPI_PROJECT_NAME: circuitkit
@@ -21,7 +20,10 @@ env:
 jobs:
   plan:
     name: Inspect release state
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    # Releases come only from Lexsi-Labs/CircuitKIT. A fork or copy of this repo
+    # inherits the workflow, and there the release job (which pushes the tag and
+    # publishes to PyPI) must not run. Skipping `plan` skips `release`.
+    if: github.repository == 'Lexsi-Labs/CircuitKIT' && (github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true)
     runs-on: ubuntu-latest
     outputs:
       action: ${{ steps.plan.outputs.action }}
@@ -33,14 +35,27 @@ jobs:
       release-exists: ${{ steps.plan.outputs.release-exists }}
       pypi-exists: ${{ steps.plan.outputs.pypi-exists }}
     steps:
+      - name: Require the default branch for manual runs
+        if: github.event_name == 'workflow_dispatch' && github.ref_name != github.event.repository.default_branch
+        env:
+          RUN_REF: ${{ github.ref_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          echo "::error::Run this workflow from the default branch ($DEFAULT_BRANCH), not '$RUN_REF'."
+          exit 1
+
       - name: Check out the trusted merged source
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          ref: ${{ github.event.pull_request.merge_commit_sha || github.ref }}
+          # Fixed ref, not an event value: this job runs on pull_request_target and
+          # workflow_dispatch, where PR and dispatch inputs are attacker-influenced.
+          # Merged PRs always land on main, and the plan below already handles main
+          # having moved on (it compares the tip with the latest release commit).
+          ref: main
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
 
@@ -202,12 +217,12 @@ jobs:
       RELEASE_TAG: ${{ needs.plan.outputs.version }}
     steps:
       - name: Check out exact release source
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ needs.plan.outputs.source-ref }}
           fetch-depth: 0
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
 
@@ -343,7 +358,7 @@ jobs:
           fi
 
       - name: Send release notes to Slack
-        uses: slackapi/slack-github-action@v1.24.0
+        uses: slackapi/slack-github-action@e28cf165c92ffef168d23c5c9000cffc8a25e117 # v1.24.0
         continue-on-error: true
         with:
           channel-id: "lexsi-labs-circuitkit-release" #${{ vars.SLACK_CHANNEL }}

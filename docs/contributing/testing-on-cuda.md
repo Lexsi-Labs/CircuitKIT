@@ -1,9 +1,9 @@
 # Testing on a CUDA machine
 
 Some of CircuitKIT's validation can't run on a CPU-only or Apple-Silicon box. The
-`gpu-cu126` extra pins `torch==2.6.0+cu126` / `torchvision==0.21.0+cu126`, and those
+`gpu-cu126` extra pins `torch==2.10.0+cu126` / `torchvision==0.25.0+cu126`, and those
 `+cu126` wheels only exist on PyTorch's CUDA index — not on PyPI — so a plain
-`uv`/`pip` resolve fails off a CUDA host with *"no version of torch==2.6.0+cu126"*.
+`uv`/`pip` resolve fails off a CUDA host with *"no version of torch==2.10.0+cu126"*.
 Real-model discovery, quantization, vLLM evaluation, and the GPU path of the
 corruption/pairing guards therefore need to be checked on an actual NVIDIA GPU.
 
@@ -25,7 +25,7 @@ then CircuitKIT with the extras you need.
 === "pip"
 
     ```bash
-    pip install torch==2.6.0+cu126 torchvision==0.21.0+cu126 \
+    pip install torch==2.10.0+cu126 torchvision==0.25.0+cu126 \
         --index-url https://download.pytorch.org/whl/cu126
     pip install -e ".[dev,benchmarks,quantization]"
     ```

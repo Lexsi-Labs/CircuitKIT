@@ -32,7 +32,7 @@ ready-made entry points for the common ones.
 from __future__ import annotations
 
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -43,15 +43,23 @@ def _register(
     hf_split: str,
     task_name: str,
     max_records: int = 200,
-    pairing_mode: str = "answer_contrastive",
+    pairing_mode: str = "harmful_vs_benign",
+    **adapter_kwargs: Any,
 ) -> None:
     """Lazy: load HF data, run SafetyPromptAdapter, register as task_name.
 
     Args:
         pairing_mode: Passed through to SafetyPromptAdapter.adapt().
-            "answer_contrastive" (default) -- same prompt, refusal vs
-            compliance token.  "harmful_vs_benign" -- different prompts
-            (Arditi et al. 2024 style).
+            "harmful_vs_benign" (default) -- each harmful prompt is paired
+            with a benign control prompt (Arditi et al. 2024 style), which
+            gives EAP discovery a contrastive signal.  "answer_contrastive"
+            -- same prompt, refusal vs compliance token; its corrupt prompt
+            equals the clean prompt, so discovery rejects it as degenerate
+            unless ``allow_degenerate_corruption`` is set.
+        **adapter_kwargs: Also passed to SafetyPromptAdapter.adapt(), e.g.
+            ``refusal_token`` / ``compliance_token`` (useful when a
+            tokenizer's first reply token is not " I" / " Sure") or
+            ``benign_controls``.
     """
     from circuitkit.tasks.registry import is_task_registered, register_task
 
@@ -70,7 +78,14 @@ def _register(
         source=hf_path,
         max_records=max_records,
         pairing_mode=pairing_mode,
+        **adapter_kwargs,
     )
+    if not len(ds):
+        raise RuntimeError(
+            f"SafetyPromptAdapter found no prompt column in {hf_path} "
+            "(it looks for prompt/goal/instruction/behavior/question); "
+            "this dataset is not a harm-prompt dataset and cannot be registered with it."
+        )
     if not ds.fully_paired:
         raise RuntimeError(
             f"SafetyPromptAdapter on {hf_path} produced "
@@ -83,34 +98,45 @@ def _register(
     )
 
 
-def register_advbench(max_records: int = 200) -> None:
+def register_advbench(max_records: int = 200, **kwargs: Any) -> None:
     """AdvBench (Zou et al. 2023, walledai/AdvBench)."""
-    _register("walledai/AdvBench", None, "train", "advbench", max_records)
+    _register("walledai/AdvBench", None, "train", "advbench", max_records, **kwargs)
 
 
-def register_harmbench(max_records: int = 200) -> None:
+def register_harmbench(max_records: int = 200, **kwargs: Any) -> None:
     """HarmBench (Mazeika et al. 2024, walledai/HarmBench)."""
-    _register("walledai/HarmBench", "standard", "train", "harmbench", max_records)
+    _register("walledai/HarmBench", "standard", "train", "harmbench", max_records, **kwargs)
 
 
-def register_sorrybench(max_records: int = 200) -> None:
+def register_sorrybench(max_records: int = 200, **kwargs: Any) -> None:
     """Sorry-Bench (sorry-bench/sorry-bench-202410)."""
-    _register("sorry-bench/sorry-bench-202410", None, "train", "sorrybench", max_records)
+    _register("sorry-bench/sorry-bench-202410", None, "train", "sorrybench", max_records, **kwargs)
 
 
-def register_jailbreakbench(max_records: int = 200) -> None:
+def register_jailbreakbench(max_records: int = 200, **kwargs: Any) -> None:
     """JailbreakBench-Behaviors (JailbreakBench/JBB-Behaviors)."""
-    _register("JailbreakBench/JBB-Behaviors", "behaviors", "harmful", "jailbreakbench", max_records)
+    _register("JailbreakBench/JBB-Behaviors", "behaviors", "harmful", "jailbreakbench", max_records, **kwargs)
 
 
-def register_truthfulqa(max_records: int = 200) -> None:
-    """TruthfulQA (truthful_qa/generation)."""
-    _register("truthful_qa", "generation", "validation", "truthfulqa", max_records)
+def register_truthfulqa(max_records: int = 200, **kwargs: Any) -> None:
+    """TruthfulQA (truthful_qa/generation).
+
+    TruthfulQA is not a harm dataset: the model has no reason to refuse these
+    factual questions, so the default refusal-vs-compliance pairing carries
+    little signal. Registered for convenience only; supply your own pairing
+    (``**kwargs``) or a custom dataset if you need a truthfulness circuit.
+    """
+    _register("truthful_qa", "generation", "validation", "truthfulqa", max_records, **kwargs)
 
 
-def register_stereoset(max_records: int = 200) -> None:
-    """StereoSet (Anthropic style stereotype benchmark)."""
-    _register("McGill-NLP/stereoset", "intersentence", "validation", "stereoset", max_records)
+def register_stereoset(max_records: int = 200, **kwargs: Any) -> None:
+    """StereoSet (McGill-NLP/stereoset).
+
+    Not supported: StereoSet rows carry ``context`` and ``sentences`` but no
+    prompt column, so ``SafetyPromptAdapter`` yields no records and this call
+    raises ``RuntimeError``. ``register_all_safety`` reports it as failed.
+    """
+    _register("McGill-NLP/stereoset", "intersentence", "validation", "stereoset", max_records, **kwargs)
 
 
 _ALL = [
@@ -123,7 +149,7 @@ _ALL = [
 ]
 
 
-def register_all_safety(max_records: int = 200) -> dict:
+def register_all_safety(max_records: int = 200, **kwargs: Any) -> dict:
     """Register every safety dataset; returns {task_name: ok_bool}.
     Errors are logged but don't propagate so partial failures (e.g.
     HF gating) don't take down the others."""
@@ -131,7 +157,7 @@ def register_all_safety(max_records: int = 200) -> dict:
     for fn in _ALL:
         name = fn.__name__.removeprefix("register_")
         try:
-            fn(max_records=max_records)
+            fn(max_records=max_records, **kwargs)
             results[name] = True
         except Exception as exc:  # noqa: BLE001
             logger.warning(f"Failed to register {name}: {exc}")
