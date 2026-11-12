@@ -59,7 +59,7 @@ circuitkit discover-smart --model gpt2 --algorithm eap-ig --task ioi --check-mem
 Install CPU-only first, then swap in the GPU torch wheel:
 ```bash
 pip install -e .
-pip install torch==2.6.0+cu126 -f https://download.pytorch.org/whl/cu126
+pip install torch==2.10.0+cu126 -f https://download.pytorch.org/whl/cu126
 ```
 
 ### Model too large for GPU

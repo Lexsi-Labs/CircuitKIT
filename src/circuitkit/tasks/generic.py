@@ -598,9 +598,9 @@ class GenericTaskSpec:
         if self.template:
             try:
                 prompt_text = self.template.render(**example)
-            except Exception:
-                # Fall back to raw prompt if template fails
-                pass
+            except Exception as exc:
+                # Fall back to raw prompt if template fails (incl. sandbox rejections)
+                logger.warning("Prompt template failed (%s); using the raw prompt", type(exc).__name__)
 
         result["prompt"] = prompt_text
 

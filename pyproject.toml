@@ -138,6 +138,9 @@ pruning = [
     # already pulled in by the base install and the `benchmarks` extra.
 ]
 gpu-cu126 = [
+    # Exact pins on purpose: a local version label (+cu126) is only valid with ==,
+    # so a range cannot select the CUDA build. Bump both together (torchvision 0.25
+    # pairs with torch 2.10) when raising the torch floor.
     "torch==2.10.0+cu126",
     "torchvision==0.25.0+cu126",
 ]

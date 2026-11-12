@@ -80,6 +80,12 @@ def _register(
         pairing_mode=pairing_mode,
         **adapter_kwargs,
     )
+    if not len(ds):
+        raise RuntimeError(
+            f"SafetyPromptAdapter found no prompt column in {hf_path} "
+            "(it looks for prompt/goal/instruction/behavior/question); "
+            "this dataset is not a harm-prompt dataset and cannot be registered with it."
+        )
     if not ds.fully_paired:
         raise RuntimeError(
             f"SafetyPromptAdapter on {hf_path} produced "
@@ -113,12 +119,23 @@ def register_jailbreakbench(max_records: int = 200, **kwargs: Any) -> None:
 
 
 def register_truthfulqa(max_records: int = 200, **kwargs: Any) -> None:
-    """TruthfulQA (truthful_qa/generation)."""
+    """TruthfulQA (truthful_qa/generation).
+
+    TruthfulQA is not a harm dataset: the model has no reason to refuse these
+    factual questions, so the default refusal-vs-compliance pairing carries
+    little signal. Registered for convenience only; supply your own pairing
+    (``**kwargs``) or a custom dataset if you need a truthfulness circuit.
+    """
     _register("truthful_qa", "generation", "validation", "truthfulqa", max_records, **kwargs)
 
 
 def register_stereoset(max_records: int = 200, **kwargs: Any) -> None:
-    """StereoSet (Anthropic style stereotype benchmark)."""
+    """StereoSet (McGill-NLP/stereoset).
+
+    Not supported: StereoSet rows carry ``context`` and ``sentences`` but no
+    prompt column, so ``SafetyPromptAdapter`` yields no records and this call
+    raises ``RuntimeError``. ``register_all_safety`` reports it as failed.
+    """
     _register("McGill-NLP/stereoset", "intersentence", "validation", "stereoset", max_records, **kwargs)
 
 

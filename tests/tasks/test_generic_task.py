@@ -9,6 +9,7 @@ Tests basic functionality:
 """
 
 import json
+import logging
 import tempfile
 from pathlib import Path
 
@@ -704,10 +705,12 @@ class TestCorruptionEffectivenessGuard:
         GenericTaskSpec._check_corruption_effectiveness(0, 4, {}, context="x")
 
 
-def test_prompt_template_renders_plain_text_in_sandbox(toy_csv_file):
+def test_prompt_template_renders_plain_text_in_sandbox(toy_csv_file, caplog, monkeypatch):
     """Prompt templates render unescaped text and cannot reach object internals."""
     from circuitkit.tasks import GenericTaskSpec
 
+    # The package logger does not propagate to the root logger caplog listens on.
+    monkeypatch.setattr(logging.getLogger("circuitkit"), "propagate", True)
     task = GenericTaskSpec.from_csv(
         path=str(toy_csv_file),
         schema={"prompt": "question", "answer": "answer"},
@@ -724,3 +727,4 @@ def test_prompt_template_renders_plain_text_in_sandbox(toy_csv_file):
     )
     # A sandbox violation falls back to the raw prompt instead of leaking internals.
     assert unsafe._extract_fields({"question": "raw"})["prompt"] == "raw"
+    assert "SecurityError" in caplog.text
