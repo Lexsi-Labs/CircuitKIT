@@ -68,3 +68,45 @@ def test_mlp_node_score_uses_gradient_at_mlp_out(gated):
         expected = ((corrupt_cache[n] - clean_acts[n].detach()) * grads[n]).sum()
         got = scores[graph.forward_index(graph.nodes[f"m{layer}"])]
         torch.testing.assert_close(got, expected, rtol=1e-4, atol=1e-6)
+
+
+@pytest.mark.parametrize("gated", [False, True])
+def test_mlp_node_score_is_the_derivative_of_patching_that_mlp(gated):
+    """The node score is the first-order effect of patching the MLP's output.
+
+    Moving hook_mlp_out a small step alpha from clean towards corrupt changes the
+    metric by alpha * score, up to O(alpha^2). This is what the faithfulness
+    pillars intervene on (a node's output), so the score and the intervention
+    refer to the same activation. With the gradient read at hook_mlp_in the
+    match fails.
+    """
+    model = _tiny_model(gated)
+    graph = Graph.from_model(model, node_scores=True)
+    clean = torch.tensor([[1, 2, 3, 4, 5]])
+    corrupt = torch.tensor([[1, 7, 8, 9, 5]])
+
+    def metric(logits):
+        return logits[0, -1, 3] - logits[0, -1, 4]
+
+    scores = torch.zeros(graph.n_forward)
+    (fwd_corrupt, fwd_clean, bwd), _ = make_hooks_and_matrices(
+        model, graph, 1, clean.shape[1], scores
+    )
+    with torch.no_grad(), model.hooks(fwd_corrupt):
+        model(corrupt)
+    with model.hooks(fwd_hooks=fwd_clean, bwd_hooks=bwd):
+        metric(model(clean)).backward()
+
+    _, corrupt_cache = model.run_with_cache(corrupt)
+    alpha = 1e-3
+    with torch.no_grad():
+        base = metric(model(clean))
+        for layer in range(model.cfg.n_layers):
+            name = f"blocks.{layer}.hook_mlp_out"
+
+            def step(act, hook, name=name):
+                return act + alpha * (corrupt_cache[name] - act)
+
+            moved = metric(model.run_with_hooks(clean, fwd_hooks=[(name, step)]))
+            score = scores[graph.forward_index(graph.nodes[f"m{layer}"])]
+            torch.testing.assert_close((moved - base) / alpha, score, rtol=2e-2, atol=1e-3)
