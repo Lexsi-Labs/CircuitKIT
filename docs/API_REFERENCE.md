@@ -265,7 +265,8 @@ template. `"auto"` wraps iff the model is a chat model (its tokenizer ships a
 `chat_template`); `"on"` always wraps; `"off"` always uses raw text. `"auto"` is
 the default for downstream-behavior tasks (`boolq`, `glue`, `mmlu`,
 `truthfulqa`, `ifeval`, `wmdp`, `gsm8k`, `winogrande_mc`) and for custom
-`GenericTaskSpec` / `NormalizedTaskSpec` tasks; `"off"` is the default for
+`GenericTaskSpec` tasks (`NormalizedTaskSpec` uses its prompts as given; pass
+`templated=True` when they already carry the chat template); `"off"` is the default for
 diagnostic minimal-pair tasks (the IOI family, `sva`, `greater_than`,
 `gender_bias`, `capital_country`, `hypernymy`, `double_io`) and for the cloze
 `winogrande` task. The mode is overridable per run via the

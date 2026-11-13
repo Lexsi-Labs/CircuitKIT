@@ -135,6 +135,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   copy) prune at most half of each layer's heads, so above `target_sparsity=0.5` fewer heads were pruned than
   requested with no signal. The cap is unchanged; it is documented in the docstring and a warning gives the pruned and
   requested counts when it binds.
+- **`NormalizedTaskSpec` no longer adds a second BOS to chat-templated prompts or reuses stale CSVs** (#45).
+  `NormalizedTaskSpec(ds, templated=True)` marks prompts that already carry the model's chat template; the EAP,
+  CD-T and IBCircuit paths then tokenize without prepending BOS (the EAP backend already supported this through the
+  dataloader's `templated` flag, but the spec never set it). The default, `templated=False`, tokenizes as before. The
+  cached EAP and CD-T CSVs were named `{name}_{n_records}_...`, so data edited in place, or another model's token ids,
+  were silently read from the old file; the name now includes a hash of the CSV rows (prompts and answer token ids).
+  The docs said `NormalizedTaskSpec` applies the chat template in `"auto"` mode; it never did, and the docs now say
+  it uses its prompts as given.
 - **Safety dataset helpers no longer build degenerate pairs by default.** `register_advbench`, `register_harmbench`,
   `register_sorrybench`, `register_jailbreakbench`, `register_truthfulqa` and
   `register_all_safety` paired each prompt with itself (`answer_contrastive`), so `discover()` rejected them with

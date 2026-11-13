@@ -173,7 +173,7 @@ circuit = discover_circuit({
 })
 ```
 
-`NormalizedTaskSpec` takes the dataset (positional), an optional `name` (defaults to `f"normalized:{ds.name}"`), and an optional `cache_dir` (defaults to `"./cache/normalized"`). That's it — the prompts come from the wrapped records' `clean_prompt` / `clean_answer` / `corrupt_prompt` / `corrupt_answer` fields.
+`NormalizedTaskSpec` takes the dataset (positional), an optional `name` (defaults to `f"normalized:{ds.name}"`), an optional `cache_dir` (defaults to `"./cache/normalized"`; CSV file names include a hash of their content, so edited data is never read from a stale file), and `templated` (default `False`). The prompts come from the wrapped records' `clean_prompt` / `clean_answer` / `corrupt_prompt` / `corrupt_answer` fields and are used as given: the spec does not apply a chat template. If your prompts already carry the model's chat template, pass `templated=True` so they are tokenized without a second BOS token.
 
 ## Next steps
 
