@@ -42,6 +42,17 @@ def test_default_pairs_are_contrastive(captured):
     assert all(r.corrupt_prompt != r.clean_prompt for r in records)
 
 
+def test_adapter_default_and_auto_detect_pairs_are_contrastive():
+    # data type "auto" runs the adapter with its defaults; identical pairs made
+    # NormalizedTaskSpec reject every record for EAP.
+    from circuitkit.data.adapters.safety_prompt import SafetyPromptAdapter
+    from circuitkit.data.auto_detect import auto_normalize
+
+    for ds in (SafetyPromptAdapter().adapt(ROWS), auto_normalize(ROWS, apply_default_strategy=True)):
+        assert len(ds) == len(ROWS)
+        assert all(r.corrupt_prompt != r.clean_prompt for r in ds.records)
+
+
 def test_options_are_passed_through(captured):
     safety_datasets.register_advbench(
         max_records=4, pairing_mode="answer_contrastive", refusal_token="I", compliance_token="Sure"

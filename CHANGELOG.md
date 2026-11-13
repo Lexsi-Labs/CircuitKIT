@@ -143,6 +143,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   were silently read from the old file; the name now includes a hash of the CSV rows (prompts and answer token ids).
   The docs said `NormalizedTaskSpec` applies the chat template in `"auto"` mode; it never did, and the docs now say
   it uses its prompts as given.
+- **`SafetyPromptAdapter` defaults to pairs EAP can use** (#46). The adapter's default `pairing_mode` was
+  `"answer_contrastive"`, which gives identical clean and corrupt prompts, so `NormalizedTaskSpec` rejected every
+  record for EAP. That default is what `data: {type: auto}` uses on a harm-prompt file (the adapter fills the corrupt
+  side, so the `benign_rewrite` default strategy never runs). The default is now `"harmful_vs_benign"`, the same as
+  the `register_*` safety helpers. The clean side is unchanged, so clean-only algorithms (IBCircuit, CD-T) see the
+  same data; pass `pairing_mode="answer_contrastive"` to get the old pairs.
 - **Safety dataset helpers no longer build degenerate pairs by default.** `register_advbench`, `register_harmbench`,
   `register_sorrybench`, `register_jailbreakbench`, `register_truthfulqa` and
   `register_all_safety` paired each prompt with itself (`answer_contrastive`), so `discover()` rejected them with

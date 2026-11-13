@@ -139,18 +139,19 @@ class SafetyPromptAdapter(DataAdapter):
     # ------------------------------------------------------------------ #
     # Pairing modes                                                        #
     # ------------------------------------------------------------------ #
-    # "answer_contrastive" (default, recommended):                         #
-    #   clean   = (harmful_prompt, refusal_token)                          #
-    #   corrupt = (harmful_prompt, compliance_token)                       #
-    #   Same prompt, different answer token. Isolates the refusal signal   #
-    #   without confounding prompt-level differences. Correct for circuit  #
-    #   localisation (Conmy et al. 2023, circuit faithfulness style).      #
-    #                                                                       #
-    # "harmful_vs_benign" (Arditi et al. 2024 style):                      #
+    # "harmful_vs_benign" (default, Arditi et al. 2024 style):             #
     #   clean   = (harmful_prompt, refusal_token)                          #
     #   corrupt = (benign_control,  compliance_token)                      #
     #   Different prompts AND different answer tokens. Captures broader     #
     #   refusal-vs-compliance activation difference.                       #
+    #                                                                       #
+    # "answer_contrastive":                                                #
+    #   clean   = (harmful_prompt, refusal_token)                          #
+    #   corrupt = (harmful_prompt, compliance_token)                       #
+    #   Same prompt, different answer token. The clean and corrupt         #
+    #   prompts are identical, so patching-based EAP sees no activation    #
+    #   difference and NormalizedTaskSpec rejects the pairs unless         #
+    #   allow_degenerate_corruption is set.                                #
     #                                                                       #
     # "benign_vs_harmful" (inverted):                                      #
     #   clean   = (benign_control,  compliance_token)                      #
@@ -169,7 +170,7 @@ class SafetyPromptAdapter(DataAdapter):
         refusal_token: str = _DEFAULT_REFUSAL,
         compliance_token: str = _DEFAULT_COMPLIANCE,
         benign_controls: Optional[List[str]] = None,
-        pairing_mode: str = "answer_contrastive",
+        pairing_mode: str = "harmful_vs_benign",
         **_unused: Any,
     ) -> NormalizedDataset:
         """Adapt a harm-prompt dataset into a NormalizedDataset.
@@ -183,8 +184,10 @@ class SafetyPromptAdapter(DataAdapter):
             compliance_token: Answer token the model gives when complying.
             benign_controls: List of benign prompts for harmful_vs_benign /
                 benign_vs_harmful modes.  Ignored for answer_contrastive.
-            pairing_mode: One of "answer_contrastive", "harmful_vs_benign",
-                "benign_vs_harmful".  Default: "answer_contrastive".
+            pairing_mode: One of "harmful_vs_benign" (default),
+                "answer_contrastive", "benign_vs_harmful". "answer_contrastive"
+                gives identical clean and corrupt prompts, which patching-based
+                EAP cannot use.
         """
         if pairing_mode not in self.PAIRING_MODES:
             raise ValueError(
