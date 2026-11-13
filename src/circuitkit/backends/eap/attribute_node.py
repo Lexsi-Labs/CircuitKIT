@@ -167,7 +167,11 @@ def make_hooks_and_matrices(
         fwd_index = graph.forward_index(node)
         fwd_hooks_corrupted.append((node.out_hook, partial(activation_hook, fwd_index)))
         fwd_hooks_clean.append((node.out_hook, partial(activation_hook, fwd_index, add=False)))
-        bwd_hooks.append((node.in_hook, partial(gradient_hook, fwd_index, fwd_index)))
+        # Node score = Δa · ∂L/∂a at the same activation a, so the gradient is
+        # read at the MLP's output hook, like the input and attention nodes.
+        # (The edge scorer in eap_utils reads gradients at a node's *input*
+        # hook on purpose: there the node is the edge's destination.)
+        bwd_hooks.append((node.out_hook, partial(gradient_hook, fwd_index, fwd_index)))
 
     return (fwd_hooks_corrupted, fwd_hooks_clean, bwd_hooks), activation_difference
 
@@ -417,7 +421,7 @@ def get_scores_peap(
 
         # Per-node, per-position grad capture. For attention nodes we hook
         # `attn.hook_result` (shape [batch, pos, n_heads, d_model]) and slice
-        # the relevant head; for MLPs we hook `hook_mlp_in` (shape
+        # the relevant head; for MLPs we hook `hook_mlp_out` (shape
         # [batch, pos, d_model]); for the input node we hook the embedding
         # output. We accumulate (act_diff[:, :, idx, :d_model] * grad).sum(d_model)
         # to get the per-position score per node.

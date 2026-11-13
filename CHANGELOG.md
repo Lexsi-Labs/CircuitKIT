@@ -117,6 +117,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Node-level EAP scores MLPs with the gradient at their own output** (#43). `make_hooks_and_matrices` in
+  `backends/eap/attribute_node.py` multiplied the MLP's activation difference at `hook_mlp_out` by the gradient at
+  `hook_mlp_in`, a different tensor. The node score is now (corrupt − clean) · ∂L/∂a at `hook_mlp_out`, as for
+  attention heads and the input node, and as in the EAP-IG reference implementation. MLP scores change at node and
+  neuron level for `eap`, `eap-ig`, `eap-ig-activations`, `eap-clean-corrupted`, `relp`, `eap-gp`, `atp-gd` and
+  `peap` (neuron level; its node-level summary already used `hook_mlp_out`), so MLP rankings and the circuits built
+  from them differ from earlier runs. Attention-head and input scores, `mlp_hook="post_act"` runs and edge-level
+  scores (which read the destination's input hook on purpose) are unchanged.
 - **Safety dataset helpers no longer build degenerate pairs by default.** `register_advbench`, `register_harmbench`,
   `register_sorrybench`, `register_jailbreakbench`, `register_truthfulqa` and
   `register_all_safety` paired each prompt with itself (`answer_contrastive`), so `discover()` rejected them with
