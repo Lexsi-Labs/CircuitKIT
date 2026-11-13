@@ -33,9 +33,10 @@ stability map is defined in `circuitkit.backends`.
 
 ### Supported Tasks
 
-16 built-in tasks are registered on first use: `ioi`, `sva`, `gender_bias`,
+17 built-in tasks are registered on first use: `ioi`, `sva`, `gender_bias`,
 `capital_country`, `hypernymy`, `greater_than`, `double_io`, `boolq`, `glue`, `mmlu`,
-`winogrande`, `winogrande_mc`, `truthfulqa`, `ifeval`, `wmdp`, `gsm8k`.
+`winogrande`, `winogrande_mc`, `truthfulqa`, `ifeval`, `wmdp`, `gsm8k`,
+`multilingual_refusal`.
 
 | Task | Data | Notes |
 |------|------|-------|
@@ -46,6 +47,7 @@ stability map is defined in `circuitkit.backends`.
 | WinoGrande | Real-world | Cloze task; suffix log-likelihood metric (`metric="suffix_loglik"`) — scores the multi-token text after the blank, not a single answer token |
 | WinoGrande-MC | Real-world | Multiple-choice reformulation of WinoGrande; single-token logit-diff metric on the answer-letter tokens (option-swap corruption). Chat-templatable, unlike the cloze `winogrande` |
 | GSM8K | Real-world | Open-ended generation discovery; differentiable NLL on the answer span |
+| Multilingual refusal | Bundled English pairs, or your CSV per language | Harmful/harmless minimal pairs for chat models; refuse-minus-comply logit-diff on the first reply token; `chat_template_mode="on"` |
 | Custom Tasks | User-provided | Generic task adapter + `auto_task_from_hf` |
 
 > **Discovery metrics are not uniform across tasks.** Most tasks score a single

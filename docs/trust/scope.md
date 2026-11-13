@@ -54,7 +54,7 @@ Start with `eap-ig` for any new experiment. It is the default, the most validate
 
 ### Tasks
 
-- **16 built-in tasks** are registered and tested. The loader-supported metrics (`logit_diff`, `kl`, `accuracy`) cover classification, cloze, and generative evaluations.
+- **17 built-in tasks** are registered and tested. The loader-supported metrics (`logit_diff`, `kl`, `accuracy`) cover classification, cloze, and generative evaluations.
 - **Custom tasks** via the YAML adapter support CSV, JSONL, and HuggingFace datasets. The auto-schema detection is heuristic — validate your schema with `circuitkit validate-config`.
 
 ### Interventions

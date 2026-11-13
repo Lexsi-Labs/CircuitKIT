@@ -317,7 +317,13 @@ class MultilingualRefusalTaskSpec:
                 f"multilingual_refusal {language}: {len(rows)} of {n_samples} requested pairs "
                 f"({dropped} dropped for unequal token lengths)."
             )
-        logger.info(f"Kept {len(rows)} {language} refusal pairs; dropped {dropped}.")
+        # Non-Latin openers often score a fragment (one letter, or part of one), so say which.
+        scored = [model.tokenizer.decode([i]) for i in (refuse_id, comply_id)]
+        logger.info(
+            f"Kept {len(rows)} {language} refusal pairs; dropped {dropped}. Scoring refuse "
+            f"{scored[0]!r} (from {openers[0]!r}) against comply {scored[1]!r} "
+            f"(from {openers[1]!r})."
+        )
         df = pd.DataFrame(rows)
         df.to_csv(str(output_path), index=False)
         return df

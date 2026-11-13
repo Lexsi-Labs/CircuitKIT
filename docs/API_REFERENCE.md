@@ -232,9 +232,10 @@ Measures cross-seed circuit reproducibility. Returns a dict with `r1_seed_consis
 
 **Module**: `circuitkit.tasks`
 
-16 built-in tasks are registered on first use: `ioi`, `sva`, `gender_bias`,
+17 built-in tasks are registered on first use: `ioi`, `sva`, `gender_bias`,
 `capital_country`, `hypernymy`, `greater_than`, `double_io`, `boolq`, `glue`, `mmlu`,
-`winogrande`, `winogrande_mc`, `truthfulqa`, `ifeval`, `wmdp`, `gsm8k`.
+`winogrande`, `winogrande_mc`, `truthfulqa`, `ifeval`, `wmdp`, `gsm8k`,
+`multilingual_refusal`.
 
 > **Per-task discovery metrics differ.** Most classification / MCQ tasks
 > (`ioi`, `boolq`, `sva`, `winogrande_mc`, ...) score a single answer token at

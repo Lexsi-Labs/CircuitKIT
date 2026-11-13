@@ -112,9 +112,10 @@ A **task** defines:
 
 ### Built-in Tasks
 
-CircuitKIT registers **16 built-in tasks** (`ioi`, `sva`, `gender_bias`,
+CircuitKIT registers **17 built-in tasks** (`ioi`, `sva`, `gender_bias`,
 `capital_country`, `hypernymy`, `greater_than`, `double_io`, `boolq`, `glue`,
-`mmlu`, `winogrande`, `winogrande_mc`, `truthfulqa`, `ifeval`, `wmdp`, `gsm8k`).
+`mmlu`, `winogrande`, `winogrande_mc`, `truthfulqa`, `ifeval`, `wmdp`, `gsm8k`,
+`multilingual_refusal`).
 A few examples:
 - **IOI (Indirect Object Identification)**: Identify the indirect object in "A and B went to C's house..."
 - **SVA (Subject-Verb Agreement)**: Predict correct verb form in number agreement

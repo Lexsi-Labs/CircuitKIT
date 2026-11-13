@@ -68,6 +68,6 @@ CircuitKIT has two entry points for custom data, and they use different keys. Do
 
 ## Where to go next
 
-- [Built-in tasks](tasks.md) — the 16 tasks that ship ready to run
+- [Built-in tasks](tasks.md) — the 17 tasks that ship ready to run
 - [Bring your own data](custom-data.md) — CSV, JSONL, and HuggingFace via YAML
 - [Corruption strategies](data-corruption.md) — generating the corrupt half of a pair

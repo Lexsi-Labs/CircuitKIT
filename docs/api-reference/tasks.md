@@ -6,7 +6,7 @@
 
 ## Built-in Tasks
 
-16 built-in tasks are registered on first use:
+17 built-in tasks are registered on first use:
 
 | Task | Type | Metric | Default template |
 |------|------|--------|-----------------|
@@ -26,6 +26,7 @@
 | `ifeval` | Instruction | — (collateral-eval only, no discovery) | `"auto"` |
 | `wmdp` | MCQ | logit-diff | `"auto"` |
 | `gsm8k` | Generation | NLL on answer span | `"auto"` |
+| `multilingual_refusal` | Chat behavior | logit-diff | `"on"` |
 
 ---
 
@@ -176,7 +177,7 @@ register_task(spec)
 
 ## Next Steps
 
-- [Built-in tasks](../user-guide/tasks.md) — all 16 tasks with metric details
+- [Built-in tasks](../user-guide/tasks.md) — all 17 tasks with metric details
 - [Bring your own data](../user-guide/custom-data.md) — full custom data guide
 - [Data model](../user-guide/data.md) — what discovery needs
 - [Chat Templates](../advanced/chat-templates.md) — `chat_template_mode` reference
