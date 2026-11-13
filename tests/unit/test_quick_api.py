@@ -634,6 +634,32 @@ def test_load_model_sets_discovery_flags():
     assert model.cfg.ungroup_grouped_query_attention is True
 
 
+@pytest.mark.parametrize(
+    "device, cuda, mps, expected",
+    [
+        ("auto", True, True, "cuda"),
+        ("auto", False, True, "mps"),
+        ("auto", False, False, "cpu"),
+        # The default keeps choosing CUDA or CPU only.
+        (None, False, True, "cpu"),
+        (None, True, True, "cuda"),
+        ("cpu", True, True, "cpu"),
+    ],
+)
+def test_load_model_device_selection(device, cuda, mps, expected):
+    """device="auto" uses get_device (CUDA, then MPS, then CPU). Mocked: no model
+    is loaded and nothing is placed on a device."""
+    import torch
+
+    with (
+        patch.object(torch.cuda, "is_available", return_value=cuda),
+        patch.object(torch.backends.mps, "is_available", return_value=mps),
+        patch.object(quick, "_from_pretrained", return_value=MagicMock()) as load,
+    ):
+        quick.load_model("gpt2", dtype="float32", device=device)
+    assert load.call_args.kwargs["device"] == expected
+
+
 def _save_tiny_tokenizer(path, vocab_size):
     from tokenizers import Tokenizer
     from tokenizers.models import WordLevel

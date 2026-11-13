@@ -153,7 +153,7 @@ If you still hit OOM with all optimizations:
 
 1. **Reduce `num_examples` to 32** — enough for a reasonable circuit estimate
 2. **Try `ig_steps=1`** — equivalent to vanilla `eap`; slightly less accurate but same memory as non-IG methods
-3. **Use CPU** — very slow but no VRAM constraint. There is no `"device"` model-config key — device selection is automatic via `get_device()` (CUDA > MPS > CPU). To force CPU, make CUDA (and MPS) unavailable to the process (e.g. `CUDA_VISIBLE_DEVICES=""`) rather than setting a config key.
+3. **Use CPU** — very slow but no VRAM constraint. Set `model: {device: cpu}` in the config (without it, `get_device()` picks CUDA > MPS > CPU), or `ck.load_model(..., device="cpu")` for the flat API.
 4. **Consider a smaller model** — GPT-2 or Pythia-70M for algorithm prototyping
 
 ---

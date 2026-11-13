@@ -26,7 +26,7 @@ Load a TransformerLens model with the hook flags circuit discovery needs already
 |-----------|---------|-------------|
 | `name` | — | HF / TL model id, e.g. `"gpt2"`, `"meta-llama/Llama-3.2-1B-Instruct"` |
 | `dtype` | `"bfloat16"` | Torch dtype string |
-| `device` | auto | `"cuda"` if available, else `"cpu"` |
+| `device` | `None` | `None`: `"cuda"` if available, else `"cpu"`. `"auto"`: `"cuda"`, then `"mps"`, then `"cpu"` |
 | `algorithm` | `None` | If given, only the flags that algorithm needs are set |
 
 ```python

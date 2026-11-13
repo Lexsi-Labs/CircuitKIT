@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`load_model(..., device="auto")` can pick MPS** (#47). `"auto"` calls `circuitkit.utils.device.get_device`, so it
+  chooses CUDA, then MPS, then CPU, as `discover_circuit` already does for a config without `model.device`. The
+  default, `device=None`, still chooses CUDA or CPU.
 - **Signed node scores, opt-in** (#47). Node scores are absolute values, so whether a node pushes towards the clean
   or the corrupt answer was lost. `signed: true` in the discovery block (`ck.discover(..., signed=True)`) keeps each
   score with its sign in `CircuitScores.signed_node_scores`, the `signed_node_scores` key of both side-cars and

@@ -291,7 +291,9 @@ def load_model(
         dtype: Torch dtype string — ``"bfloat16"`` (default), ``"float32"``,
             ``"float16"``, ...
         device: Target device. ``None`` (default) auto-selects ``"cuda"`` when
-            available, else ``"cpu"``.
+            available, else ``"cpu"``. ``"auto"`` picks ``"cuda"``, then
+            ``"mps"``, then ``"cpu"``, as the dict-config API does
+            (:func:`circuitkit.utils.device.get_device`).
         algorithm: If given, only the flags that algorithm needs are set. When
             omitted, the safe superset (all four flags) is enabled so the model
             works with any algorithm.
@@ -333,6 +335,10 @@ def load_model(
 
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
+    elif device == "auto":
+        from .utils.device import get_device
+
+        device = get_device("auto")
 
     try:
         torch_dtype = getattr(torch, dtype)
