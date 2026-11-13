@@ -61,6 +61,26 @@ discover_circuit({
 
 **Savings:** Linear. `batch_size=1` is ~50-60% less peak memory than `batch_size=4`. Slower (more batches).
 
+### 4. Skip TransformerLens weight copies (opt-in, `CIRCUITKIT_TL_MEMORY_PATCH=1`)
+
+CircuitKIT ships a TransformerLens patch that removes two large temporaries from every forward pass: attention
+output is computed with one `einsum` over `W_O` instead of broadcasting a `[batch, pos, head, d_head, d_model]`
+tensor, and gated MLPs (Llama, Qwen, Gemma, ...) and the unembedding use transposed weight views instead of a fresh
+`.T.contiguous()` copy of each matrix. Set the variable before CircuitKIT is imported:
+
+```bash
+CIRCUITKIT_TL_MEMORY_PATCH=1 python run_discovery.py
+```
+
+- **Off by default.** Without the contiguous copies, bf16 matmuls accumulate in a different order, so logits differ
+  from Hugging Face's in the last bits and scores can differ slightly between runs with and without the patch.
+  Keep it on or off for every run you compare.
+- **Import order.** The patch is applied when `circuitkit` is imported. If `transformer_lens` was imported first,
+  CircuitKIT raises an `ImportError`; import `circuitkit` first (or restart the kernel).
+- **Savings** grow with model width: the removed temporaries scale with `d_model × d_mlp` per layer and with
+  `batch × pos × n_heads × d_head × d_model` in attention. They were the out-of-memory sites for Gemma-4 31B on an
+  80 GB card. See `src/circuitkit/_tl_patches/README.md` for the patch series.
+
 ---
 
 ## Combined Strategy for Large Models
@@ -100,7 +120,7 @@ discover_circuit({
 | + ig_steps 3 (now the default; was 5) | ~75–80% |
 | **All combined** | **~80%** |
 
-There are no `memory_efficient` or `use_half_precision_activations` config keys — neither is read anywhere in the discovery backend, so setting them silently does nothing. The levers above (model precision, `batch_size`, `ig_steps`, `n_examples`) are the only ones that actually affect memory.
+There are no `memory_efficient` or `use_half_precision_activations` config keys — neither is read anywhere in the discovery backend, so setting them silently does nothing. The levers above (model precision, `batch_size`, `ig_steps`, `n_examples`, and the opt-in `CIRCUITKIT_TL_MEMORY_PATCH=1`) are the only ones that actually affect memory.
 
 ---
 

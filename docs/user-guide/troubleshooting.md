@@ -54,6 +54,10 @@ Or enable memory-efficient discovery:
 circuitkit discover-smart --model gpt2 --algorithm eap-ig --task ioi --check-memory
 ```
 
+For wide gated-MLP models, `CIRCUITKIT_TL_MEMORY_PATCH=1` (set before importing CircuitKIT) drops
+TransformerLens's per-forward weight copies. It is off by default because it changes bf16 accumulation
+order; see [Memory Optimization](../advanced/memory-optimization.md).
+
 ### CUDA out of memory during install
 
 Install CPU-only first, then swap in the GPU torch wheel:

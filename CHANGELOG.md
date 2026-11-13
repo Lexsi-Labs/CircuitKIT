@@ -171,6 +171,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   side, so the `benign_rewrite` default strategy never runs). The default is now `"harmful_vs_benign"`, the same as
   the `register_*` safety helpers. The clean side is unchanged, so clean-only algorithms (IBCircuit, CD-T) see the
   same data; pass `pairing_mode="answer_contrastive"` to get the old pairs.
+- **The TransformerLens memory patch is documented for users** (#47). `CIRCUITKIT_TL_MEMORY_PATCH=1` was described only
+  in `_tl_patches/README.md`; the memory-optimization and troubleshooting pages now say what it saves, that it must be
+  set before `circuitkit` is imported, and why it stays off by default (bf16 accumulation order, so logits and scores
+  can differ from runs without it).
 - **`data: {type: auto}` reads a CSV path** (#46). `prepare_custom_task` and the `circuitkit data` commands pass the
   file path to `auto_normalize`, but the adapters only read datasets, DataFrames and lists of rows, so every CSV path
   failed with "Could not auto-detect dataset shape". `auto_normalize` and `detect_shape` now read a path into rows
