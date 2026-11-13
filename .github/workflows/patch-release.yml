@@ -334,7 +334,9 @@ jobs:
         run: |
           set -euo pipefail
           : "${TWINE_PASSWORD:?PYPI_API_TOKEN is required to publish the release}"
-          python -m twine upload --non-interactive --verbose dist/*
+          # --skip-existing: two merges close together can start two runs for the
+          # same version; the second must not fail on "File already exists".
+          python -m twine upload --non-interactive --verbose --skip-existing dist/*
 
       # The version-bump commit created above (if any) only exists on this
       # detached checkout so far; fast-forward main with it so the tracked

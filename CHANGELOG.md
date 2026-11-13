@@ -395,6 +395,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **Torch floor raised to 2.13.0** (CVE-2025-3000 / GHSA-rrmf-rvhw-rf47 affects torch <=2.12.1). The `gpu-cu126`
+  extra now pins `torch==2.13.0+cu126` / `torchvision==0.28.0+cu126`, and the install docs match it.
 - The graph HTML embedded the payload with `json.dumps`, so a task, model or node name containing `</script>` ended the
   script and the rest of the name ran as HTML). `<`, `>`, `&`, U+2028 and U+2029 are now written as `\uXXXX`
   escapes inside the embedded JSON (it parses back to the same data), and the page title is HTML-escaped.
