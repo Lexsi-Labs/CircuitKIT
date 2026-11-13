@@ -132,6 +132,14 @@ class CircuitScores:
         timestamp (str): ISO 8601 datetime when scores were generated.
         version (str): Schema version for backward compatibility (default '1.0').
         discovery_cfg (Optional[Dict]): Full discovery configuration for reproducibility.
+        signed_node_scores (Optional[Dict[str, float]]): The same scores with their
+            sign kept, present only when discovery ran with ``signed: true``
+            (EAP family, node level). With the built-in logit-difference
+            metrics, a positive score means patching the node from its clean to
+            its corrupt activation lowers the clean answer's logit difference
+            (the node supports the clean behaviour) and a negative score means
+            the node works against it. Pruning and ranking always use
+            ``node_scores``.
     """
 
     task: str
@@ -142,6 +150,7 @@ class CircuitScores:
     timestamp: str
     version: str = "1.0"
     discovery_cfg: Optional[Dict[str, Any]] = field(default_factory=dict)
+    signed_node_scores: Optional[Dict[str, float]] = None
 
     def __post_init__(self):
         """Validate schema constraints."""
@@ -187,7 +196,10 @@ class CircuitScores:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
-        return asdict(self)
+        data = asdict(self)
+        if data["signed_node_scores"] is None:
+            del data["signed_node_scores"]  # only written when discovery asked for it
+        return data
 
     def to_json(self, path: Path, *, top_fraction: float = 0.2) -> None:
         """

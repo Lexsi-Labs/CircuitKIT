@@ -55,12 +55,17 @@ def calculate_manual_perplexity(model, tokenizer, predictions, device):
 # --- END HELPER FUNCTION ---
 
 
-def convert_eap_graph_to_circuitkit_scores(graph: Graph) -> dict[str, float]:
+def convert_eap_graph_to_circuitkit_scores(graph: Graph, *, signed: bool = False) -> dict[str, float]:
     """
     Converts node scores from an EAP-IG Graph object to the dictionary format
     expected by CircuitKIT's pruning functions.
 
     Maps 'aL.hH' -> 'AL.H' and 'mL' -> 'MLP L'.
+
+    Args:
+        graph: Graph with node scores from ``attribute_node``.
+        signed: Keep each score's sign. Defaults to False (absolute values,
+            which is what pruning ranks on).
     """
     if graph.nodes_scores is None:
         raise ValueError(
@@ -73,8 +78,8 @@ def convert_eap_graph_to_circuitkit_scores(graph: Graph) -> dict[str, float]:
         if isinstance(node, (AttentionNode, MLPNode)):
             # Get the score for this node
             score = node.score.item()
-            # get absolute value for score
-            score = abs(score)
+            if not signed:
+                score = abs(score)
 
             # Convert the node name to CircuitKIT format
             if isinstance(node, AttentionNode):

@@ -502,7 +502,10 @@ def discover(
         output_path: Where the engine writes the ``.pt`` artifact and the
             ``_scores.json`` / ``_scores.pt`` side-cars.
         **kw: Extra keys forwarded into the ``discovery`` block (e.g.
-            ``ig_steps=3``, ``intervention="patching"``).
+            ``ig_steps=3``, ``intervention="patching"``). ``signed=True``
+            (EAP family, node level) also keeps the scores' signs in
+            ``circuit.signed_scores``; ``circuit.scores`` and the circuit stay
+            the same.
 
     Returns:
         A :class:`Circuit` wrapping the discovered nodes and their scores.

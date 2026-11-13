@@ -17,6 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Signed node scores, opt-in** (#47). Node scores are absolute values, so whether a node pushes towards the clean
+  or the corrupt answer was lost. `signed: true` in the discovery block (`ck.discover(..., signed=True)`) keeps each
+  score with its sign in `CircuitScores.signed_node_scores`, the `signed_node_scores` key of both side-cars and
+  `Circuit.signed_scores`. With the built-in logit-difference metrics a positive score means the node supports the
+  clean answer. `node_scores`, the ranking and the pruned circuit are the same as without the key, and the default
+  scores JSON is unchanged. EAP family at node level only; other algorithms and neuron level reject the key (neuron
+  runs already save signed `neurons_scores`).
 - **Hyperparameter ranges** (`circuitkit.utils.hparams`). Each hyperparameter now has a *valid*
   range (outside it the value cannot work: `HyperparameterError`, a `ValueError`) and a *sensible*
   range (inside valid, but earlier runs or the literature show it is risky: `HyperparameterWarning`).

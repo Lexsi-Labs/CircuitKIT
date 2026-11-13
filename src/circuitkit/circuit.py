@@ -117,6 +117,9 @@ class Circuit:
         scores: A ``dict[str, float]`` mapping every candidate node name to its
             importance score. Empty if the discovery run produced no score
             side-car (e.g. a bare neuron-level artifact).
+        signed_scores: The same scores with their sign kept, when discovery ran
+            with ``signed=True`` (EAP family, node level); otherwise empty. See
+            :class:`~circuitkit.artifacts.scores.CircuitScores` for what the sign means.
         graph: The underlying EAP ``Graph`` object if one was supplied,
             otherwise ``None``. Most flat-API runs do not retain the live
             graph; drop to :func:`circuitkit.api.discover_circuit` if you need
@@ -169,6 +172,7 @@ class Circuit:
         """
         self.nodes: PruningArtifact = nodes
         self.scores: Dict[str, float] = dict(scores) if scores else {}
+        self.signed_scores: Dict[str, float] = {}
         self.graph: Optional[Any] = graph
         self.circuit_scores: Optional["CircuitScores"] = circuit_scores
         self.task: Optional[str] = task
@@ -184,6 +188,7 @@ class Circuit:
             self.model_name = self.model_name or getattr(circuit_scores, "model", None)
             if not self.scores:
                 self.scores = dict(getattr(circuit_scores, "node_scores", {}) or {})
+            self.signed_scores = dict(getattr(circuit_scores, "signed_node_scores", None) or {})
 
     # ------------------------------------------------------------------ #
     # Constructors                                                       #
@@ -235,6 +240,7 @@ class Circuit:
 
         circuit_scores = None
         scores: Dict[str, float] = {}
+        signed: Dict[str, float] = {}
         meta: Dict[str, Optional[str]] = {}
         # Resolve the scores side-car: explicit path, then JSON, then .pt.
         candidates: List[Path] = []
@@ -263,6 +269,7 @@ class Circuit:
                     scores = dict(circuit_scores.node_scores)
                 else:
                     scores = {k: float(v) for k, v in blob.get("node_scores", {}).items()}
+                    signed = {k: float(v) for k, v in (blob.get("signed_node_scores") or {}).items()}
                     meta = _sidecar_metadata(blob)
             else:
                 # Untrusted side-car (auto-discovered next to the artifact);
@@ -273,13 +280,14 @@ class Circuit:
                     scores = {
                         k: float(v.item() if hasattr(v, "item") else v) for k, v in raw.items()
                     }
+                    signed = {k: float(v) for k, v in (blob.get("signed_node_scores") or {}).items()}
                     # The neuron-level branches write no scores JSON, so the run's
                     # algorithm, task and model come from here when present (an
                     # older side-car has none and the title says "unknown").
                     meta = _sidecar_metadata(blob)
             break
 
-        return cls(
+        circuit = cls(
             nodes,
             scores,
             graph=graph,
@@ -288,6 +296,8 @@ class Circuit:
             artifact_path=str(artifact_path),
             **meta,
         )
+        circuit.signed_scores = circuit.signed_scores or signed
+        return circuit
 
     # ------------------------------------------------------------------ #
     # Persistence                                                        #
@@ -326,6 +336,8 @@ class Circuit:
             from .artifacts.scores import interop_fields
 
             data = {"node_scores": self.scores}
+            if self.signed_scores:
+                data["signed_node_scores"] = self.signed_scores
             # from_artifact reads this file first, so it has to carry the label.
             for key, attr in _PT_SIDECAR_METADATA.items():
                 if getattr(self, attr):

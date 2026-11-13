@@ -67,11 +67,25 @@ Run circuit discovery and return a `Circuit` object.
 | `sparsity` | 0.3 | Target pruning sparsity |
 | `scope` | `"both"` | Pruning scope: `"heads"`, `"mlp"`, or `"both"` |
 | `output_path` | `"./circuit_discovery_results.pt"` | Where to write artifacts |
-| `**kw` | — | Extra keys forwarded into the discovery block (e.g. `ig_steps=3`) |
+| `**kw` | — | Extra keys forwarded into the discovery block (e.g. `ig_steps=3`, `signed=True`) |
 
 ```python
 circuit = ck.discover(model, "ioi", algorithm="eap-ig", n_examples=64, ig_steps=3)
 print(circuit.top_nodes(5))
+```
+
+**Signed scores.** Node scores are absolute values by default, which is what pruning ranks on.
+`signed=True` (EAP family, node level) also keeps each score with its sign in
+`circuit.signed_scores` and in the `signed_node_scores` key of the scores side-cars; the circuit
+and `circuit.scores` are the same as without it. With the built-in logit-difference metrics a
+positive score means the node supports the clean answer (patching it to its corrupt activation
+lowers the logit difference) and a negative score means it works against it. Other algorithms and
+`level="neuron"` reject the key; a neuron-level run already saves signed per-neuron scores as
+`neurons_scores` in the `_scores.pt` side-car.
+
+```python
+circuit = ck.discover(model, "ioi", algorithm="eap", n_examples=64, signed=True)
+negative = {n: s for n, s in circuit.signed_scores.items() if s < 0}
 ```
 
 ---
@@ -344,6 +358,7 @@ Extra keyword arguments go into the `discovery` block.
 ```python
 circuit.nodes          # List[str] — node names
 circuit.scores         # Dict[str, float] — {node: importance_score}
+circuit.signed_scores  # Dict[str, float] — same with sign, when discovered with signed=True
 circuit.level          # "node" or "neuron"
 circuit.task           # task name
 circuit.algorithm      # algorithm used

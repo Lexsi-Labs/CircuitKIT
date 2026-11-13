@@ -1280,6 +1280,20 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
                 f"{', '.join(sorted(DISCOVERY_ALGORITHMS))}."
             )
         validate_discovery_algorithm(discovery_cfg["algorithm"])
+        if discovery_cfg.get("signed"):
+            from .tasks._algorithm_families import EAP_FAMILY
+
+            if discovery_cfg["algorithm"].lower() not in EAP_FAMILY:
+                raise ValueError(
+                    "discovery key 'signed' is supported for the EAP family only "
+                    f"({sorted(EAP_FAMILY)}), not {discovery_cfg['algorithm']!r}."
+                )
+            if discovery_cfg.get("level", "node") != "node":
+                raise ValueError(
+                    "discovery key 'signed' applies to node-level discovery. Neuron-level "
+                    "runs already save signed per-neuron scores as 'neurons_scores' in "
+                    "the _scores.pt side-car."
+                )
 
         progress.step("Setting up model", model=model_cfg["name"])
         # config["model"]["device"] pins the device; absent -> auto-detect.
@@ -1544,6 +1558,11 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
 
                 if not is_neuron_level:
                     node_scores = _convert_eap_scores_to_ck_format(graph)
+                    signed_node_scores = (
+                        _convert_eap_scores_to_ck_format(graph, signed=True)
+                        if discovery_cfg.get("signed")
+                        else None
+                    )
 
                     # Build unified CircuitScores artifact (Workstream G)
                     circuit_scores = _build_circuit_scores(
@@ -1553,6 +1572,7 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
                         node_scores=node_scores,
                         discovery_cfg=discovery_cfg,
                     )
+                    circuit_scores.signed_node_scores = signed_node_scores
 
                     # Save CircuitScores as JSON
                     if config.get("output_path"):
@@ -1563,12 +1583,10 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
                         logger.info(f"Saved unified CircuitScores → {scores_path}")
 
                     # Also save legacy format for compatibility
-                    _save_artifact(
-                        {"algo": algo, "level": "node", "node_scores": node_scores},
-                        config.get("output_path"),
-                        "_scores",
-                        logger,
-                    )
+                    legacy = {"algo": algo, "level": "node", "node_scores": node_scores}
+                    if signed_node_scores is not None:
+                        legacy["signed_node_scores"] = signed_node_scores
+                    _save_artifact(legacy, config.get("output_path"), "_scores", logger)
 
                 else:
                     # Handle neuron-level results
