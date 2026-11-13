@@ -1111,12 +1111,20 @@ def prepare_custom_task(
     elif data_type == "auto":
         from .data.auto_detect import auto_normalize
 
+        # Harm-prompt (REFUSAL) options; adapters of other shapes ignore them.
+        adapter_kwargs = {
+            k: data_cfg[k]
+            for k in ("length_match", "benign_controls", "chat_template_mode")
+            if k in data_cfg
+        }
         ds = auto_normalize(
             data_cfg["path"],
             apply_default_strategy=True,
             max_records=data_cfg.get("max_records"),
             name=data_cfg.get("name", Path(data_cfg["path"]).stem),
             source=data_cfg["path"],
+            tokenizer=model.tokenizer,
+            **adapter_kwargs,
         )
 
     elif data_type == "clean_only":
@@ -1142,7 +1150,7 @@ def prepare_custom_task(
 
     from .data.normalized_task import NormalizedTaskSpec
 
-    task_spec = NormalizedTaskSpec(ds, name=task_name)
+    task_spec = NormalizedTaskSpec(ds, name=task_name, templated=bool(ds.meta.get("templated")))
     padding = data_cfg.get("pair_padding_side")
     if padding in ("left", "right"):
         task_spec.pair_padding_side = padding

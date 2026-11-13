@@ -17,6 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Length-matched safety pairs, opt-in** (#46). `SafetyPromptAdapter.adapt(..., length_match=True, tokenizer=tok)`
+  pairs each harmful prompt only with a benign control of the same token length, so with padding the clean and corrupt
+  prompts line up position by position (a random control of another length shifts the whole chat preamble).
+  `chat_template_mode="on"`/`"auto"` stores the prompts wrapped in the tokenizer's chat template and measures length on
+  that text; the dataset is then marked `templated` and `data: {type: auto}` builds its task with `templated=True`.
+  Prompts without a same-length control are dropped and counted in `meta["_alignment"]`; if none is left the adapter
+  raises. `data: {type: auto}` passes `length_match`, `benign_controls` and `chat_template_mode` from the data block,
+  with the model's tokenizer. Without these options the pairs are the same as before.
 - **`load_model(..., device="auto")` can pick MPS** (#47). `"auto"` calls `circuitkit.utils.device.get_device`, so it
   chooses CUDA, then MPS, then CPU, as `discover_circuit` already does for a config without `model.device`. The
   default, `device=None`, still chooses CUDA or CPU.
