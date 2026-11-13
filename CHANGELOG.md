@@ -163,6 +163,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   side, so the `benign_rewrite` default strategy never runs). The default is now `"harmful_vs_benign"`, the same as
   the `register_*` safety helpers. The clean side is unchanged, so clean-only algorithms (IBCircuit, CD-T) see the
   same data; pass `pairing_mode="answer_contrastive"` to get the old pairs.
+- **`data: {type: auto}` reads a CSV path** (#46). `prepare_custom_task` and the `circuitkit data` commands pass the
+  file path to `auto_normalize`, but the adapters only read datasets, DataFrames and lists of rows, so every CSV path
+  failed with "Could not auto-detect dataset shape". `auto_normalize` and `detect_shape` now read a path into rows
+  first.
 - **`build_discovery_config` is re-exported from `circuitkit`** (#47). The flat API is documented as re-exported from
   the package root and the function's docstring calls it public, but only `circuitkit.quick.build_discovery_config`
   worked. `ck.build_discovery_config` now resolves to the same function, and the flat-API page lists it.

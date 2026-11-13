@@ -79,3 +79,16 @@ def test_register_all_safety_reports_stereoset_as_failed(captured):
     assert results.pop("stereoset") is False
     assert results and all(results.values())
     assert len(captured) == len(results)
+
+
+def test_auto_normalize_reads_a_csv_path(tmp_path):
+    # prepare_custom_task and the CLI pass data: {type: auto}'s path as a string;
+    # no adapter reads a path, so this raised "Could not auto-detect dataset shape".
+    from circuitkit.data.auto_detect import auto_normalize, detect_shape
+    from circuitkit.data.normalized import DatasetShape
+
+    path = tmp_path / "harm.csv"
+    path.write_text("prompt\n" + "\n".join(r["prompt"] for r in ROWS) + "\n")
+    assert detect_shape(str(path)) == DatasetShape.REFUSAL
+    ds = auto_normalize(str(path), apply_default_strategy=True)
+    assert [r.clean_prompt for r in ds.records] == [r["prompt"] for r in ROWS]
