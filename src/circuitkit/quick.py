@@ -46,6 +46,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 
 __all__ = [
     "load_model",
+    "build_discovery_config",
     "discover",
     "faithfulness",
     "prune",

@@ -149,6 +149,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   side, so the `benign_rewrite` default strategy never runs). The default is now `"harmful_vs_benign"`, the same as
   the `register_*` safety helpers. The clean side is unchanged, so clean-only algorithms (IBCircuit, CD-T) see the
   same data; pass `pairing_mode="answer_contrastive"` to get the old pairs.
+- **`build_discovery_config` is re-exported from `circuitkit`** (#47). The flat API is documented as re-exported from
+  the package root and the function's docstring calls it public, but only `circuitkit.quick.build_discovery_config`
+  worked. `ck.build_discovery_config` now resolves to the same function, and the flat-API page lists it.
 - **Safety dataset helpers no longer build degenerate pairs by default.** `register_advbench`, `register_harmbench`,
   `register_sorrybench`, `register_jailbreakbench`, `register_truthfulqa` and
   `register_all_safety` paired each prompt with itself (`answer_contrastive`), so `discover()` rejected them with

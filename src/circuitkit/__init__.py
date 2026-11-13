@@ -17,6 +17,7 @@ _API_EXPORTS = {"discover_circuit", "evaluate_circuit", "load_circuit"}
 # stays fast and torch-free until one of these is actually accessed.
 _QUICK_EXPORTS = {
     "load_model",
+    "build_discovery_config",
     "discover",
     "faithfulness",
     "prune",
@@ -38,6 +39,7 @@ __all__ = [
     "load_circuit",
     # Flat front-door API
     "load_model",
+    "build_discovery_config",
     "discover",
     "faithfulness",
     "prune",

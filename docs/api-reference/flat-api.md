@@ -324,6 +324,19 @@ ck.visualize_circuit(circuit, mode="graph", output="./circuit.html")
 
 ---
 
+## `build_discovery_config`
+
+```python
+build_discovery_config(model, task, *, algorithm="eap-ig", level="node", n_examples=128,
+                       batch_size=4, sparsity=0.3, scope="both",
+                       output_path="./circuit_discovery_results.pt", **kw) -> dict
+```
+
+Returns the dict config that `discover` passes to `discover_circuit`, so you can inspect or edit it first.
+Extra keyword arguments go into the `discovery` block.
+
+---
+
 ## `Circuit` Object
 
 `Circuit` is returned by `ck.discover` and `ck.load_scores`.
