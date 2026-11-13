@@ -46,6 +46,7 @@ def _bootstrap_builtin_tasks() -> Dict[str, TaskSpec]:
         from .builtins.ifeval import IFEvalTaskSpec
         from .builtins.ioi import IOITaskSpec
         from .builtins.mmlu import MMLUTaskSpec
+        from .builtins.multilingual_refusal import MultilingualRefusalTaskSpec
         from .builtins.sva import SVATaskSpec
         from .builtins.truthfulqa import TruthfulQATaskSpec
         from .builtins.winogrande import WinoGrandeTaskSpec
@@ -70,6 +71,7 @@ def _bootstrap_builtin_tasks() -> Dict[str, TaskSpec]:
             TruthfulQATaskSpec(),
             IFEvalTaskSpec(),
             GSM8KTaskSpec(),
+            MultilingualRefusalTaskSpec(),
         ]
 
         registered = {}

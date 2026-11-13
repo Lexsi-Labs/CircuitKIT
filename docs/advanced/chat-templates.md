@@ -23,6 +23,7 @@ The task type sets the default mode; you can override it per run.
 | Downstream-behavior tasks | `"auto"` | `boolq`, `glue`, `mmlu`, `truthfulqa`, `ifeval`, `wmdp`, `gsm8k`, `winogrande_mc` |
 | Diagnostic minimal-pair tasks | `"off"` | `ioi`, `sva`, `greater_than`, `gender_bias`, `capital_country`, `hypernymy`, `double_io` |
 | Cloze tasks | `"off"` | `winogrande` |
+| Chat-model behavior tasks | `"on"` | `multilingual_refusal` |
 | Custom `GenericTaskSpec` | `"auto"` | User-defined tasks |
 | `NormalizedTaskSpec` | prompts used as given | Adapter / auto-schema datasets; pass `templated=True` if the prompts already carry the chat template |
 

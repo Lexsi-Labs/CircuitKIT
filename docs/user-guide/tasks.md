@@ -10,7 +10,7 @@ print(list_tasks())
 !!! note "Import from `circuitkit`, not `circuitkit.tasks`"
     `circuitkit.tasks.list_tasks` exists too, but it skips the bootstrap that registers the built-ins. Calling it directly returns an incomplete list unless something else already ran the bootstrap. Import `list_tasks`, `get_task`, and `register_task` from the `circuitkit` package root.
 
-## The 16 tasks
+## The 17 tasks
 
 The first seven are synthetic diagnostic tasks — short, template-generated English sentences with a clean single-token answer. The rest wrap real benchmark datasets. "Discovery" is the metric the task uses internally; the loader-exposed metrics (`logit_diff`, `kl`, `accuracy`) are what you select for a custom YAML task, not these.
 
@@ -32,6 +32,7 @@ The first seven are synthetic diagnostic tasks — short, template-generated Eng
 | `truthfulqa` | Truthful vs. plausible-false answers | Paired + clean-only | logit_diff | auto |
 | `gsm8k` | Grade-school math word problems | Paired + clean-only | answer-span NLL | auto |
 | `ifeval` | Instruction following | **No discovery** | — | auto |
+| `multilingual_refusal` | Refusal of harmful requests, one language per run | Paired | logit_diff | on |
 
 A few things worth reading off this table.
 
@@ -42,6 +43,38 @@ A few things worth reading off this table.
 **`ifeval` is not a discovery task.** It's registered for collateral evaluation only. Calling `discover_circuit` with `task: ifeval` raises a `ValueError`. Use it as a downstream benchmark, not a discovery target.
 
 **"Clean-only" means IBCircuit and CD-T also work.** Every discovery-capable task here builds a paired dataloader for the EAP family and ACDC, and also supports the clean-only path (IBCircuit / CD-T). You choose which by the `algorithm` you pass.
+
+## Multilingual refusal
+
+`multilingual_refusal` finds the refusal circuit of a chat model in one language. Each pair is a harmful and a harmless request that differ in one or two words. The harmful request is scored on the first token of a refusal, and the harmless one on the first token of a compliance.
+
+```python
+from circuitkit.api import discover_circuit
+
+discover_circuit({
+    "model": {"name": "CohereLabs/tiny-aya-global", "precision": "float16"},
+    "discovery": {
+        "algorithm": "eap-ig",
+        "task": "multilingual_refusal",
+        "level": "node",
+        "data_params": {
+            "language": "hi",
+            "pairs_path": "pairs_hi.csv",  # columns: harmful, harmless
+            "refuse": "मैं",
+            "comply": "ज़रूर",
+            "num_examples": 64,
+        },
+    },
+    "pruning": {"target_sparsity": 0.1, "scope": "heads"},
+    "output_path": "./refusal_hi.pt",
+})
+```
+
+- **Pairs.** English pairs ship with the package. Other languages need `pairs_path`, because CircuitKIT ships no translations. Translate each pair together, so the swap stays minimal, and have someone who reads the language check it.
+- **Openers.** `refuse` and `comply` are the words a reply starts with. Defaults exist for `en`, `hi`, `hi-Latn`, `bn`, `ta`, `ar` and `sw`, but what your model actually says in that language is better. If a word is several tokens, its first token is scored, and two openers sharing a first token are an error.
+- **Chat template.** The default is `on`, so a tokenizer without a template is an error: a base model has no refusal behavior to trace. Use `off` for pairs that are already rendered.
+- **Token lengths.** A pair whose two prompts tokenize to different lengths is dropped, and the kept count is logged. Non-Latin text often splits unevenly, so expect to keep fewer pairs than you supply.
+- **Algorithms.** The EAP family only, so `ibcircuit` and `cdt` are rejected.
 
 ## Loading a task
 
