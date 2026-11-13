@@ -58,7 +58,8 @@ dependencies = [
     # One HF stack with the other Lexsi libraries (transformers>=5.15,<6).
     # transformer-lens is pinned exactly: circuitkit/_tl_patches applies its
     # Gemma-4 / Sarvam-MoE / Cohere patch series to the 3.8.0 sources at import.
-    "huggingface-hub>=1.5,<2",
+    # The hub cap follows transformers' own (<3); transformer-lens 3.8.0 has none.
+    "huggingface-hub>=1.5,<3",
     "transformers>=5.15,<6",
     "safetensors",  # checkpoint export — evaluate/hf_checkpoint.py
     "ordered-set",

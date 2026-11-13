@@ -51,6 +51,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`huggingface-hub` may be 2.x** (#42). The requirement is now `huggingface-hub>=1.5,<3`, the same cap as
+  `transformers` 5.x. Nothing needed the old `<2`: `transformer-lens` 3.8.0 asks only for `>=0.23.2`. CircuitKIT can
+  now share an environment with tools that install hub 2.x. `transformer-lens` stays pinned at 3.8.0 because the
+  bundled patch series is written against its sources.
 - **Faithfulness scores no longer clip silently.** `patching_score` and `ablation_score` keep their
   meaning (the ratio clipped to 0 to 1), so existing callers read the same thing. Added next to
   them: `FaithfulnessReport.patching_raw_ratio` and `.ablation_raw_ratio` (read from
