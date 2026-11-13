@@ -6,6 +6,7 @@ is ``hook_mlp_out``; the gradient at ``hook_mlp_in`` belongs to a different
 tensor and gives a different number.
 """
 
+import pytest
 import torch
 from transformer_lens import HookedTransformer, HookedTransformerConfig
 
@@ -13,11 +14,14 @@ from circuitkit.backends.eap.attribute_node import make_hooks_and_matrices
 from circuitkit.backends.eap.graph import Graph
 
 
-def _tiny_model():
+def _tiny_model(gated=False):
     torch.manual_seed(0)
+    # gated: a SwiGLU MLP with RMSNorm, as in Llama / Qwen. hook_mlp_out is still
+    # the MLP's whole contribution to the residual stream.
     cfg = HookedTransformerConfig(
         n_layers=2, n_heads=2, d_model=16, d_head=8, d_mlp=32, d_vocab=50, n_ctx=8,
-        act_fn="gelu", normalization_type="LN", device="cpu", seed=0,
+        act_fn="silu" if gated else "gelu", gated_mlp=gated,
+        normalization_type="RMS" if gated else "LN", device="cpu", seed=0,
     )
     model = HookedTransformer(cfg)
     model.cfg.use_attn_result = True
@@ -27,8 +31,9 @@ def _tiny_model():
     return model
 
 
-def test_mlp_node_score_uses_gradient_at_mlp_out():
-    model = _tiny_model()
+@pytest.mark.parametrize("gated", [False, True])
+def test_mlp_node_score_uses_gradient_at_mlp_out(gated):
+    model = _tiny_model(gated)
     graph = Graph.from_model(model, node_scores=True)
     clean = torch.tensor([[1, 2, 3, 4, 5]])
     corrupt = torch.tensor([[1, 7, 8, 9, 5]])
