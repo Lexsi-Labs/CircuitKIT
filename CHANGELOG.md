@@ -125,6 +125,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `peap` (neuron level; its node-level summary already used `hook_mlp_out`), so MLP rankings and the circuits built
   from them differ from earlier runs. Attention-head and input scores, `mlp_hook="post_act"` runs and edge-level
   scores (which read the destination's input hook on purpose) are unchanged.
+- **Circuit sizes no longer lose a node to float truncation** (#44). Counts derived from a sparsity were computed
+  with `int(n * fraction)`, and a sparsity built from a node count rarely maps back exactly: with 612 nodes,
+  `sparsity = 1 - k/612` kept k − 1 nodes for k = 20, 40, 60, 64, 80, 100 and 200. `circuitkit.utils.count_at_fraction`
+  floors with a 1e-9 tolerance and is now used by `_compute_n_topn`, the neuron-level keep count, `get_nodes_to_prune`,
+  `StructuralPruner`, the weight pruner, stability discovery and the Pillar 5 random baselines, so a baseline has the
+  same size as its circuit. Only products within 1e-9 below an integer change; other sparsities keep the same count.
+- **The 50% per-layer head-pruning cap is now stated and reported** (#44). `get_nodes_to_prune` (and the weight-pruner
+  copy) prune at most half of each layer's heads, so above `target_sparsity=0.5` fewer heads were pruned than
+  requested with no signal. The cap is unchanged; it is documented in the docstring and a warning gives the pruned and
+  requested counts when it binds.
 - **Safety dataset helpers no longer build degenerate pairs by default.** `register_advbench`, `register_harmbench`,
   `register_sorrybench`, `register_jailbreakbench`, `register_truthfulqa` and
   `register_all_safety` paired each prompt with itself (`answer_contrastive`), so `discover()` rejected them with

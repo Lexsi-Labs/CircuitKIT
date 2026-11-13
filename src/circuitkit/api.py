@@ -50,6 +50,7 @@ from .utils.exceptions import (  # noqa: E402 - import after intentional pre-imp
 
 # CircuitKIT imports
 from circuitkit.utils.device import get_device, empty_cache
+from circuitkit.utils import count_at_fraction
 from .utils.logging import (  # noqa: E402 - import after intentional pre-import setup
     ProgressLogger,
     get_logger,
@@ -719,11 +720,11 @@ def _compute_n_topn(graph: Graph, scope: str, sparsity: float):
     n_mlps = n_layers
 
     if scope == "heads":
-        n_to_keep, n_always = int(n_heads * (1 - sparsity)), n_mlps
+        n_to_keep, n_always = count_at_fraction(n_heads, 1 - sparsity), n_mlps
     elif scope == "mlp":
-        n_to_keep, n_always = int(n_mlps * (1 - sparsity)), n_heads
+        n_to_keep, n_always = count_at_fraction(n_mlps, 1 - sparsity), n_heads
     else:  # both
-        n_to_keep, n_always = int((n_heads + n_mlps) * (1 - sparsity)), 0
+        n_to_keep, n_always = count_at_fraction(n_heads + n_mlps, 1 - sparsity), 0
 
     return n_to_keep + n_always, n_to_keep
 
@@ -2073,7 +2074,7 @@ def _reconstruct_circuit_graph(
                     graph.neurons_scores[fwd_idx] = float("inf")
                     total_to_keep_global += node.d_neuron
                 else:
-                    num_keep_local = int(node.d_neuron * (1 - sparsity))
+                    num_keep_local = count_at_fraction(node.d_neuron, 1 - sparsity)
                     total_to_keep_global += num_keep_local
                     abs_scores = t.abs(graph.neurons_scores[fwd_idx, : node.d_neuron])
                     if num_keep_local < node.d_neuron and num_keep_local > 0:

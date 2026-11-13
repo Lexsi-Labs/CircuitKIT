@@ -33,6 +33,7 @@ from transformer_lens import HookedTransformer
 
 from circuitkit.artifacts.scores import CircuitScores
 from circuitkit.utils.hparams import validate as _validate_hparams
+from circuitkit.utils import count_at_fraction
 from circuitkit.utils.logging import get_logger
 
 
@@ -249,7 +250,7 @@ class StructuralPruner:
                 continue
             candidates[name] = score
 
-        num_to_prune = int(len(candidates) * sparsity)
+        num_to_prune = count_at_fraction(len(candidates), sparsity)
         if num_to_prune == 0:
             return {}
 
