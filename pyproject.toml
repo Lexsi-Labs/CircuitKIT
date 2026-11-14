@@ -83,7 +83,7 @@ dependencies = [
     # at import time under numpy>=2.
     "spacy>=3.8",
     "psutil",  # CLI debug + memory pre-flight checks
-    "transformer-lens==3.8.0",
+    "transformer-lens==4.3.0",
     # Structural pruning
     "torch-pruning>=1.0",
 ]
