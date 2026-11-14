@@ -40,7 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   languages take a `pairs_path` CSV, because CircuitKIT ships no translations. Prompts go through
   the chat template by default, with the BOS handling that needs, and a pair that tokenizes to two
   lengths is dropped. Defaults for `refuse` and `comply` exist for `en`, `hi`, `hi-Latn`, `bn`,
-  `ta`, `ar` and `sw`. EAP family only.
+  `ta`, `ar` and `sw`. EAP family only. `data_params["chat_template_kwargs"]` goes to the
+  tokenizer's `apply_chat_template`: Qwen3 needs `{"enable_thinking": False}`, because with its
+  default template the reply opens with `<think>` (about 0.9997 of the probability at the scored
+  position on Qwen3-0.6B), and a template with that switch left on logs a warning.
 - **Hyperparameter ranges** (`circuitkit.utils.hparams`). Each hyperparameter now has a *valid*
   range (outside it the value cannot work: `HyperparameterError`, a `ValueError`) and a *sensible*
   range (inside valid, but earlier runs or the literature show it is risky: `HyperparameterWarning`).

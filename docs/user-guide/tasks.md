@@ -73,6 +73,7 @@ discover_circuit({
 - **Pairs.** English pairs ship with the package. Other languages need `pairs_path`, because CircuitKIT ships no translations. Translate each pair together, so the swap stays minimal, and have someone who reads the language check it.
 - **Openers.** `refuse` and `comply` are the words a reply starts with. Defaults exist for `en`, `hi`, `hi-Latn`, `bn`, `ta`, `ar` and `sw`, but what your model actually says in that language is better. If a word is several tokens, its first token is scored, and two openers sharing a first token are an error.
 - **Chat template.** The default is `on`, so a tokenizer without a template is an error: a base model has no refusal behavior to trace. Use `off` for pairs that are already rendered.
+- **Thinking models.** A reasoning model such as Qwen3 opens its reply with `<think>` unless its template's switch is off, so the position scored is the one that predicts that tag (about 0.9997 of the probability on Qwen3-0.6B, in every language tried), not a refusal. Set `"chat_template_kwargs": {"enable_thinking": False}` in `data_params`; a template with the switch left on logs a warning.
 - **Token lengths.** A pair whose two prompts tokenize to different lengths is dropped, and the kept count is logged. Non-Latin text often splits unevenly, so expect to keep fewer pairs than you supply.
 - **Algorithms.** The EAP family only, so `ibcircuit` and `cdt` are rejected.
 

@@ -39,8 +39,12 @@ class FakeTokenizer:
         reverse = {v: k for k, v in self.vocab.items()}
         return " ".join(reverse[i] for i in ids)
 
-    def apply_chat_template(self, messages, tokenize=False, add_generation_prompt=True):
-        return TEMPLATE.format(messages[0]["content"])
+    def apply_chat_template(
+        self, messages, tokenize=False, add_generation_prompt=True, enable_thinking=True
+    ):
+        # Like Qwen3's template: with the switch off the assistant turn opens already closed.
+        text = TEMPLATE.format(messages[0]["content"])
+        return text if enable_thinking else text + " <think> </think>"
 
 
 class FakeModel:
@@ -142,6 +146,45 @@ class TestChatTemplate:
         loader = spec.build_dataloader(model, cfg, "cpu")
         assert loader.templated is True
         assert model.prepend_bos and not any(model.prepend_bos)
+
+    def test_chat_template_kwargs_reach_the_template_and_the_cache_name(
+        self, spec, tmp_path, hindi_pairs
+    ):
+        cfg = _cfg(tmp_path, language="hi", pairs_path=hindi_pairs)
+        default, _ = _rows(spec, cfg, FakeModel())
+        off_cfg = _cfg(
+            tmp_path,
+            language="hi",
+            pairs_path=hindi_pairs,
+            chat_template_kwargs={"enable_thinking": False},
+        )
+        path, _ = spec._get_or_generate_csv(off_cfg, FakeModel())
+        off = pd.read_csv(path)
+        assert not any("</think>" in text for text in default["clean"])
+        assert all(text.endswith("<assistant> <think> </think>") for text in off["clean"])
+        assert all(text.endswith("<assistant> <think> </think>") for text in off["corrupted"])
+        assert path != spec._get_or_generate_csv(cfg, FakeModel())[0]
+
+    def test_a_thinking_template_left_on_is_warned_about(
+        self, spec, tmp_path, hindi_pairs, monkeypatch
+    ):
+        # The task's logger may not propagate to caplog (CircuitKIT's own handler), so record the calls.
+        from circuitkit.tasks.builtins import multilingual_refusal as module
+
+        warnings = []
+        monkeypatch.setattr(module.logger, "warning", warnings.append)
+        model = FakeModel(chat_template="{% if enable_thinking %}...{% endif %}")
+        spec._get_or_generate_csv(_cfg(tmp_path, language="hi", pairs_path=hindi_pairs), model)
+        assert len(warnings) == 1 and "enable_thinking" in warnings[0] and "<think>" in warnings[0]
+        warnings.clear()
+        off = _cfg(
+            tmp_path,
+            language="hi",
+            pairs_path=hindi_pairs,
+            chat_template_kwargs={"enable_thinking": False},
+        )
+        spec._get_or_generate_csv(off, model)
+        assert warnings == []
 
     @pytest.mark.parametrize("template", [None, "", "   ", {}, []])
     def test_a_base_model_is_an_error_not_a_raw_run(self, spec, tmp_path, template):

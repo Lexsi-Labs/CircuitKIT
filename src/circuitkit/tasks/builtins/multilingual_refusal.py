@@ -22,6 +22,10 @@ kept count is logged. Set ``chat_template_mode="off"`` for pairs that are alread
     pairs_path: CSV of pairs. Required for every language but English.
     refuse / comply: The openers to score. Prefer what the model actually says in that
         language; the defaults in :data:`DEFAULT_OPENERS` are a starting point.
+    chat_template_kwargs: Extra arguments for the tokenizer's ``apply_chat_template``. A
+        thinking model such as Qwen3 needs ``{"enable_thinking": False}``: with its default
+        template the reply opens with ``<think>``, so the position scored here predicts
+        that tag, not a refusal or a compliance.
     num_examples, seed, data_partition: As for the other tasks.
 """
 
@@ -135,6 +139,18 @@ def _has_template(tokenizer) -> bool:
     return bool(template.strip() if isinstance(template, str) else template)
 
 
+def _warn_if_thinking(tokenizer, chat_template_kwargs: Dict[str, Any]) -> None:
+    """Warn when the template has a reasoning switch that ``chat_template_kwargs`` leaves alone."""
+    template = getattr(tokenizer, "chat_template", None)
+    text = template if isinstance(template, str) else json.dumps(template or "")
+    if "enable_thinking" in text and "enable_thinking" not in chat_template_kwargs:
+        logger.warning(
+            "multilingual_refusal: this chat template has an 'enable_thinking' switch that is "
+            "on, so the reply opens with <think> and the scored position predicts that tag. "
+            "Set data_params['chat_template_kwargs'] = {'enable_thinking': False}."
+        )
+
+
 def _first_token(tokenizer, text: str) -> int:
     """The token a reply starting with ``text`` opens on.
 
@@ -238,9 +254,17 @@ class MultilingualRefusalTaskSpec:
 
         refuse, comply = _openers(data_params)
         pairs = load_pairs(data_params)
-        # The pairs and openers are in the name, so editing either can't reuse a stale CSV.
+        template_kwargs = dict(data_params.get("chat_template_kwargs") or {})
+        if apply:
+            _warn_if_thinking(model.tokenizer, template_kwargs)
+        # The pairs, openers and template switches are in the name, so editing any of them
+        # can't reuse a stale CSV.
         digest = hashlib.sha256(
-            json.dumps([pairs, refuse, comply], ensure_ascii=False).encode("utf-8")
+            json.dumps(
+                [pairs, refuse, comply] + ([template_kwargs] if template_kwargs else []),
+                ensure_ascii=False,
+                sort_keys=True,
+            ).encode("utf-8")
         ).hexdigest()[:8]
         model_name = getattr(model.cfg, "model_name", "unknown").replace("/", "_")
         part_tag = "" if data_partition == "all" else f"_{data_partition}"
@@ -259,6 +283,7 @@ class MultilingualRefusalTaskSpec:
                 apply=apply,
                 openers=(refuse, comply),
                 language=language,
+                chat_template_kwargs=template_kwargs,
             )
         return data_path, apply
 
@@ -273,6 +298,7 @@ class MultilingualRefusalTaskSpec:
         apply: bool,
         openers: Tuple[str, str],
         language: str,
+        chat_template_kwargs: Optional[Dict[str, Any]] = None,
     ) -> pd.DataFrame:
         """Write up to ``n_samples`` token-aligned pairs. Columns mirror the other tasks."""
         refuse_id = _first_token(model.tokenizer, openers[0])
@@ -290,8 +316,12 @@ class MultilingualRefusalTaskSpec:
         for harmful, harmless in pool:
             # Both sides get the same wrapping, so the template adds an identical prefix and
             # suffix and the pair stays aligned wherever the two requests tokenize alike.
-            clean = wrap_prompt(model, harmful, apply=apply)
-            corrupted = wrap_prompt(model, harmless, apply=apply)
+            clean = wrap_prompt(
+                model, harmful, apply=apply, chat_template_kwargs=chat_template_kwargs
+            )
+            corrupted = wrap_prompt(
+                model, harmless, apply=apply, chat_template_kwargs=chat_template_kwargs
+            )
             clean_len = to_tokens(model, clean, templated=apply).shape[-1]
             if clean_len != to_tokens(model, corrupted, templated=apply).shape[-1]:
                 dropped += 1

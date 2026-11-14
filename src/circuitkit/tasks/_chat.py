@@ -45,7 +45,7 @@ emitted when ``auto`` resolves to True makes such a misfire visible.
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +133,7 @@ def wrap_prompt(
     assistant_prefix: str = "",
     *,
     apply: bool,
+    chat_template_kwargs: Optional[Dict[str, Any]] = None,
 ) -> str:
     """Format one task prompt for ``model``.
 
@@ -145,6 +146,10 @@ def wrap_prompt(
             single-token logit-difference metric stays valid — a chat model
             asked a bare question otherwise emits a verbose reply.
         apply: the resolved boolean from :func:`resolve_chat_template`.
+        chat_template_kwargs: extra keyword arguments for the tokenizer's
+            ``apply_chat_template``, e.g. Qwen3's ``{"enable_thinking": False}``.
+            Without it a thinking model's template leaves the reasoning switch
+            on and the reply opens with ``<think>``.
 
     Returns:
         The string to tokenize. When ``apply`` is False this is plain
@@ -164,6 +169,7 @@ def wrap_prompt(
         [{"role": "user", "content": user_text}],
         tokenize=False,
         add_generation_prompt=True,
+        **(chat_template_kwargs or {}),
     )
     return templated + assistant_prefix
 
