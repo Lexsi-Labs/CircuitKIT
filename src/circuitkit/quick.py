@@ -585,6 +585,8 @@ def faithfulness(
     device: Optional[str] = None,
     configs: Optional[Union[str, List[str]]] = None,
     seed: Optional[int] = None,
+    data_params: Optional[Dict[str, Any]] = None,
+    chat_template_mode: Optional[str] = None,
     **kw: Any,
 ) -> "FaithfulnessReport":
     """Score a discovered circuit with the multi-pillar faithfulness framework.
@@ -618,6 +620,12 @@ def faithfulness(
             is evaluated on the distribution it was discovered on. ``None``
             (default) leaves the task's own default in effect, which for
             multi-config tasks like WMDP is *all* configs.
+        data_params: Task data options, merged over ``num_examples`` and ``seed``. Pass the
+            ones the circuit was discovered with, or a task that reads them (``multilingual_refusal``:
+            ``language``, ``pairs_path``, ``refuse``, ``comply``, ``chat_template_kwargs``) is
+            evaluated on its defaults, which for that task is the English pairs.
+        chat_template_mode: ``"auto"``, ``"on"`` or ``"off"``, as discovery was run with.
+            ``None`` keeps the task's own default.
         **kw: Extra keyword arguments forwarded to
             :func:`run_full_faithfulness` (e.g. ``n_stability_runs``).
 
@@ -684,6 +692,10 @@ def faithfulness(
     # a constant (zero-variance) — breaking any stability-vs-outcome analysis.
     if seed is not None:
         discovery_cfg["data_params"]["seed"] = seed
+    if data_params:
+        discovery_cfg["data_params"].update(data_params)
+    if chat_template_mode is not None:
+        discovery_cfg["chat_template_mode"] = chat_template_mode
 
     # Reconstruct at the circuit's ACTUAL sparsity. circuit.nodes is the PRUNED
     # (removed) node list, so the discovery sparsity is that fraction of the

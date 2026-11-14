@@ -148,6 +148,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`ck.faithfulness` drops the task's `data_params` and `chat_template_mode`.** It built the evaluation data from
+  `num_examples` and `seed` only, so a `multilingual_refusal` circuit found in Spanish was scored on the bundled English
+  pairs with the default openers (seen on Qwen3-0.6B: the cache file was the `en` one), and a base model with
+  `chat_template_mode="off"` could not be evaluated at all. The two are now arguments:
+  `faithfulness(..., data_params={...}, chat_template_mode=...)`. Without them nothing changes.
 - **Node-level EAP scores MLPs with the gradient at their own output** (#43). `make_hooks_and_matrices` in
   `backends/eap/attribute_node.py` multiplied the MLP's activation difference at `hook_mlp_out` by the gradient at
   `hook_mlp_in`, a different tensor. The node score is now (corrupt − clean) · ∂L/∂a at `hook_mlp_out`, as for
