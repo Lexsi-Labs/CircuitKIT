@@ -42,7 +42,13 @@ patch retires with the series.
 `0001`-`0003` reproduce the vendored fork byte for byte. `0005` is not applied by
 default because it changes bf16 accumulation order and logits; set
 `CIRCUITKIT_TL_MEMORY_PATCH=1` before importing CircuitKIT to opt into its VRAM
-reduction. The import hook rejects an import order where `transformer_lens` was
+reduction. Measured on node-level EAP-IG (IOI, 3 seeds, gpt2, Qwen2.5-0.5B, Qwen3-0.6B and
+a 3.35B Tiny Aya-architecture model), it lowers peak memory by 11-37 % (24-37 % on the
+Qwen and Cohere-architecture models). The node scores then correlate with the unpatched ones at 1.000
+in fp32 and at 0.987-0.999 (Spearman, per seed) in bf16, with at least 95 % overlap of the top 10 / 25 / 50 % of
+nodes, against 0.68-0.87 between two data seeds. Faithfulness stays within the seed-to-seed spread,
+though one Qwen3-0.6B bf16 cell moved by +0.045. The full tables and the rule used to keep it
+opt-in are in [Memory Optimization](../../../docs/advanced/memory-optimization.md). The import hook rejects an import order where `transformer_lens` was
 already loaded; restart and import `circuitkit` first. Without `0004`, a
 tiny random Gemma-4 disagrees with Hugging Face on 12.5% of top-1 tokens; with it,
 max |Δlogit| is 7e-5. `0006` needs no new TransformerLens feature: Cohere uses the

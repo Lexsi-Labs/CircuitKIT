@@ -180,7 +180,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The TransformerLens memory patch is documented for users** (#47). `CIRCUITKIT_TL_MEMORY_PATCH=1` was described only
   in `_tl_patches/README.md`; the memory-optimization and troubleshooting pages now say what it saves, that it must be
   set before `circuitkit` is imported, and why it stays off by default (bf16 accumulation order, so logits and scores
-  can differ from runs without it).
+  can differ from runs without it). The memory-optimization page now has the measurements, on gpt2, Qwen2.5-0.5B,
+  Qwen3-0.6B and a 3.35B Tiny Aya-architecture model, patch on vs off, in fp32 and bf16: peak memory 11-37 % lower
+  (24-37 % on the Qwen and Cohere-architecture models); node scores correlate at 1.000 in fp32 and 0.987-0.999 in bf16
+  with at least 95 % top-k overlap; faithfulness within the seed-to-seed spread, except one Qwen3-0.6B bf16 cell
+  (+0.045). One bf16 seed fell just below the 0.99 Spearman bar set for turning it on by default, so it stays opt-in.
 - **`data: {type: auto}` reads a CSV path** (#46). `prepare_custom_task` and the `circuitkit data` commands pass the
   file path to `auto_normalize`, but the adapters only read datasets, DataFrames and lists of rows, so every CSV path
   failed with "Could not auto-detect dataset shape". `auto_normalize` and `detect_shape` now read a path into rows

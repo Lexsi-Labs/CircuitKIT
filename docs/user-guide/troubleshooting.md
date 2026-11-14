@@ -55,8 +55,10 @@ circuitkit discover-smart --model gpt2 --algorithm eap-ig --task ioi --check-mem
 ```
 
 For wide gated-MLP models, `CIRCUITKIT_TL_MEMORY_PATCH=1` (set before importing CircuitKIT) drops
-TransformerLens's per-forward weight copies. It is off by default because it changes bf16 accumulation
-order; see [Memory Optimization](../advanced/memory-optimization.md).
+TransformerLens's per-forward weight copies; peak memory was 24-37 % lower on Qwen and a 3.35B Cohere-architecture
+model in our runs. It is off by default because it changes bf16 accumulation order, so scores can differ slightly
+(bf16 Spearman 0.987-0.999 against the unpatched run); see [Memory Optimization](../advanced/memory-optimization.md)
+for the measurements.
 
 ### CUDA out of memory during install
 
