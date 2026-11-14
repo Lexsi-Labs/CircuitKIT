@@ -868,10 +868,21 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#the-16-tasks" class="md-nav__link">
+  <a href="#the-17-tasks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The 16 tasks
+        The 17 tasks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multilingual-refusal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multilingual refusal
       
     </span>
   </a>
@@ -1539,10 +1550,21 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#the-16-tasks" class="md-nav__link">
+  <a href="#the-17-tasks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The 16 tasks
+        The 17 tasks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multilingual-refusal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multilingual refusal
       
     </span>
   </a>
@@ -1616,7 +1638,7 @@
 <p class="admonition-title">Import from <code>circuitkit</code>, not <code>circuitkit.tasks</code></p>
 <p><code>circuitkit.tasks.list_tasks</code> exists too, but it skips the bootstrap that registers the built-ins. Calling it directly returns an incomplete list unless something else already ran the bootstrap. Import <code>list_tasks</code>, <code>get_task</code>, and <code>register_task</code> from the <code>circuitkit</code> package root.</p>
 </div>
-<h2 id="the-16-tasks">The 16 tasks<a class="headerlink" href="#the-16-tasks" title="Permanent link">&para;</a></h2>
+<h2 id="the-17-tasks">The 17 tasks<a class="headerlink" href="#the-17-tasks" title="Permanent link">&para;</a></h2>
 <p>The first seven are synthetic diagnostic tasks — short, template-generated English sentences with a clean single-token answer. The rest wrap real benchmark datasets. "Discovery" is the metric the task uses internally; the loader-exposed metrics (<code>logit_diff</code>, <code>kl</code>, <code>accuracy</code>) are what you select for a custom YAML task, not these.</p>
 <table>
 <thead>
@@ -1741,6 +1763,13 @@
 <td>—</td>
 <td>auto</td>
 </tr>
+<tr>
+<td><code>multilingual_refusal</code></td>
+<td>Refusal of harmful requests, one language per run</td>
+<td>Paired</td>
+<td>logit_diff</td>
+<td>on</td>
+</tr>
 </tbody>
 </table>
 <p>A few things worth reading off this table.</p>
@@ -1748,12 +1777,42 @@
 <p><strong>Two tasks don't use <code>logit_diff</code>.</strong> <code>winogrande</code>'s disambiguating word comes after the blank, so a last-position logit difference measures chance; it scores the log-likelihood of the whole suffix span instead. <code>gsm8k</code> is open-ended generation, scored by a differentiable NLL over the answer span. Both are still EAP-compatible.</p>
 <p><strong><code>ifeval</code> is not a discovery task.</strong> It's registered for collateral evaluation only. Calling <code>discover_circuit</code> with <code>task: ifeval</code> raises a <code>ValueError</code>. Use it as a downstream benchmark, not a discovery target.</p>
 <p><strong>"Clean-only" means IBCircuit and CD-T also work.</strong> Every discovery-capable task here builds a paired dataloader for the EAP family and ACDC, and also supports the clean-only path (IBCircuit / CD-T). You choose which by the <code>algorithm</code> you pass.</p>
-<h2 id="loading-a-task">Loading a task<a class="headerlink" href="#loading-a-task" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_task</span>
+<h2 id="multilingual-refusal">Multilingual refusal<a class="headerlink" href="#multilingual-refusal" title="Permanent link">&para;</a></h2>
+<p><code>multilingual_refusal</code> finds the refusal circuit of a chat model in one language. Each pair is a harmful and a harmless request that differ in one or two words. The harmful request is scored on the first token of a refusal, and the harmless one on the first token of a compliance.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.api</span><span class="w"> </span><span class="kn">import</span> <span class="n">discover_circuit</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">spec</span> <span class="o">=</span> <span class="n">get_task</span><span class="p">(</span><span class="s2">"ioi"</span><span class="p">)</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nb">print</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>               <span class="c1"># "ioi"</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">chat_template_mode</span><span class="p">)</span> <span class="c1"># "off"</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">discover_circuit</span><span class="p">({</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="s2">"model"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"name"</span><span class="p">:</span> <span class="s2">"CohereLabs/tiny-aya-global"</span><span class="p">,</span> <span class="s2">"precision"</span><span class="p">:</span> <span class="s2">"float16"</span><span class="p">},</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="s2">"discovery"</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>        <span class="s2">"algorithm"</span><span class="p">:</span> <span class="s2">"eap-ig"</span><span class="p">,</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>        <span class="s2">"task"</span><span class="p">:</span> <span class="s2">"multilingual_refusal"</span><span class="p">,</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>        <span class="s2">"level"</span><span class="p">:</span> <span class="s2">"node"</span><span class="p">,</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>        <span class="s2">"data_params"</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>            <span class="s2">"language"</span><span class="p">:</span> <span class="s2">"hi"</span><span class="p">,</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>            <span class="s2">"pairs_path"</span><span class="p">:</span> <span class="s2">"pairs_hi.csv"</span><span class="p">,</span>  <span class="c1"># columns: harmful, harmless</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>            <span class="s2">"refuse"</span><span class="p">:</span> <span class="s2">"मैं"</span><span class="p">,</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>            <span class="s2">"comply"</span><span class="p">:</span> <span class="s2">"ज़रूर"</span><span class="p">,</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>            <span class="s2">"num_examples"</span><span class="p">:</span> <span class="mi">64</span><span class="p">,</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>        <span class="p">},</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>    <span class="p">},</span>
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>    <span class="s2">"pruning"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"target_sparsity"</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span> <span class="s2">"scope"</span><span class="p">:</span> <span class="s2">"heads"</span><span class="p">},</span>
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>    <span class="s2">"output_path"</span><span class="p">:</span> <span class="s2">"./refusal_hi.pt"</span><span class="p">,</span>
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="p">})</span>
+</code></pre></div>
+<ul>
+<li><strong>Pairs.</strong> English pairs ship with the package. Other languages need <code>pairs_path</code>, because CircuitKIT ships no translations. Translate each pair together, so the swap stays minimal, and have someone who reads the language check it.</li>
+<li><strong>Openers.</strong> <code>refuse</code> and <code>comply</code> are the words a reply starts with. Defaults exist for <code>en</code>, <code>hi</code>, <code>hi-Latn</code>, <code>bn</code>, <code>ta</code>, <code>ar</code> and <code>sw</code>, but what your model actually says in that language is better. If a word is several tokens, its first token is scored, and two openers sharing a first token are an error.</li>
+<li><strong>Chat template.</strong> The default is <code>on</code>, so a tokenizer without a template is an error: a base model has no refusal behavior to trace. Use <code>off</code> for pairs that are already rendered.</li>
+<li><strong>Thinking models.</strong> A reasoning model such as Qwen3 opens its reply with <code>&lt;think&gt;</code> unless its template's switch is off, so the position scored is the one that predicts that tag (about 0.9997 of the probability on Qwen3-0.6B, in every language tried), not a refusal. Set <code>"chat_template_kwargs": {"enable_thinking": False}</code> in <code>data_params</code>; a template with the switch left on logs a warning.</li>
+<li><strong>Token lengths.</strong> A pair whose two prompts tokenize to different lengths is dropped, and the kept count is logged. Non-Latin text often splits unevenly, so expect to keep fewer pairs than you supply.</li>
+<li><strong>Algorithms.</strong> The EAP family only, so <code>ibcircuit</code> and <code>cdt</code> are rejected.</li>
+</ul>
+<h2 id="loading-a-task">Loading a task<a class="headerlink" href="#loading-a-task" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_task</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">spec</span> <span class="o">=</span> <span class="n">get_task</span><span class="p">(</span><span class="s2">"ioi"</span><span class="p">)</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nb">print</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>               <span class="c1"># "ioi"</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">chat_template_mode</span><span class="p">)</span> <span class="c1"># "off"</span>
 </code></pre></div>
 <p>Task specs load lazily — the underlying data downloads or generates on first use, not at import.</p>
 <h2 id="chat-template-policy">Chat template policy<a class="headerlink" href="#chat-template-policy" title="Permanent link">&para;</a></h2>
@@ -1782,10 +1841,10 @@
 </table>
 <p>Instruction-tuned models (Llama-Instruct, Gemma-IT, Qwen-Instruct) expect chat-formatted prompts, so downstream tasks default to <code>auto</code>. Diagnostic tasks default to <code>off</code>.</p>
 <p>Override per run:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">discover_circuit</span><span class="p">({</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="s2">"discovery"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"task"</span><span class="p">:</span> <span class="s2">"ioi"</span><span class="p">,</span> <span class="s2">"chat_template_mode"</span><span class="p">:</span> <span class="s2">"on"</span><span class="p">,</span> <span class="o">...</span><span class="p">},</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="o">...</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="p">})</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">discover_circuit</span><span class="p">({</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="s2">"discovery"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"task"</span><span class="p">:</span> <span class="s2">"ioi"</span><span class="p">,</span> <span class="s2">"chat_template_mode"</span><span class="p">:</span> <span class="s2">"on"</span><span class="p">,</span> <span class="o">...</span><span class="p">},</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="o">...</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="p">})</span>
 </code></pre></div>
 <p>See <a href="../../advanced/chat-templates/">Chat templates</a> for the full resolution rules.</p>
 <h2 id="next-steps">Next steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>

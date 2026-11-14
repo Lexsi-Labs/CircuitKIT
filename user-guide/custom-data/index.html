@@ -1915,48 +1915,68 @@
 </code></pre></div>
 <ul>
 <li><strong><code>template</code></strong> pairs each clean record with a corrupt one using the four <code>clean_prompt</code> / <code>corrupt_prompt</code> / <code>clean_answer</code> / <code>corrupt_answer</code> keys, then runs a token-alignment pass so the pair stays position-matched. For a clean-only algorithm (IBCircuit, CD-T) you may supply just <code>clean_prompt</code> (and <code>clean_answer</code>) and skip the corrupt keys.</li>
-<li><strong><code>auto</code></strong> infers the mapping from column names and applies a default corruption strategy.</li>
-<li><strong><code>clean_only</code></strong> loads clean prompts and answers with no corrupt partner — compatible with IBCircuit and CD-T only. Set <code>prompt_column</code> and <code>answer_column</code> if your columns aren't named <code>prompt</code>/<code>answer</code>.</li>
+<li><strong><code>auto</code></strong> infers the mapping from column names and applies a default corruption strategy.
+  A file of harmful prompts (a <code>prompt</code>, <code>goal</code>, <code>behavior</code> or similar column) is paired by
+  <code>SafetyPromptAdapter</code>: each prompt (refusal answer <code>" I"</code>) against a benign control (compliance
+  answer <code>" Sure"</code>). Three optional keys tune that pairing:<ul>
+<li><code>benign_controls</code>: your own list of control prompts (default: ten built-in ones).</li>
+<li><code>length_match: true</code>: pair each prompt only with a control of the same token length under the
+  model's tokenizer, so clean and corrupt line up position by position. Prompts with no control of
+  their length are dropped, so give a pool that covers your prompt lengths (same language, many
+  lengths).</li>
+<li><code>chat_template_mode: on | auto | off</code> (default <code>off</code>): store every prompt wrapped in the model's
+  chat template, so lengths are matched on the templated text; the task is then tokenized without
+  an extra BOS.</li>
 </ul>
+</li>
+</ul>
+<p><div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">data</span><span class="p">:</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">auto</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./data/harmful_hi.csv</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="nt">length_match</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span><span class="nt">chat_template_mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">auto</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span><span class="nt">benign_controls</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"..."</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"..."</span><span class="p p-Indicator">]</span>
+</code></pre></div>
+- <strong><code>clean_only</code></strong> loads clean prompts and answers with no corrupt partner — compatible with IBCircuit and CD-T only. Set <code>prompt_column</code> and <code>answer_column</code> if your columns aren't named <code>prompt</code>/<code>answer</code>.</p>
 <p>Note the key mismatch between the two paths: the task-YAML <code>schema</code> uses <code>corrupted_prompt</code>, while the inline <code>data.template</code> block uses <code>corrupt_prompt</code>. They are separate loaders. Use whichever entry point fits your workflow, but don't copy keys between them.</p>
 <h2 id="validate-before-you-run">Validate before you run<a class="headerlink" href="#validate-before-you-run" title="Permanent link">&para;</a></h2>
 <p>Check a dataset without spending a discovery run on it:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Validate and summarize a CSV (prints a verdict and per-check report)</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>circuitkit<span class="w"> </span>data<span class="w"> </span>check<span class="w"> </span>data.csv
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Write the report as JSON</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>circuitkit<span class="w"> </span>data<span class="w"> </span>check<span class="w"> </span>data.csv<span class="w"> </span>--output<span class="w"> </span>./report.json
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="c1"># Build a normalized (clean, corrupt) dataset and save it</span>
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>circuitkit<span class="w"> </span>data<span class="w"> </span>prepare<span class="w"> </span>data.csv<span class="w"> </span>--output<span class="w"> </span>./normalized.json
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Validate and summarize a CSV (prints a verdict and per-check report)</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>circuitkit<span class="w"> </span>data<span class="w"> </span>check<span class="w"> </span>data.csv
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># Write the report as JSON</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>circuitkit<span class="w"> </span>data<span class="w"> </span>check<span class="w"> </span>data.csv<span class="w"> </span>--output<span class="w"> </span>./report.json
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1"># Build a normalized (clean, corrupt) dataset and save it</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>circuitkit<span class="w"> </span>data<span class="w"> </span>prepare<span class="w"> </span>data.csv<span class="w"> </span>--output<span class="w"> </span>./normalized.json
 </code></pre></div>
 <h2 id="via-python-register_task">Via Python: <code>register_task</code><a class="headerlink" href="#via-python-register_task" title="Permanent link">&para;</a></h2>
 <p>For full control, build and register a spec directly. <code>register_task</code> and <code>NormalizedTaskSpec</code> are imported from the package root and <code>circuitkit.data.normalized_task</code>. <code>NormalizedTaskSpec</code> wraps a <code>NormalizedDataset</code> of <code>ContrastiveRecord</code>s — it takes the dataset positionally and an optional <code>name</code>, not <code>metric=</code> / <code>templates=</code> / <code>data=</code> keywords. The metric is selected later via <code>.metric_fn(metric_type=...)</code>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit</span><span class="w"> </span><span class="kn">import</span> <span class="n">register_task</span><span class="p">,</span> <span class="n">discover_circuit</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.data.normalized_task</span><span class="w"> </span><span class="kn">import</span> <span class="n">NormalizedTaskSpec</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.data.normalized</span><span class="w"> </span><span class="kn">import</span> <span class="n">NormalizedDataset</span><span class="p">,</span> <span class="n">ContrastiveRecord</span><span class="p">,</span> <span class="n">DatasetShape</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="n">records</span> <span class="o">=</span> <span class="p">[</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="n">ContrastiveRecord</span><span class="p">(</span>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>        <span class="n">record_id</span><span class="o">=</span><span class="s2">"0"</span><span class="p">,</span>
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>        <span class="n">clean_prompt</span><span class="o">=</span><span class="s2">"John gave a drink to"</span><span class="p">,</span>
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>        <span class="n">clean_answer</span><span class="o">=</span><span class="s2">" Mary"</span><span class="p">,</span>
-<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>        <span class="n">corrupt_prompt</span><span class="o">=</span><span class="s2">"Susan gave a drink to"</span><span class="p">,</span>
-<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>        <span class="n">corrupt_answer</span><span class="o">=</span><span class="s2">" Bob"</span><span class="p">,</span>
-<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>    <span class="p">),</span>
-<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="p">]</span>
-<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="n">ds</span> <span class="o">=</span> <span class="n">NormalizedDataset</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"my_task"</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">DatasetShape</span><span class="o">.</span><span class="n">QA</span><span class="p">,</span> <span class="n">records</span><span class="o">=</span><span class="n">records</span><span class="p">)</span>
-<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>
-<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="n">spec</span> <span class="o">=</span> <span class="n">NormalizedTaskSpec</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"my_task"</span><span class="p">)</span>
-<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="n">register_task</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
-<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>
-<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="n">circuit</span> <span class="o">=</span> <span class="n">discover_circuit</span><span class="p">({</span>
-<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>    <span class="s2">"model"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"name"</span><span class="p">:</span> <span class="s2">"gpt2"</span><span class="p">},</span>
-<a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>    <span class="s2">"discovery"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"algorithm"</span><span class="p">:</span> <span class="s2">"eap-ig"</span><span class="p">,</span> <span class="s2">"task"</span><span class="p">:</span> <span class="s2">"my_task"</span><span class="p">},</span>
-<a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a>    <span class="s2">"pruning"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"target_sparsity"</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">,</span> <span class="s2">"scope"</span><span class="p">:</span> <span class="s2">"both"</span><span class="p">},</span>
-<a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a><span class="p">})</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit</span><span class="w"> </span><span class="kn">import</span> <span class="n">register_task</span><span class="p">,</span> <span class="n">discover_circuit</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.data.normalized_task</span><span class="w"> </span><span class="kn">import</span> <span class="n">NormalizedTaskSpec</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">circuitkit.data.normalized</span><span class="w"> </span><span class="kn">import</span> <span class="n">NormalizedDataset</span><span class="p">,</span> <span class="n">ContrastiveRecord</span><span class="p">,</span> <span class="n">DatasetShape</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="n">records</span> <span class="o">=</span> <span class="p">[</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="n">ContrastiveRecord</span><span class="p">(</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>        <span class="n">record_id</span><span class="o">=</span><span class="s2">"0"</span><span class="p">,</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>        <span class="n">clean_prompt</span><span class="o">=</span><span class="s2">"John gave a drink to"</span><span class="p">,</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>        <span class="n">clean_answer</span><span class="o">=</span><span class="s2">" Mary"</span><span class="p">,</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>        <span class="n">corrupt_prompt</span><span class="o">=</span><span class="s2">"Susan gave a drink to"</span><span class="p">,</span>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>        <span class="n">corrupt_answer</span><span class="o">=</span><span class="s2">" Bob"</span><span class="p">,</span>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>    <span class="p">),</span>
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="p">]</span>
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="n">ds</span> <span class="o">=</span> <span class="n">NormalizedDataset</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"my_task"</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">DatasetShape</span><span class="o">.</span><span class="n">QA</span><span class="p">,</span> <span class="n">records</span><span class="o">=</span><span class="n">records</span><span class="p">)</span>
+<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>
+<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="n">spec</span> <span class="o">=</span> <span class="n">NormalizedTaskSpec</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"my_task"</span><span class="p">)</span>
+<a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a><span class="n">register_task</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
+<a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>
+<a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a><span class="n">circuit</span> <span class="o">=</span> <span class="n">discover_circuit</span><span class="p">({</span>
+<a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>    <span class="s2">"model"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"name"</span><span class="p">:</span> <span class="s2">"gpt2"</span><span class="p">},</span>
+<a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>    <span class="s2">"discovery"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"algorithm"</span><span class="p">:</span> <span class="s2">"eap-ig"</span><span class="p">,</span> <span class="s2">"task"</span><span class="p">:</span> <span class="s2">"my_task"</span><span class="p">},</span>
+<a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>    <span class="s2">"pruning"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"target_sparsity"</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">,</span> <span class="s2">"scope"</span><span class="p">:</span> <span class="s2">"both"</span><span class="p">},</span>
+<a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a><span class="p">})</span>
 </code></pre></div>
-<p><code>NormalizedTaskSpec</code> takes the dataset (positional), an optional <code>name</code> (defaults to <code>f"normalized:{ds.name}"</code>), and an optional <code>cache_dir</code> (defaults to <code>"./cache/normalized"</code>). That's it — the prompts come from the wrapped records' <code>clean_prompt</code> / <code>clean_answer</code> / <code>corrupt_prompt</code> / <code>corrupt_answer</code> fields.</p>
+<p><code>NormalizedTaskSpec</code> takes the dataset (positional), an optional <code>name</code> (defaults to <code>f"normalized:{ds.name}"</code>), an optional <code>cache_dir</code> (defaults to <code>"./cache/normalized"</code>; CSV file names include a hash of their content, so edited data is never read from a stale file), and <code>templated</code> (default <code>False</code>). The prompts come from the wrapped records' <code>clean_prompt</code> / <code>clean_answer</code> / <code>corrupt_prompt</code> / <code>corrupt_answer</code> fields and are used as given: the spec does not apply a chat template. If your prompts already carry the model's chat template, pass <code>templated=True</code> so they are tokenized without a second BOS token.</p>
 <h2 id="next-steps">Next steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../data-corruption/">Corruption strategies</a> — generating the corrupt half when you don't supply it</li>

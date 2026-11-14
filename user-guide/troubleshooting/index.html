@@ -2053,10 +2053,15 @@ the qkv flags.</p>
 <p>Or enable memory-efficient discovery:
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>circuitkit<span class="w"> </span>discover-smart<span class="w"> </span>--model<span class="w"> </span>gpt2<span class="w"> </span>--algorithm<span class="w"> </span>eap-ig<span class="w"> </span>--task<span class="w"> </span>ioi<span class="w"> </span>--check-memory
 </code></pre></div></p>
+<p>For wide gated-MLP models, <code>CIRCUITKIT_TL_MEMORY_PATCH=1</code> (set before importing CircuitKIT) drops
+TransformerLens's per-forward weight copies; peak memory was 24-37 % lower on Qwen and a 3.35B Cohere-architecture
+model in our runs. It is off by default because it changes bf16 accumulation order, so scores can differ slightly
+(bf16 Spearman 0.987-0.999 against the unpatched run); see <a href="../../advanced/memory-optimization/">Memory Optimization</a>
+for the measurements.</p>
 <h3 id="cuda-out-of-memory-during-install">CUDA out of memory during install<a class="headerlink" href="#cuda-out-of-memory-during-install" title="Permanent link">&para;</a></h3>
 <p>Install CPU-only first, then swap in the GPU torch wheel:
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="nv">torch</span><span class="o">==</span><span class="m">2</span>.10.0+cu126<span class="w"> </span>-f<span class="w"> </span>https://download.pytorch.org/whl/cu126
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="nv">torch</span><span class="o">==</span><span class="m">2</span>.13.0+cu126<span class="w"> </span>-f<span class="w"> </span>https://download.pytorch.org/whl/cu126
 </code></pre></div></p>
 <h3 id="model-too-large-for-gpu">Model too large for GPU<a class="headerlink" href="#model-too-large-for-gpu" title="Permanent link">&para;</a></h3>
 <ul>

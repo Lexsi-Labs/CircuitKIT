@@ -1247,6 +1247,34 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#4-skip-transformerlens-weight-copies-opt-in-circuitkit_tl_memory_patch1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Skip TransformerLens weight copies (opt-in, CIRCUITKIT_TL_MEMORY_PATCH=1)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Skip TransformerLens weight copies (opt-in, CIRCUITKIT_TL_MEMORY_PATCH=1)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#measured-patch-on-vs-off" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Measured: patch on vs off
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1772,6 +1800,34 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#4-skip-transformerlens-weight-copies-opt-in-circuitkit_tl_memory_patch1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Skip TransformerLens weight copies (opt-in, CIRCUITKIT_TL_MEMORY_PATCH=1)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Skip TransformerLens weight copies (opt-in, CIRCUITKIT_TL_MEMORY_PATCH=1)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#measured-patch-on-vs-off" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Measured: patch on vs off
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1943,27 +1999,346 @@ figures.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="s2">"discovery"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"batch_size"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"data_params"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"num_examples"</span><span class="p">:</span> <span class="mi">128</span><span class="p">}}</span>
 </code></pre></div>
 <p><strong>Savings:</strong> Linear. <code>batch_size=1</code> is ~50-60% less peak memory than <code>batch_size=4</code>. Slower (more batches).</p>
+<h3 id="4-skip-transformerlens-weight-copies-opt-in-circuitkit_tl_memory_patch1">4. Skip TransformerLens weight copies (opt-in, <code>CIRCUITKIT_TL_MEMORY_PATCH=1</code>)<a class="headerlink" href="#4-skip-transformerlens-weight-copies-opt-in-circuitkit_tl_memory_patch1" title="Permanent link">&para;</a></h3>
+<p>CircuitKIT ships a TransformerLens patch that removes two large temporaries from every forward pass: attention
+output is computed with one <code>einsum</code> over <code>W_O</code> instead of broadcasting a <code>[batch, pos, head, d_head, d_model]</code>
+tensor, and gated MLPs (Llama, Qwen, Gemma, ...) and the unembedding use transposed weight views instead of a fresh
+<code>.T.contiguous()</code> copy of each matrix. Set the variable before CircuitKIT is imported:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nv">CIRCUITKIT_TL_MEMORY_PATCH</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>python<span class="w"> </span>run_discovery.py
+</code></pre></div>
+<ul>
+<li><strong>Off by default.</strong> Without the contiguous copies, bf16 matmuls accumulate in a different order, so logits differ
+  from Hugging Face's in the last bits and scores can differ slightly between runs with and without the patch.
+  Keep it on or off for every run you compare. The measurements below say how large the change is.</li>
+<li><strong>Import order.</strong> The patch is applied when <code>circuitkit</code> is imported. If <code>transformer_lens</code> was imported first,
+  CircuitKIT raises an <code>ImportError</code>; import <code>circuitkit</code> first (or restart the kernel).</li>
+<li><strong>Savings</strong> grow with model width: the removed temporaries scale with <code>d_model × d_mlp</code> per layer and with
+  <code>batch × pos × n_heads × d_head × d_model</code> in attention. They were the out-of-memory sites for Gemma-4 31B on an
+  80 GB card. See <code>src/circuitkit/_tl_patches/README.md</code> for the patch series.</li>
+</ul>
+<h4 id="measured-patch-on-vs-off">Measured: patch on vs off<a class="headerlink" href="#measured-patch-on-vs-off" title="Permanent link">&para;</a></h4>
+<p>Node-level EAP-IG on the <code>ioi</code> task: 64 examples, 3 IG steps, 3 data seeds (0, 1, 2), batch size 4 (1 for the
+Cohere-architecture model). Every on/off pair ran in separate processes; the on and off runs of one model use the same
+seeds and data. RTX 6000 Ada (48 GB), torch 2.13.0+cu126, transformer-lens 3.8.0, CircuitKIT <code>79f4b1b</code>. The GPU was
+shared with other jobs, so wall times are indicative only. Peak is <code>torch.cuda.max_memory_allocated()</code> during
+discovery and includes the weights. The Cohere-architecture row is a public fine-tune of <code>tiny-aya-global</code>
+(<code>itssaharsh/tiny-aya-global-unlearn-bio-default-layers</code>, same <code>Cohere2ForCausalLM</code> architecture, 3.35B parameters)
+loaded from a local checkpoint, because Tiny Aya itself is gated. It was run in bf16 only: fp32 weights alone
+(13 GB) were more than the shared card could spare.</p>
+<p><strong>Peak memory.</strong></p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>dtype</th>
+<th>Weights</th>
+<th>Peak, patch off</th>
+<th>Peak, patch on</th>
+<th>Saving of peak</th>
+<th>Saving beyond weights</th>
+<th>Wall s, off → on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>gpt2</td>
+<td>fp32</td>
+<td>0.64 GiB</td>
+<td>1.13 GiB</td>
+<td>0.99 GiB</td>
+<td>12 %</td>
+<td>28 %</td>
+<td>3 → 3</td>
+</tr>
+<tr>
+<td>gpt2</td>
+<td>bf16</td>
+<td>0.33 GiB</td>
+<td>0.62 GiB</td>
+<td>0.55 GiB</td>
+<td>11 %</td>
+<td>23 %</td>
+<td>3 → 3</td>
+</tr>
+<tr>
+<td>Qwen2.5-0.5B</td>
+<td>fp32</td>
+<td>2.41 GiB</td>
+<td>5.29 GiB</td>
+<td>3.61 GiB</td>
+<td>32 %</td>
+<td>58 %</td>
+<td>11 → 10</td>
+</tr>
+<tr>
+<td>Qwen2.5-0.5B</td>
+<td>bf16</td>
+<td>1.23 GiB</td>
+<td>2.77 GiB</td>
+<td>1.94 GiB</td>
+<td>30 %</td>
+<td>54 %</td>
+<td>11 → 10</td>
+</tr>
+<tr>
+<td>Qwen3-0.6B</td>
+<td>fp32</td>
+<td>2.90 GiB</td>
+<td>6.21 GiB</td>
+<td>4.65 GiB</td>
+<td>25 %</td>
+<td>47 %</td>
+<td>15 → 10</td>
+</tr>
+<tr>
+<td>Qwen3-0.6B</td>
+<td>bf16</td>
+<td>1.47 GiB</td>
+<td>3.31 GiB</td>
+<td>2.53 GiB</td>
+<td>24 %</td>
+<td>42 %</td>
+<td>11 → 10</td>
+</tr>
+<tr>
+<td>Tiny Aya architecture (3.35B)</td>
+<td>bf16</td>
+<td>7.34 GiB</td>
+<td>14.86 GiB</td>
+<td>9.42 GiB</td>
+<td>37 %</td>
+<td>72 %</td>
+<td>92 → 41</td>
+</tr>
+</tbody>
+</table>
+<p>The saving is real and grows with model width. The wall-time differences are within what a shared GPU gives, except
+that the patch cannot make discovery slower; do not read 92 → 41 s as a speed-up.</p>
+<p><strong>Scores.</strong> Same seed, patch on vs off, over the 3 seeds. The last column is the Spearman correlation between two
+different seeds with the patch off, the run-to-run variation to compare against.</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>dtype</th>
+<th>Spearman on/off, per seed</th>
+<th>Top-k overlap, worst seed, k = 10 / 25 / 50 % of nodes</th>
+<th>Seed vs seed, patch off</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>gpt2</td>
+<td>fp32</td>
+<td>1.0000, 1.0000, 1.0000</td>
+<td>1.00 / 1.00 / 1.00</td>
+<td>0.867</td>
+</tr>
+<tr>
+<td>gpt2</td>
+<td>bf16</td>
+<td>0.9968, 0.9981, 0.9989</td>
+<td>1.00 / 0.97 / 0.97</td>
+<td>0.870</td>
+</tr>
+<tr>
+<td>Qwen2.5-0.5B</td>
+<td>fp32</td>
+<td>1.0000, 1.0000, 1.0000</td>
+<td>1.00 / 1.00 / 1.00</td>
+<td>0.863</td>
+</tr>
+<tr>
+<td>Qwen2.5-0.5B</td>
+<td>bf16</td>
+<td>0.9906, 0.9941, 0.9935</td>
+<td>0.97 / 0.99 / 0.98</td>
+<td>0.859</td>
+</tr>
+<tr>
+<td>Qwen3-0.6B</td>
+<td>fp32</td>
+<td>1.0000, 1.0000, 1.0000</td>
+<td>1.00 / 1.00 / 1.00</td>
+<td>0.841</td>
+</tr>
+<tr>
+<td>Qwen3-0.6B</td>
+<td>bf16</td>
+<td>0.9941, 0.9944, <strong>0.9866</strong></td>
+<td>0.96 / 0.98 / 0.97</td>
+<td>0.842</td>
+</tr>
+<tr>
+<td>Tiny Aya architecture (3.35B)</td>
+<td>bf16</td>
+<td>0.9984, 0.9986, 0.9986</td>
+<td>0.98 / 0.99 / 0.98</td>
+<td>0.684</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Logits against Hugging Face</strong> (8 short prompts, same token ids, same dtype; max |Δlogit| and top-1 agreement,
+patch off / patch on). The last column is the largest on-vs-off difference at the last position of each prompt.</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>dtype</th>
+<th>Max abs Δ, off / on</th>
+<th>Top-1 agreement, off / on</th>
+<th>On vs off, last position</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>gpt2</td>
+<td>fp32</td>
+<td>7.3e-4 / 4.7e-4</td>
+<td>1.000 / 1.000</td>
+<td>2.4e-4</td>
+</tr>
+<tr>
+<td>gpt2</td>
+<td>bf16</td>
+<td>9 / 10</td>
+<td>0.936 / 0.917</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Qwen2.5-0.5B</td>
+<td>fp32</td>
+<td>9.1e-5 / 1.1e-4</td>
+<td>1.000 / 1.000</td>
+<td>3.9e-5</td>
+</tr>
+<tr>
+<td>Qwen2.5-0.5B</td>
+<td>bf16</td>
+<td>2.1 / 2.2</td>
+<td>0.969 / 0.947</td>
+<td>0.62</td>
+</tr>
+<tr>
+<td>Qwen3-0.6B</td>
+<td>fp32</td>
+<td>1.0e-4 / 7.6e-5</td>
+<td>1.000 / 1.000</td>
+<td>3.5e-5</td>
+</tr>
+<tr>
+<td>Qwen3-0.6B</td>
+<td>bf16</td>
+<td>0.78 / 1.3</td>
+<td>0.985 / 0.977</td>
+<td>0.75</td>
+</tr>
+<tr>
+<td>Tiny Aya architecture (3.35B)</td>
+<td>bf16</td>
+<td>1.3 / 1.2</td>
+<td>0.965 / 0.979</td>
+<td>0.31</td>
+</tr>
+</tbody>
+</table>
+<p>In bf16 both settings are far from Hugging Face in absolute terms; the patch moves the logits by about as much as the
+bf16 noise already present. In fp32 the difference is numerically tiny (about 1e-4 or less).</p>
+<p><strong>Faithfulness</strong> (patching score of the circuit that keeps the top 10 / 25 / 50 % of nodes, mean ± sd over the 3
+seeds; each seed's circuit is scored on that seed's data; patch off | patch on). The ablation pillar is floored at 0
+and was 0 for most circuits, so it is not shown.</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>dtype</th>
+<th>Keep 10 %</th>
+<th>Keep 25 %</th>
+<th>Keep 50 %</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>gpt2</td>
+<td>fp32</td>
+<td>0.151 ± 0.022 &#124; 0.151 ± 0.022</td>
+<td>0.749 ± 0.047 &#124; 0.749 ± 0.047</td>
+<td>0.969 ± 0.054 &#124; 0.969 ± 0.054</td>
+</tr>
+<tr>
+<td>gpt2</td>
+<td>bf16</td>
+<td>0.146 ± 0.030 &#124; 0.145 ± 0.028</td>
+<td>0.769 ± 0.037 &#124; 0.757 ± 0.029</td>
+<td>0.953 ± 0.081 &#124; 0.957 ± 0.074</td>
+</tr>
+<tr>
+<td>Qwen2.5-0.5B</td>
+<td>fp32</td>
+<td>0.292 ± 0.095 &#124; 0.292 ± 0.095</td>
+<td>0.725 ± 0.117 &#124; 0.725 ± 0.117</td>
+<td>0.895 ± 0.068 &#124; 0.895 ± 0.068</td>
+</tr>
+<tr>
+<td>Qwen2.5-0.5B</td>
+<td>bf16</td>
+<td>0.317 ± 0.077 &#124; 0.311 ± 0.078</td>
+<td>0.749 ± 0.136 &#124; 0.777 ± 0.074</td>
+<td>0.909 ± 0.048 &#124; 0.897 ± 0.062</td>
+</tr>
+<tr>
+<td>Qwen3-0.6B</td>
+<td>fp32</td>
+<td>0.287 ± 0.009 &#124; 0.287 ± 0.009</td>
+<td>0.640 ± 0.048 &#124; 0.640 ± 0.048</td>
+<td>0.841 ± 0.025 &#124; 0.841 ± 0.025</td>
+</tr>
+<tr>
+<td>Qwen3-0.6B</td>
+<td>bf16</td>
+<td>0.288 ± 0.011 &#124; 0.289 ± 0.010</td>
+<td>0.611 ± 0.045 &#124; 0.624 ± 0.053</td>
+<td>0.810 ± 0.037 &#124; <strong>0.855 ± 0.058</strong></td>
+</tr>
+<tr>
+<td>Tiny Aya architecture (3.35B)</td>
+<td>bf16</td>
+<td>0.105 ± 0.075 &#124; 0.104 ± 0.075</td>
+<td>0.539 ± 0.136 &#124; 0.539 ± 0.132</td>
+<td>0.975 ± 0.021 &#124; 0.970 ± 0.027</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Why it stays opt-in.</strong> The rule applied before the runs was: make the patch the default only if, in bf16, every
+seed has on/off Spearman ≥ 0.99 and top-k overlap ≥ 0.95 at every k, faithfulness differences stay within one sd, the
+fp32 differences are numerically tiny, and the saving is at least 15 % on the larger models. Everything holds except
+two marginal cases, both on Qwen3-0.6B in bf16: one seed has Spearman 0.9866 (the mean over seeds is 0.9917), and
+faithfulness at 50 % of nodes is 0.045 higher with the patch on, which is larger than the sd of the runs without it
+(0.037) and smaller than the sd with it (0.058). With three seeds that is not enough to call the change noise, and a
+default changes every bf16 user's scores, so the patch stays opt-in. The differences that do appear are much smaller
+than the seed-to-seed variation, and the memory saving is large (24-37 % of peak on the models above). If your
+model is wide or tight on memory, turning it on is a reasonable choice; keep it the same for every run you compare.</p>
 <hr />
 <h2 id="combined-strategy-for-large-models">Combined Strategy for Large Models<a class="headerlink" href="#combined-strategy-for-large-models" title="Permanent link">&para;</a></h2>
 <p>For Gemma-4B or Llama-3B (targeting ~6 GB peak VRAM):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">discover_circuit</span><span class="p">({</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="s2">"model"</span><span class="p">:</span> <span class="p">{</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>        <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"google/gemma-3-4b-it"</span><span class="p">,</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>        <span class="s2">"precision"</span><span class="p">:</span> <span class="s2">"bfloat16"</span><span class="p">,</span>         <span class="c1"># 1. half-precision model</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="p">},</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="s2">"discovery"</span><span class="p">:</span> <span class="p">{</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>        <span class="s2">"algorithm"</span><span class="p">:</span> <span class="s2">"eap-ig"</span><span class="p">,</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>        <span class="s2">"task"</span><span class="p">:</span> <span class="s2">"mmlu"</span><span class="p">,</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>        <span class="s2">"level"</span><span class="p">:</span> <span class="s2">"node"</span><span class="p">,</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>        <span class="s2">"ig_steps"</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>                   <span class="c1"># 2. IG steps (the default)</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>        <span class="s2">"batch_size"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>                 <span class="c1"># 3. batch size 1 (top-level, not under data_params)</span>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>        <span class="s2">"data_params"</span><span class="p">:</span> <span class="p">{</span>
-<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>            <span class="s2">"num_examples"</span><span class="p">:</span> <span class="mi">64</span><span class="p">,</span>          <span class="c1"># 4. fewer examples</span>
-<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>        <span class="p">},</span>
-<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>    <span class="p">},</span>
-<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>    <span class="s2">"pruning"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"target_sparsity"</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">,</span> <span class="s2">"scope"</span><span class="p">:</span> <span class="s2">"heads"</span><span class="p">},</span>
-<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>    <span class="s2">"output_path"</span><span class="p">:</span> <span class="s2">"./circuit.pt"</span><span class="p">,</span>
-<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="p">})</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">discover_circuit</span><span class="p">({</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="s2">"model"</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>        <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"google/gemma-3-4b-it"</span><span class="p">,</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>        <span class="s2">"precision"</span><span class="p">:</span> <span class="s2">"bfloat16"</span><span class="p">,</span>         <span class="c1"># 1. half-precision model</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="p">},</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="s2">"discovery"</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>        <span class="s2">"algorithm"</span><span class="p">:</span> <span class="s2">"eap-ig"</span><span class="p">,</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>        <span class="s2">"task"</span><span class="p">:</span> <span class="s2">"mmlu"</span><span class="p">,</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>        <span class="s2">"level"</span><span class="p">:</span> <span class="s2">"node"</span><span class="p">,</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>        <span class="s2">"ig_steps"</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>                   <span class="c1"># 2. IG steps (the default)</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>        <span class="s2">"batch_size"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>                 <span class="c1"># 3. batch size 1 (top-level, not under data_params)</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>        <span class="s2">"data_params"</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>            <span class="s2">"num_examples"</span><span class="p">:</span> <span class="mi">64</span><span class="p">,</span>          <span class="c1"># 4. fewer examples</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>        <span class="p">},</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>    <span class="p">},</span>
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>    <span class="s2">"pruning"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"target_sparsity"</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">,</span> <span class="s2">"scope"</span><span class="p">:</span> <span class="s2">"heads"</span><span class="p">},</span>
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>    <span class="s2">"output_path"</span><span class="p">:</span> <span class="s2">"./circuit.pt"</span><span class="p">,</span>
+<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="p">})</span>
 </code></pre></div>
 <hr />
 <h2 id="memory-savings-summary">Memory Savings Summary<a class="headerlink" href="#memory-savings-summary" title="Permanent link">&para;</a></h2>
@@ -1997,27 +2372,27 @@ figures.</p>
 </tr>
 </tbody>
 </table>
-<p>There are no <code>memory_efficient</code> or <code>use_half_precision_activations</code> config keys — neither is read anywhere in the discovery backend, so setting them silently does nothing. The levers above (model precision, <code>batch_size</code>, <code>ig_steps</code>, <code>n_examples</code>) are the only ones that actually affect memory.</p>
+<p>There are no <code>memory_efficient</code> or <code>use_half_precision_activations</code> config keys — neither is read anywhere in the discovery backend, so setting them silently does nothing. The levers above (model precision, <code>batch_size</code>, <code>ig_steps</code>, <code>n_examples</code>, and the opt-in <code>CIRCUITKIT_TL_MEMORY_PATCH=1</code>) are the only ones that actually affect memory.</p>
 <hr />
 <h2 id="monitoring-memory-usage">Monitoring Memory Usage<a class="headerlink" href="#monitoring-memory-usage" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">():</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Before: </span><span class="si">{</span><span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">memory_allocated</span><span class="p">()</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">1e9</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> GB"</span><span class="p">)</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="c1"># ... run discovery ...</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">():</span>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Peak: </span><span class="si">{</span><span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">max_memory_allocated</span><span class="p">()</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">1e9</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> GB"</span><span class="p">)</span>
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>    <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">reset_peak_memory_stats</span><span class="p">()</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">():</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Before: </span><span class="si">{</span><span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">memory_allocated</span><span class="p">()</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">1e9</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> GB"</span><span class="p">)</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="c1"># ... run discovery ...</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">():</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Peak: </span><span class="si">{</span><span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">max_memory_allocated</span><span class="p">()</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">1e9</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> GB"</span><span class="p">)</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>    <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">reset_peak_memory_stats</span><span class="p">()</span>
 </code></pre></div>
 <h2 id="pre-flight-memory-check">Pre-Flight Memory Check<a class="headerlink" href="#pre-flight-memory-check" title="Permanent link">&para;</a></h2>
 <p>Before running discovery, check if the model will fit:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>circuitkit<span class="w"> </span>discover-smart<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span>--model<span class="w"> </span>google/gemma-3-4b-it<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span>--algorithm<span class="w"> </span>eap-ig<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span>--task<span class="w"> </span>mmlu<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span>--check-memory
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>circuitkit<span class="w"> </span>discover-smart<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span>--model<span class="w"> </span>google/gemma-3-4b-it<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span>--algorithm<span class="w"> </span>eap-ig<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span>--task<span class="w"> </span>mmlu<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span>--check-memory
 </code></pre></div>
 <p>This runs a dry-run estimate without loading the full dataset.</p>
 <hr />
@@ -2055,7 +2430,7 @@ figures.</p>
 <ol>
 <li><strong>Reduce <code>num_examples</code> to 32</strong> — enough for a reasonable circuit estimate</li>
 <li><strong>Try <code>ig_steps=1</code></strong> — equivalent to vanilla <code>eap</code>; slightly less accurate but same memory as non-IG methods</li>
-<li><strong>Use CPU</strong> — very slow but no VRAM constraint. There is no <code>"device"</code> model-config key — device selection is automatic via <code>get_device()</code> (CUDA &gt; MPS &gt; CPU). To force CPU, make CUDA (and MPS) unavailable to the process (e.g. <code>CUDA_VISIBLE_DEVICES=""</code>) rather than setting a config key.</li>
+<li><strong>Use CPU</strong> — very slow but no VRAM constraint. Set <code>model: {device: cpu}</code> in the config (without it, <code>get_device()</code> picks CUDA &gt; MPS &gt; CPU), or <code>ck.load_model(..., device="cpu")</code> for the flat API.</li>
 <li><strong>Consider a smaller model</strong> — GPT-2 or Pythia-70M for algorithm prototyping</li>
 </ol>
 <hr />

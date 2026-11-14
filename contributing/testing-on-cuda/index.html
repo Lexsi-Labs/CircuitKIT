@@ -1356,9 +1356,9 @@
 
 <h1 id="testing-on-a-cuda-machine">Testing on a CUDA machine<a class="headerlink" href="#testing-on-a-cuda-machine" title="Permanent link">&para;</a></h1>
 <p>Some of CircuitKIT's validation can't run on a CPU-only or Apple-Silicon box. The
-<code>gpu-cu126</code> extra pins <code>torch==2.10.0+cu126</code> / <code>torchvision==0.25.0+cu126</code>, and those
+<code>gpu-cu126</code> extra pins <code>torch==2.13.0+cu126</code> / <code>torchvision==0.28.0+cu126</code>, and those
 <code>+cu126</code> wheels only exist on PyTorch's CUDA index — not on PyPI — so a plain
-<code>uv</code>/<code>pip</code> resolve fails off a CUDA host with <em>"no version of torch==2.10.0+cu126"</em>.
+<code>uv</code>/<code>pip</code> resolve fails off a CUDA host with <em>"no version of torch==2.13.0+cu126"</em>.
 Real-model discovery, quantization, vLLM evaluation, and the GPU path of the
 corruption/pairing guards therefore need to be checked on an actual NVIDIA GPU.</p>
 <p>Device selection is automatic (<code>get_device()</code>: CUDA → MPS → CPU), so you don't set
@@ -1374,14 +1374,14 @@ then CircuitKIT with the extras you need.</p>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="nv">torch</span><span class="o">==</span><span class="m">2</span>.10.0+cu126<span class="w"> </span><span class="nv">torchvision</span><span class="o">==</span><span class="m">0</span>.25.0+cu126<span class="w"> </span><span class="se">\</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="nv">torch</span><span class="o">==</span><span class="m">2</span>.13.0+cu126<span class="w"> </span><span class="nv">torchvision</span><span class="o">==</span><span class="m">0</span>.28.0+cu126<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span>--index-url<span class="w"> </span>https://download.pytorch.org/whl/cu126
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">".[dev,benchmarks,quantization]"</span>
 </code></pre></div>
 </div>
 </div>
 </div>
-<p>For a different CUDA version, swap <code>cu126</code> for your toolkit (e.g. <code>cu121</code>) in both
+<p>For a different CUDA version, swap <code>cu126</code> for your toolkit (e.g. <code>cu130</code>) in both
 the index URL and the torch pins.</p>
 <h2 id="2-confirm-the-gpu-is-visible">2. Confirm the GPU is visible<a class="headerlink" href="#2-confirm-the-gpu-is-visible" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0))"</span>
