@@ -232,9 +232,10 @@ Measures cross-seed circuit reproducibility. Returns a dict with `r1_seed_consis
 
 **Module**: `circuitkit.tasks`
 
-16 built-in tasks are registered on first use: `ioi`, `sva`, `gender_bias`,
+17 built-in tasks are registered on first use: `ioi`, `sva`, `gender_bias`,
 `capital_country`, `hypernymy`, `greater_than`, `double_io`, `boolq`, `glue`, `mmlu`,
-`winogrande`, `winogrande_mc`, `truthfulqa`, `ifeval`, `wmdp`, `gsm8k`.
+`winogrande`, `winogrande_mc`, `truthfulqa`, `ifeval`, `wmdp`, `gsm8k`,
+`multilingual_refusal`.
 
 > **Per-task discovery metrics differ.** Most classification / MCQ tasks
 > (`ioi`, `boolq`, `sva`, `winogrande_mc`, ...) score a single answer token at
@@ -265,7 +266,8 @@ template. `"auto"` wraps iff the model is a chat model (its tokenizer ships a
 `chat_template`); `"on"` always wraps; `"off"` always uses raw text. `"auto"` is
 the default for downstream-behavior tasks (`boolq`, `glue`, `mmlu`,
 `truthfulqa`, `ifeval`, `wmdp`, `gsm8k`, `winogrande_mc`) and for custom
-`GenericTaskSpec` / `NormalizedTaskSpec` tasks; `"off"` is the default for
+`GenericTaskSpec` tasks (`NormalizedTaskSpec` uses its prompts as given; pass
+`templated=True` when they already carry the chat template); `"off"` is the default for
 diagnostic minimal-pair tasks (the IOI family, `sva`, `greater_than`,
 `gender_bias`, `capital_country`, `hypernymy`, `double_io`) and for the cloze
 `winogrande` task. The mode is overridable per run via the

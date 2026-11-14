@@ -82,11 +82,11 @@ Pinned CUDA 12.6 wheels:
 pip install -e .[gpu-cu126] --extra-index-url https://download.pytorch.org/whl/cu126
 ```
 
-Includes: `torch==2.10.0+cu126`, `torchvision==0.25.0+cu126`
+Includes: `torch==2.13.0+cu126`, `torchvision==0.28.0+cu126`
 
-Alternative CUDA versions available via PyTorch's wheel index:
-- CUDA 12.1: `cu121`
-- CUDA 11.8: `cu118`
+Other CUDA builds of torch 2.13+ on PyTorch's wheel index:
+- CUDA 12.9: `cu129`
+- CUDA 13.0: `cu130`
 
 ### Development & Testing
 
@@ -214,7 +214,7 @@ pip install -e . --no-cache-dir
 
 ```bash
 pip install -e .
-pip install torch==2.10.0+cu126 -f https://download.pytorch.org/whl/cu126
+pip install torch==2.13.0+cu126 -f https://download.pytorch.org/whl/cu126
 ```
 
 ### Issue: `pygraphviz` compilation fails
@@ -328,7 +328,7 @@ pip uninstall circuitkit spacy lm-eval torch-pruning
 For specific CUDA/cuDNN versions:
 
 ```bash
-pip install torch==2.6.0+cu121 --index-url https://download.pytorch.org/whl/cu121
+pip install torch==2.13.0+cu130 --index-url https://download.pytorch.org/whl/cu130
 pip install -e .
 ```
 

@@ -18,7 +18,9 @@ import pytest
 class TestPublicSurface:
     """Verify that new and existing names are reachable via the package root."""
 
-    NEW_NAMES = ["load_scores", "selective_finetune", "visualize_circuit", "Pipeline"]
+    NEW_NAMES = [
+        "load_scores", "selective_finetune", "visualize_circuit", "Pipeline", "build_discovery_config",
+    ]
     ORIGINAL_QUICK_NAMES = [
         "load_model", "discover", "faithfulness",
         "prune", "quantize", "export_checkpoint", "benchmark",
@@ -199,3 +201,10 @@ class TestTaskHelpers:
         import circuitkit
         with pytest.raises(Exception):  # KeyError or ValueError depending on registry impl
             circuitkit.get_task("nonexistent_task_xyz_abc")
+
+
+def test_build_discovery_config_is_reexported_from_the_package_root():
+    import circuitkit
+    from circuitkit import quick
+
+    assert circuitkit.build_discovery_config is quick.build_discovery_config

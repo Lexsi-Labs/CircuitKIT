@@ -176,3 +176,25 @@ def test_ibcircuit_normalized_task_uses_one_multi_example_batch_for_nan_stabilit
 
     assert torch.isfinite(noisy_activation).all()
     assert torch.isfinite(kl_loss)
+
+
+def test_templated_prompts_are_tokenized_without_a_second_bos(tmp_path):
+    task = NormalizedTaskSpec(_paired_dataset(), cache_dir=str(tmp_path), templated=True)
+    eap = task.build_dataloader(_ToyModel(), {"algorithm": "eap"}, "cpu")
+    assert eap.templated is True  # tokenize_batch_pair then uses prepend_bos=False
+    ib = task.build_dataloader(_ToyModel(), {"algorithm": "ibcircuit"}, "cpu")
+    assert (next(iter(ib))["tokens"][:, 0] != 1).all()  # _ToyModel's BOS id is 1
+    raw = NormalizedTaskSpec(_paired_dataset(), cache_dir=str(tmp_path))
+    assert raw.build_dataloader(_ToyModel(), {"algorithm": "eap"}, "cpu").templated is False
+
+
+def test_eap_csv_cache_follows_the_record_content(tmp_path):
+    first = _paired_dataset()
+    task = NormalizedTaskSpec(first, cache_dir=str(tmp_path))
+    assert task.build_dataloader(_ToyModel(), {"algorithm": "eap"}, "cpu").dataset.df["clean"].iloc[0].startswith("Question")
+    changed = _paired_dataset()  # same name, same length, different prompts
+    for r in changed.records:
+        r.clean_prompt = r.clean_prompt.replace("Question", "Edited")
+    task = NormalizedTaskSpec(changed, cache_dir=str(tmp_path))
+    clean = task.build_dataloader(_ToyModel(), {"algorithm": "eap"}, "cpu").dataset.df["clean"]
+    assert clean.str.startswith("Edited").all()

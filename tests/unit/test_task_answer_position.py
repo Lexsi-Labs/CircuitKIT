@@ -133,7 +133,7 @@ def test_cache_written_before_the_fix_is_not_reused(task, prefix, tiny_model, tm
 def test_prompt_text_before_answer_drops_bos_answer_and_padding(tiny_model):
     model = tiny_model
     row = model.to_tokens("Then , Mary and John went to the store . John gave a drink to Mary")[0]
-    padded = torch.cat([row, torch.full((3,), model.tokenizer.pad_token_id)])
+    padded = torch.cat([row, torch.full((3,), model.tokenizer.pad_token_id, device=row.device)])
     end = len(row) - 2  # the final "to"
     text = prompt_text_before_answer(model, padded, end)
     assert text.split()[-1] == "to" and text.split()[0] == "Then"

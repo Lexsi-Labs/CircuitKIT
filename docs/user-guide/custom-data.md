@@ -124,6 +124,26 @@ pruning:
 
 - **`template`** pairs each clean record with a corrupt one using the four `clean_prompt` / `corrupt_prompt` / `clean_answer` / `corrupt_answer` keys, then runs a token-alignment pass so the pair stays position-matched. For a clean-only algorithm (IBCircuit, CD-T) you may supply just `clean_prompt` (and `clean_answer`) and skip the corrupt keys.
 - **`auto`** infers the mapping from column names and applies a default corruption strategy.
+  A file of harmful prompts (a `prompt`, `goal`, `behavior` or similar column) is paired by
+  `SafetyPromptAdapter`: each prompt (refusal answer `" I"`) against a benign control (compliance
+  answer `" Sure"`). Three optional keys tune that pairing:
+    - `benign_controls`: your own list of control prompts (default: ten built-in ones).
+    - `length_match: true`: pair each prompt only with a control of the same token length under the
+      model's tokenizer, so clean and corrupt line up position by position. Prompts with no control of
+      their length are dropped, so give a pool that covers your prompt lengths (same language, many
+      lengths).
+    - `chat_template_mode: on | auto | off` (default `off`): store every prompt wrapped in the model's
+      chat template, so lengths are matched on the templated text; the task is then tokenized without
+      an extra BOS.
+
+  ```yaml
+  data:
+    type: auto
+    path: ./data/harmful_hi.csv
+    length_match: true
+    chat_template_mode: auto
+    benign_controls: ["...", "..."]
+  ```
 - **`clean_only`** loads clean prompts and answers with no corrupt partner — compatible with IBCircuit and CD-T only. Set `prompt_column` and `answer_column` if your columns aren't named `prompt`/`answer`.
 
 Note the key mismatch between the two paths: the task-YAML `schema` uses `corrupted_prompt`, while the inline `data.template` block uses `corrupt_prompt`. They are separate loaders. Use whichever entry point fits your workflow, but don't copy keys between them.
@@ -173,7 +193,7 @@ circuit = discover_circuit({
 })
 ```
 
-`NormalizedTaskSpec` takes the dataset (positional), an optional `name` (defaults to `f"normalized:{ds.name}"`), and an optional `cache_dir` (defaults to `"./cache/normalized"`). That's it — the prompts come from the wrapped records' `clean_prompt` / `clean_answer` / `corrupt_prompt` / `corrupt_answer` fields.
+`NormalizedTaskSpec` takes the dataset (positional), an optional `name` (defaults to `f"normalized:{ds.name}"`), an optional `cache_dir` (defaults to `"./cache/normalized"`; CSV file names include a hash of their content, so edited data is never read from a stale file), and `templated` (default `False`). The prompts come from the wrapped records' `clean_prompt` / `clean_answer` / `corrupt_prompt` / `corrupt_answer` fields and are used as given: the spec does not apply a chat template. If your prompts already carry the model's chat template, pass `templated=True` so they are tokenized without a second BOS token.
 
 ## Next steps
 

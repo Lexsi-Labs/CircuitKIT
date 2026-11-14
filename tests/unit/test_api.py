@@ -796,6 +796,12 @@ class TestComputeNTopn:
         assert n_to_keep == 4
         assert n_topn == 4 + 2  # + n_mlps always
 
+    def test_sparsity_from_a_node_count_keeps_that_count(self):
+        # 36 layers x 16 heads + 36 MLPs = 612 nodes; 1 - k/612 used to keep k - 1.
+        for k in (20, 40, 60, 64, 80, 100, 200):
+            _, n_to_keep = self._call(n_layers=36, n_heads=16, scope="both", sparsity=1 - k / 612)
+            assert n_to_keep == k
+
     def test_n_topn_gte_n_to_keep(self):
         for scope in ("heads", "mlp", "both"):
             n_topn, n_to_keep = self._call(n_layers=3, n_heads=3, scope=scope, sparsity=0.3)

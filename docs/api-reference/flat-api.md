@@ -26,7 +26,7 @@ Load a TransformerLens model with the hook flags circuit discovery needs already
 |-----------|---------|-------------|
 | `name` | — | HF / TL model id, e.g. `"gpt2"`, `"meta-llama/Llama-3.2-1B-Instruct"` |
 | `dtype` | `"bfloat16"` | Torch dtype string |
-| `device` | auto | `"cuda"` if available, else `"cpu"` |
+| `device` | `None` | `None`: `"cuda"` if available, else `"cpu"`. `"auto"`: `"cuda"`, then `"mps"`, then `"cpu"` |
 | `algorithm` | `None` | If given, only the flags that algorithm needs are set |
 
 ```python
@@ -67,11 +67,25 @@ Run circuit discovery and return a `Circuit` object.
 | `sparsity` | 0.3 | Target pruning sparsity |
 | `scope` | `"both"` | Pruning scope: `"heads"`, `"mlp"`, or `"both"` |
 | `output_path` | `"./circuit_discovery_results.pt"` | Where to write artifacts |
-| `**kw` | — | Extra keys forwarded into the discovery block (e.g. `ig_steps=3`) |
+| `**kw` | — | Extra keys forwarded into the discovery block (e.g. `ig_steps=3`, `signed=True`) |
 
 ```python
 circuit = ck.discover(model, "ioi", algorithm="eap-ig", n_examples=64, ig_steps=3)
 print(circuit.top_nodes(5))
+```
+
+**Signed scores.** Node scores are absolute values by default, which is what pruning ranks on.
+`signed=True` (EAP family, node level) also keeps each score with its sign in
+`circuit.signed_scores` and in the `signed_node_scores` key of the scores side-cars; the circuit
+and `circuit.scores` are the same as without it. With the built-in logit-difference metrics a
+positive score means the node supports the clean answer (patching it to its corrupt activation
+lowers the logit difference) and a negative score means it works against it. Other algorithms and
+`level="neuron"` reject the key; a neuron-level run already saves signed per-neuron scores as
+`neurons_scores` in the `_scores.pt` side-car.
+
+```python
+circuit = ck.discover(model, "ioi", algorithm="eap", n_examples=64, signed=True)
+negative = {n: s for n, s in circuit.signed_scores.items() if s < 0}
 ```
 
 ---
@@ -324,6 +338,19 @@ ck.visualize_circuit(circuit, mode="graph", output="./circuit.html")
 
 ---
 
+## `build_discovery_config`
+
+```python
+build_discovery_config(model, task, *, algorithm="eap-ig", level="node", n_examples=128,
+                       batch_size=4, sparsity=0.3, scope="both",
+                       output_path="./circuit_discovery_results.pt", **kw) -> dict
+```
+
+Returns the dict config that `discover` passes to `discover_circuit`, so you can inspect or edit it first.
+Extra keyword arguments go into the `discovery` block.
+
+---
+
 ## `Circuit` Object
 
 `Circuit` is returned by `ck.discover` and `ck.load_scores`.
@@ -331,6 +358,7 @@ ck.visualize_circuit(circuit, mode="graph", output="./circuit.html")
 ```python
 circuit.nodes          # List[str] — node names
 circuit.scores         # Dict[str, float] — {node: importance_score}
+circuit.signed_scores  # Dict[str, float] — same with sign, when discovered with signed=True
 circuit.level          # "node" or "neuron"
 circuit.task           # task name
 circuit.algorithm      # algorithm used

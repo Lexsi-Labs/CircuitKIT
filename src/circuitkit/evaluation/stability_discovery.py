@@ -16,6 +16,8 @@ from typing import Dict, List
 import numpy as np
 import torch
 
+from circuitkit.utils import count_at_fraction
+
 logger = logging.getLogger(__name__)
 
 
@@ -163,7 +165,7 @@ def node_scores_to_circuit(
         ((k, _to_float(v)) for k, v in node_scores.items()),
         key=lambda x: x[1],
     )
-    n_prune = int(len(sorted_nodes) * sparsity)
+    n_prune = count_at_fraction(len(sorted_nodes), sparsity)
     return dict(sorted_nodes[n_prune:])
 
 

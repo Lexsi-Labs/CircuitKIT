@@ -6,6 +6,8 @@ from collections import defaultdict
 from typing import Any, Dict, List, Tuple, Union
 
 from transformer_lens import HookedTransformer
+
+from circuitkit.utils import count_at_fraction
 import logging
 
 
@@ -606,7 +608,7 @@ def get_nodes_to_prune_from_weights(
     # 2. Prune MLP layers if scope allows
     if pruning_scope in ["mlp", "both"] and mlp_scores:
         sorted_mlps = sorted(mlp_scores.items(), key=lambda item: item[1])
-        num_mlps_to_prune = int(len(sorted_mlps) * target_sparsity)
+        num_mlps_to_prune = count_at_fraction(len(sorted_mlps), target_sparsity)
         pruned_mlps = [name for name, score in sorted_mlps[:num_mlps_to_prune]]
         nodes_to_prune.extend(pruned_mlps)
         logger.info(
@@ -617,7 +619,7 @@ def get_nodes_to_prune_from_weights(
 
     # 3. Prune Attention Heads if scope allows (with 50% per-layer constraint)
     if pruning_scope in ["heads", "both"] and attn_head_scores:
-        total_heads_to_prune = int(len(attn_head_scores) * target_sparsity)
+        total_heads_to_prune = count_at_fraction(len(attn_head_scores), target_sparsity)
         logger.info(
             f"Targeting to prune {total_heads_to_prune} out of {len(attn_head_scores)} total Attention Heads ({target_sparsity:.0%})."
         )
@@ -642,6 +644,12 @@ def get_nodes_to_prune_from_weights(
 
         nodes_to_prune.extend(pruned_attn_heads)
         logger.info(f"Actually pruned {len(pruned_attn_heads)} Attention Heads.")
+        if len(pruned_attn_heads) < total_heads_to_prune:
+            logger.warning(
+                f"Head pruning capped at half of each layer's heads: pruned "
+                f"{len(pruned_attn_heads)} of the {total_heads_to_prune} requested "
+                f"({len(attn_head_scores)} heads, target_sparsity={target_sparsity})."
+            )
         for layer, count in sorted(pruned_heads_count_by_layer.items()):
             total_in_layer = len(attn_heads_by_layer[layer])
             logger.info(f"  - Layer {layer}: Pruned {count}/{total_in_layer} heads.")

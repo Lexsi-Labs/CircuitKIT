@@ -139,18 +139,19 @@ class SafetyPromptAdapter(DataAdapter):
     # ------------------------------------------------------------------ #
     # Pairing modes                                                        #
     # ------------------------------------------------------------------ #
-    # "answer_contrastive" (default, recommended):                         #
-    #   clean   = (harmful_prompt, refusal_token)                          #
-    #   corrupt = (harmful_prompt, compliance_token)                       #
-    #   Same prompt, different answer token. Isolates the refusal signal   #
-    #   without confounding prompt-level differences. Correct for circuit  #
-    #   localisation (Conmy et al. 2023, circuit faithfulness style).      #
-    #                                                                       #
-    # "harmful_vs_benign" (Arditi et al. 2024 style):                      #
+    # "harmful_vs_benign" (default, Arditi et al. 2024 style):             #
     #   clean   = (harmful_prompt, refusal_token)                          #
     #   corrupt = (benign_control,  compliance_token)                      #
     #   Different prompts AND different answer tokens. Captures broader     #
     #   refusal-vs-compliance activation difference.                       #
+    #                                                                       #
+    # "answer_contrastive":                                                #
+    #   clean   = (harmful_prompt, refusal_token)                          #
+    #   corrupt = (harmful_prompt, compliance_token)                       #
+    #   Same prompt, different answer token. The clean and corrupt         #
+    #   prompts are identical, so patching-based EAP sees no activation    #
+    #   difference and NormalizedTaskSpec rejects the pairs unless         #
+    #   allow_degenerate_corruption is set.                                #
     #                                                                       #
     # "benign_vs_harmful" (inverted):                                      #
     #   clean   = (benign_control,  compliance_token)                      #
@@ -169,7 +170,10 @@ class SafetyPromptAdapter(DataAdapter):
         refusal_token: str = _DEFAULT_REFUSAL,
         compliance_token: str = _DEFAULT_COMPLIANCE,
         benign_controls: Optional[List[str]] = None,
-        pairing_mode: str = "answer_contrastive",
+        pairing_mode: str = "harmful_vs_benign",
+        length_match: bool = False,
+        tokenizer: Any = None,
+        chat_template_mode: str = "off",
         **_unused: Any,
     ) -> NormalizedDataset:
         """Adapt a harm-prompt dataset into a NormalizedDataset.
@@ -183,8 +187,24 @@ class SafetyPromptAdapter(DataAdapter):
             compliance_token: Answer token the model gives when complying.
             benign_controls: List of benign prompts for harmful_vs_benign /
                 benign_vs_harmful modes.  Ignored for answer_contrastive.
-            pairing_mode: One of "answer_contrastive", "harmful_vs_benign",
-                "benign_vs_harmful".  Default: "answer_contrastive".
+            pairing_mode: One of "harmful_vs_benign" (default),
+                "answer_contrastive", "benign_vs_harmful". "answer_contrastive"
+                gives identical clean and corrupt prompts, which patching-based
+                EAP cannot use.
+            length_match: Pair each harmful prompt only with a control of the
+                same token length (as tokenized by ``tokenizer``, after the chat
+                template when one is applied), so clean and corrupt prompts line up
+                position by position under padding. Prompts with no control of
+                their length are dropped; ``meta["_alignment"]`` counts them. Use a
+                control pool large enough to cover the prompt lengths. Needs
+                ``tokenizer``. Defaults to False (controls drawn at random).
+            tokenizer: HuggingFace tokenizer, for ``length_match`` and
+                ``chat_template_mode``.
+            chat_template_mode: ``"off"`` (default), ``"on"`` or ``"auto"`` (on
+                when the tokenizer has a chat template). When it resolves to on,
+                every prompt is stored wrapped in the tokenizer's chat template
+                (user turn plus generation prompt) and ``meta["templated"]`` is
+                True; build the task with ``NormalizedTaskSpec(ds, templated=True)``.
         """
         if pairing_mode not in self.PAIRING_MODES:
             raise ValueError(
@@ -197,6 +217,33 @@ class SafetyPromptAdapter(DataAdapter):
                 f"pairing_mode={pairing_mode!r} requires at least one benign "
                 "control prompt (benign_controls or the default list)."
             )
+
+        if (length_match or chat_template_mode != "off") and tokenizer is None:
+            raise ValueError("length_match and chat_template_mode need tokenizer=")
+        templated = False
+        if tokenizer is not None:
+            from ...tasks._chat import (
+                resolve_chat_template_from_tokenizer,
+                wrap_prompt_with_tokenizer,
+            )
+
+            templated = resolve_chat_template_from_tokenizer(chat_template_mode, tokenizer)
+
+        def fmt(text: str) -> str:
+            if not templated:
+                return text
+            return wrap_prompt_with_tokenizer(tokenizer, text, apply=True)
+
+        def n_tokens(text: str) -> int:
+            return len(tokenizer(text, add_special_tokens=False)["input_ids"])
+
+        match = length_match and pairing_mode != "answer_contrastive"
+        controls_by_len: Dict[int, List[str]] = {}
+        if match:
+            for c in controls:
+                c = fmt(c)
+                controls_by_len.setdefault(n_tokens(c), []).append(c)
+        n_unmatched = 0
 
         records: List[ContrastiveRecord] = []
         import random as _r
@@ -211,17 +258,26 @@ class SafetyPromptAdapter(DataAdapter):
                 continue
             category = _first_present(row, _CATEGORY_COLS) or ""
             target = _first_present(row, _TARGET_COLS) or ""
+            prompt = fmt(prompt)
+
+            if pairing_mode != "answer_contrastive":
+                if match:
+                    same_length = controls_by_len.get(n_tokens(prompt))
+                    if not same_length:
+                        n_unmatched += 1
+                        continue
+                    control = rng.choice(same_length)
+                else:
+                    control = fmt(rng.choice(controls))
 
             if pairing_mode == "answer_contrastive":
                 # Same prompt, different answer tokens -- cleanest signal.
                 clean_p, clean_a = prompt, refusal_token
                 corrupt_p, corrupt_a = prompt, compliance_token
             elif pairing_mode == "harmful_vs_benign":
-                control = rng.choice(controls)
                 clean_p, clean_a = prompt, refusal_token
                 corrupt_p, corrupt_a = control, compliance_token
             else:  # benign_vs_harmful
-                control = rng.choice(controls)
                 clean_p, clean_a = control, compliance_token
                 corrupt_p, corrupt_a = prompt, refusal_token
 
@@ -244,15 +300,30 @@ class SafetyPromptAdapter(DataAdapter):
             if max_records and len(records) >= max_records:
                 break
 
+        meta: Dict[str, Any] = {
+            "n_loaded": len(records),
+            "refusal_token": refusal_token,
+            "compliance_token": compliance_token,
+            "pairing_mode": pairing_mode,
+        }
+        if templated:
+            meta["templated"] = True
+        if match:
+            if not records:
+                raise RuntimeError(
+                    f"length_match: none of {n_unmatched} prompts has a benign control "
+                    f"of the same token length (control lengths: {sorted(controls_by_len)}). "
+                    "Pass a larger benign_controls pool."
+                )
+            meta["_alignment"] = {
+                "align_strategy": "length_match",
+                "kept": len(records),
+                "dropped_no_same_length_control": n_unmatched,
+            }
         return NormalizedDataset(
             name=name or "safety_prompt",
             shape=DatasetShape.REFUSAL,
             records=records,
             source=source or "raw",
-            meta={
-                "n_loaded": len(records),
-                "refusal_token": refusal_token,
-                "compliance_token": compliance_token,
-                "pairing_mode": pairing_mode,
-            },
+            meta=meta,
         )

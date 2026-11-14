@@ -20,6 +20,7 @@ from .ifeval import IFEvalTaskSpec
 # Import all built-in task specs for re-export
 from .ioi import IOITaskSpec, IOITaskSpecLegacy
 from .mmlu import MMLUTaskSpec
+from .multilingual_refusal import MultilingualRefusalTaskSpec
 from .sva import SVATaskSpec
 from .truthfulqa import TruthfulQATaskSpec
 from .winogrande import WinoGrandeTaskSpec
@@ -36,6 +37,7 @@ __all__ = [
     "MMLUTaskSpec",
     "GLUETaskSpec",
     "BoolQTaskSpec",
+    "MultilingualRefusalTaskSpec",
     "WinoGrandeTaskSpec",
     "WinoGrandeMCTaskSpec",
     "TruthfulQATaskSpec",

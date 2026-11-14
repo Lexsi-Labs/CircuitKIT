@@ -21,6 +21,7 @@ How much do we gain from using the attribution algorithm?"
 
 import logging
 from circuitkit.utils.device import get_device, empty_cache
+from circuitkit.utils import count_at_fraction
 from typing import Dict, List, Optional
 
 import numpy as np
@@ -603,7 +604,7 @@ class Pillar5_Baselines:
             # sparsity here = fraction ACTIVE, so n_keep = sparsity * total_scored
             scored_neurons = ~torch.isnan(baseline_graph.neurons_scores)
             n_scored = int(scored_neurons.sum().item())
-            n_keep = max(1, int(n_scored * sparsity))
+            n_keep = max(1, count_at_fraction(n_scored, sparsity))
             baseline_graph.reset(empty=True)
             baseline_graph.apply_random(n_keep, level="neuron", prune=True, seed=seed)
 
@@ -617,7 +618,7 @@ class Pillar5_Baselines:
 
             # Get all node names — SKIP logits
             all_nodes = [n for n in baseline_graph.nodes.keys() if n != "logits"]
-            n_keep = max(1, int(len(all_nodes) * sparsity))
+            n_keep = max(1, count_at_fraction(len(all_nodes), sparsity))
 
             # Randomly select nodes
             selected_nodes = rng.choice(all_nodes, size=n_keep, replace=False)
@@ -649,7 +650,7 @@ class Pillar5_Baselines:
             weight_scores = Pillar5_Baselines._compute_weight_norm_scores(model, baseline_graph)
             scored_mask = ~torch.isnan(weight_scores)
             n_scored = int(scored_mask.sum().item())
-            n_keep = max(1, int(n_scored * sparsity))
+            n_keep = max(1, count_at_fraction(n_scored, sparsity))
 
             scores_copy = weight_scores.clone()
             scores_copy[~scored_mask] = -float("inf")
@@ -682,7 +683,7 @@ class Pillar5_Baselines:
                 node_scores.append((node_name, weight_norm_scores.get(node_name, float("inf"))))
 
             node_scores.sort(key=lambda x: x[1], reverse=True)
-            n_keep = max(1, int(len(node_scores) * sparsity))
+            n_keep = max(1, count_at_fraction(len(node_scores), sparsity))
 
             for i in range(n_keep):
                 baseline_graph.nodes[node_scores[i][0]].in_graph = True
@@ -768,7 +769,7 @@ class Pillar5_Baselines:
             wanda_scores.append((node_name, weight_mag * activation_mag))
 
         wanda_scores.sort(key=lambda x: x[1], reverse=True)
-        n_keep = max(1, int(len(wanda_scores) * sparsity))
+        n_keep = max(1, count_at_fraction(len(wanda_scores), sparsity))
         for node_name, _ in wanda_scores[:n_keep]:
             baseline_graph.nodes[node_name].in_graph = True
 

@@ -8,6 +8,11 @@ updates:
     groups:
       pip-updates:
         patterns: ["*"]
+    # torch/torchvision are pinned as a CUDA pair (+cu126) in the gpu-cu126 extra;
+    # Dependabot drops the local label, so the pair is bumped by hand.
+    ignore:
+      - dependency-name: "torch"
+      - dependency-name: "torchvision"
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
@@ -16,3 +21,7 @@ updates:
     groups:
       actions-updates:
         patterns: ["*"]
+    # Major action upgrades change inputs (e.g. slack v1 -> v4); review those by hand.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]

@@ -50,6 +50,7 @@ from .utils.exceptions import (  # noqa: E402 - import after intentional pre-imp
 
 # CircuitKIT imports
 from circuitkit.utils.device import get_device, empty_cache
+from circuitkit.utils import count_at_fraction
 from .utils.logging import (  # noqa: E402 - import after intentional pre-import setup
     ProgressLogger,
     get_logger,
@@ -719,11 +720,11 @@ def _compute_n_topn(graph: Graph, scope: str, sparsity: float):
     n_mlps = n_layers
 
     if scope == "heads":
-        n_to_keep, n_always = int(n_heads * (1 - sparsity)), n_mlps
+        n_to_keep, n_always = count_at_fraction(n_heads, 1 - sparsity), n_mlps
     elif scope == "mlp":
-        n_to_keep, n_always = int(n_mlps * (1 - sparsity)), n_heads
+        n_to_keep, n_always = count_at_fraction(n_mlps, 1 - sparsity), n_heads
     else:  # both
-        n_to_keep, n_always = int((n_heads + n_mlps) * (1 - sparsity)), 0
+        n_to_keep, n_always = count_at_fraction(n_heads + n_mlps, 1 - sparsity), 0
 
     return n_to_keep + n_always, n_to_keep
 
@@ -1110,12 +1111,20 @@ def prepare_custom_task(
     elif data_type == "auto":
         from .data.auto_detect import auto_normalize
 
+        # Harm-prompt (REFUSAL) options; adapters of other shapes ignore them.
+        adapter_kwargs = {
+            k: data_cfg[k]
+            for k in ("length_match", "benign_controls", "chat_template_mode")
+            if k in data_cfg
+        }
         ds = auto_normalize(
             data_cfg["path"],
             apply_default_strategy=True,
             max_records=data_cfg.get("max_records"),
             name=data_cfg.get("name", Path(data_cfg["path"]).stem),
             source=data_cfg["path"],
+            tokenizer=model.tokenizer,
+            **adapter_kwargs,
         )
 
     elif data_type == "clean_only":
@@ -1141,7 +1150,7 @@ def prepare_custom_task(
 
     from .data.normalized_task import NormalizedTaskSpec
 
-    task_spec = NormalizedTaskSpec(ds, name=task_name)
+    task_spec = NormalizedTaskSpec(ds, name=task_name, templated=bool(ds.meta.get("templated")))
     padding = data_cfg.get("pair_padding_side")
     if padding in ("left", "right"):
         task_spec.pair_padding_side = padding
@@ -1279,6 +1288,20 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
                 f"{', '.join(sorted(DISCOVERY_ALGORITHMS))}."
             )
         validate_discovery_algorithm(discovery_cfg["algorithm"])
+        if discovery_cfg.get("signed"):
+            from .tasks._algorithm_families import EAP_FAMILY
+
+            if discovery_cfg["algorithm"].lower() not in EAP_FAMILY:
+                raise ValueError(
+                    "discovery key 'signed' is supported for the EAP family only "
+                    f"({sorted(EAP_FAMILY)}), not {discovery_cfg['algorithm']!r}."
+                )
+            if discovery_cfg.get("level", "node") != "node":
+                raise ValueError(
+                    "discovery key 'signed' applies to node-level discovery. Neuron-level "
+                    "runs already save signed per-neuron scores as 'neurons_scores' in "
+                    "the _scores.pt side-car."
+                )
 
         progress.step("Setting up model", model=model_cfg["name"])
         # config["model"]["device"] pins the device; absent -> auto-detect.
@@ -1543,6 +1566,11 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
 
                 if not is_neuron_level:
                     node_scores = _convert_eap_scores_to_ck_format(graph)
+                    signed_node_scores = (
+                        _convert_eap_scores_to_ck_format(graph, signed=True)
+                        if discovery_cfg.get("signed")
+                        else None
+                    )
 
                     # Build unified CircuitScores artifact (Workstream G)
                     circuit_scores = _build_circuit_scores(
@@ -1552,6 +1580,7 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
                         node_scores=node_scores,
                         discovery_cfg=discovery_cfg,
                     )
+                    circuit_scores.signed_node_scores = signed_node_scores
 
                     # Save CircuitScores as JSON
                     if config.get("output_path"):
@@ -1562,12 +1591,10 @@ def discover_circuit(  # noqa: C901 - complex function, refactor out of scope fo
                         logger.info(f"Saved unified CircuitScores → {scores_path}")
 
                     # Also save legacy format for compatibility
-                    _save_artifact(
-                        {"algo": algo, "level": "node", "node_scores": node_scores},
-                        config.get("output_path"),
-                        "_scores",
-                        logger,
-                    )
+                    legacy = {"algo": algo, "level": "node", "node_scores": node_scores}
+                    if signed_node_scores is not None:
+                        legacy["signed_node_scores"] = signed_node_scores
+                    _save_artifact(legacy, config.get("output_path"), "_scores", logger)
 
                 else:
                     # Handle neuron-level results
@@ -2073,7 +2100,7 @@ def _reconstruct_circuit_graph(
                     graph.neurons_scores[fwd_idx] = float("inf")
                     total_to_keep_global += node.d_neuron
                 else:
-                    num_keep_local = int(node.d_neuron * (1 - sparsity))
+                    num_keep_local = count_at_fraction(node.d_neuron, 1 - sparsity)
                     total_to_keep_global += num_keep_local
                     abs_scores = t.abs(graph.neurons_scores[fwd_idx, : node.d_neuron])
                     if num_keep_local < node.d_neuron and num_keep_local > 0:

@@ -137,7 +137,7 @@ If you still encounter OOM errors with all optimizations:
 2. **Reduce IG steps to 3** (minimum for reasonable results)
 3. **Use `samples_per_subject`** to cap examples per subject (MMLU/WMDP only)
 4. **Use a smaller model** for algorithm prototyping (GPT-2, Pythia-70M)
-5. **Use CPU** for very large models (much slower; device selection is automatic via `get_device()` — there is no `device` config key to force this, so make CUDA unavailable to the process instead, e.g. `CUDA_VISIBLE_DEVICES=""`)
+5. **Use CPU** for very large models (much slower; set `model: {device: cpu}` in the config, or `ck.load_model(..., device="cpu")`; without a device, `get_device()` picks CUDA > MPS > CPU)
 
 ## Best Practices
 

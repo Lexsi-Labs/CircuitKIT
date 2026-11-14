@@ -17,6 +17,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Length-matched safety pairs, opt-in** (#46). `SafetyPromptAdapter.adapt(..., length_match=True, tokenizer=tok)`
+  pairs each harmful prompt only with a benign control of the same token length, so with padding the clean and corrupt
+  prompts line up position by position (a random control of another length shifts the whole chat preamble).
+  `chat_template_mode="on"`/`"auto"` stores the prompts wrapped in the tokenizer's chat template and measures length on
+  that text; the dataset is then marked `templated` and `data: {type: auto}` builds its task with `templated=True`.
+  Prompts without a same-length control are dropped and counted in `meta["_alignment"]`; if none is left the adapter
+  raises. `data: {type: auto}` passes `length_match`, `benign_controls` and `chat_template_mode` from the data block,
+  with the model's tokenizer. Without these options the pairs are the same as before.
+- **`load_model(..., device="auto")` can pick MPS** (#47). `"auto"` calls `circuitkit.utils.device.get_device`, so it
+  chooses CUDA, then MPS, then CPU, as `discover_circuit` already does for a config without `model.device`. The
+  default, `device=None`, still chooses CUDA or CPU.
+- **Signed node scores, opt-in** (#47). Node scores are absolute values, so whether a node pushes towards the clean
+  or the corrupt answer was lost. `signed: true` in the discovery block (`ck.discover(..., signed=True)`) keeps each
+  score with its sign in `CircuitScores.signed_node_scores`, the `signed_node_scores` key of both side-cars and
+  `Circuit.signed_scores`. With the built-in logit-difference metrics a positive score means the node supports the
+  clean answer. `node_scores`, the ranking and the pruned circuit are the same as without the key, and the default
+  scores JSON is unchanged. EAP family at node level only; other algorithms and neuron level reject the key (neuron
+  runs already save signed `neurons_scores`).
+- **`multilingual_refusal` task** (#48). Refusal minimal pairs for chat models, one language per run.
+  English pairs come from `binary_align/jailbreak_binary.csv`, which no task used until now. Other
+  languages take a `pairs_path` CSV, because CircuitKIT ships no translations. Prompts go through
+  the chat template by default, with the BOS handling that needs, and a pair that tokenizes to two
+  lengths is dropped. Defaults for `refuse` and `comply` exist for `en`, `hi`, `hi-Latn`, `bn`,
+  `ta`, `ar` and `sw`. EAP family only. `data_params["chat_template_kwargs"]` goes to the
+  tokenizer's `apply_chat_template`: Qwen3 needs `{"enable_thinking": False}`, because with its
+  default template the reply opens with `<think>` (about 0.9997 of the probability at the scored
+  position on Qwen3-0.6B), and a template with that switch left on logs a warning.
 - **Hyperparameter ranges** (`circuitkit.utils.hparams`). Each hyperparameter now has a *valid*
   range (outside it the value cannot work: `HyperparameterError`, a `ValueError`) and a *sensible*
   range (inside valid, but earlier runs or the literature show it is risky: `HyperparameterWarning`).
@@ -51,6 +78,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`huggingface-hub` may be 2.x** (#42). The requirement is now `huggingface-hub>=1.5,<3`, the same cap as
+  `transformers` 5.x. Nothing needed the old `<2`: `transformer-lens` 3.8.0 asks only for `>=0.23.2`. CircuitKIT can
+  now share an environment with tools that install hub 2.x. `transformer-lens` stays pinned at 3.8.0 because the
+  bundled patch series is written against its sources.
 - **Faithfulness scores no longer clip silently.** `patching_score` and `ablation_score` keep their
   meaning (the ratio clipped to 0 to 1), so existing callers read the same thing. Added next to
   them: `FaithfulnessReport.patching_raw_ratio` and `.ablation_raw_ratio` (read from
@@ -117,6 +148,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`ck.faithfulness` drops the task's `data_params` and `chat_template_mode`.** It built the evaluation data from
+  `num_examples` and `seed` only, so a `multilingual_refusal` circuit found in Spanish was scored on the bundled English
+  pairs with the default openers (seen on Qwen3-0.6B: the cache file was the `en` one), and a base model with
+  `chat_template_mode="off"` could not be evaluated at all. The two are now arguments:
+  `faithfulness(..., data_params={...}, chat_template_mode=...)`. Without them nothing changes.
+- **Node-level EAP scores MLPs with the gradient at their own output** (#43). `make_hooks_and_matrices` in
+  `backends/eap/attribute_node.py` multiplied the MLP's activation difference at `hook_mlp_out` by the gradient at
+  `hook_mlp_in`, a different tensor. The node score is now (corrupt − clean) · ∂L/∂a at `hook_mlp_out`, as for
+  attention heads and the input node, and as in the EAP-IG reference implementation. MLP scores change at node and
+  neuron level for `eap`, `eap-ig`, `eap-ig-activations`, `eap-clean-corrupted`, `relp`, `eap-gp`, `atp-gd` and
+  `peap` (neuron level; its node-level summary already used `hook_mlp_out`), so MLP rankings and the circuits built
+  from them differ from earlier runs. Attention-head and input scores, `mlp_hook="post_act"` runs and edge-level
+  scores (which read the destination's input hook on purpose) are unchanged.
+- **Circuit sizes no longer lose a node to float truncation** (#44). Counts derived from a sparsity were computed
+  with `int(n * fraction)`, and a sparsity built from a node count rarely maps back exactly: with 612 nodes,
+  `sparsity = 1 - k/612` kept k − 1 nodes for k = 20, 40, 60, 64, 80, 100 and 200. `circuitkit.utils.count_at_fraction`
+  floors with a 1e-9 tolerance and is now used by `_compute_n_topn`, the neuron-level keep count, `get_nodes_to_prune`,
+  `StructuralPruner`, the weight pruner, stability discovery and the Pillar 5 random baselines, so a baseline has the
+  same size as its circuit. Only products within 1e-9 below an integer change; other sparsities keep the same count.
+- **The 50% per-layer head-pruning cap is now stated and reported** (#44). `get_nodes_to_prune` (and the weight-pruner
+  copy) prune at most half of each layer's heads, so above `target_sparsity=0.5` fewer heads were pruned than
+  requested with no signal. The cap is unchanged; it is documented in the docstring and a warning gives the pruned and
+  requested counts when it binds.
+- **`NormalizedTaskSpec` no longer adds a second BOS to chat-templated prompts or reuses stale CSVs** (#45).
+  `NormalizedTaskSpec(ds, templated=True)` marks prompts that already carry the model's chat template; the EAP,
+  CD-T and IBCircuit paths then tokenize without prepending BOS (the EAP backend already supported this through the
+  dataloader's `templated` flag, but the spec never set it). The default, `templated=False`, tokenizes as before. The
+  cached EAP and CD-T CSVs were named `{name}_{n_records}_...`, so data edited in place, or another model's token ids,
+  were silently read from the old file; the name now includes a hash of the CSV rows (prompts and answer token ids).
+  The docs said `NormalizedTaskSpec` applies the chat template in `"auto"` mode; it never did, and the docs now say
+  it uses its prompts as given.
+- **`SafetyPromptAdapter` defaults to pairs EAP can use** (#46). The adapter's default `pairing_mode` was
+  `"answer_contrastive"`, which gives identical clean and corrupt prompts, so `NormalizedTaskSpec` rejected every
+  record for EAP. That default is what `data: {type: auto}` uses on a harm-prompt file (the adapter fills the corrupt
+  side, so the `benign_rewrite` default strategy never runs). The default is now `"harmful_vs_benign"`, the same as
+  the `register_*` safety helpers. The clean side is unchanged, so clean-only algorithms (IBCircuit, CD-T) see the
+  same data; pass `pairing_mode="answer_contrastive"` to get the old pairs.
+- **The TransformerLens memory patch is documented for users** (#47). `CIRCUITKIT_TL_MEMORY_PATCH=1` was described only
+  in `_tl_patches/README.md`; the memory-optimization and troubleshooting pages now say what it saves, that it must be
+  set before `circuitkit` is imported, and why it stays off by default (bf16 accumulation order, so logits and scores
+  can differ from runs without it). The memory-optimization page now has the measurements, on gpt2, Qwen2.5-0.5B,
+  Qwen3-0.6B and a 3.35B Tiny Aya-architecture model, patch on vs off, in fp32 and bf16: peak memory 11-37 % lower
+  (24-37 % on the Qwen and Cohere-architecture models); node scores correlate at 1.000 in fp32 and 0.987-0.999 in bf16
+  with at least 95 % top-k overlap; faithfulness within the seed-to-seed spread, except one Qwen3-0.6B bf16 cell
+  (+0.045). One bf16 seed fell just below the 0.99 Spearman bar set for turning it on by default, so it stays opt-in.
+- **`data: {type: auto}` reads a CSV path** (#46). `prepare_custom_task` and the `circuitkit data` commands pass the
+  file path to `auto_normalize`, but the adapters only read datasets, DataFrames and lists of rows, so every CSV path
+  failed with "Could not auto-detect dataset shape". `auto_normalize` and `detect_shape` now read a path into rows
+  first.
+- **`build_discovery_config` is re-exported from `circuitkit`** (#47). The flat API is documented as re-exported from
+  the package root and the function's docstring calls it public, but only `circuitkit.quick.build_discovery_config`
+  worked. `ck.build_discovery_config` now resolves to the same function, and the flat-API page lists it.
 - **Safety dataset helpers no longer build degenerate pairs by default.** `register_advbench`, `register_harmbench`,
   `register_sorrybench`, `register_jailbreakbench`, `register_truthfulqa` and
   `register_all_safety` paired each prompt with itself (`answer_contrastive`), so `discover()` rejected them with
@@ -395,6 +478,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **Torch floor raised to 2.13.0** (CVE-2025-3000 / GHSA-rrmf-rvhw-rf47 affects torch <=2.12.1). The `gpu-cu126`
+  extra now pins `torch==2.13.0+cu126` / `torchvision==0.28.0+cu126`, and the install docs match it.
 - The graph HTML embedded the payload with `json.dumps`, so a task, model or node name containing `</script>` ended the
   script and the rest of the name ran as HTML). `<`, `>`, `&`, U+2028 and U+2029 are now written as `\uXXXX`
   escapes inside the embedded JSON (it parses back to the same data), and the page title is HTML-escaped.

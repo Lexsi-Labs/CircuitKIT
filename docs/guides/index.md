@@ -25,7 +25,7 @@ The cards below link every guide, including the deeper references (Selectors, Vi
 
     ---
 
-    What discovery needs, the 16 built-in tasks, and bringing your own CSV, JSONL, or HuggingFace dataset.
+    What discovery needs, the 17 built-in tasks, and bringing your own CSV, JSONL, or HuggingFace dataset.
 
     [:octicons-arrow-right-24: Data overview](../user-guide/data.md)
 
@@ -65,7 +65,7 @@ The cards below link every guide, including the deeper references (Selectors, Vi
 
     ---
 
-    The 16 registered tasks, their metrics, and chat-template defaults.
+    The 17 registered tasks, their metrics, and chat-template defaults.
 
     [:octicons-arrow-right-24: Built-in tasks](../user-guide/tasks.md)
 

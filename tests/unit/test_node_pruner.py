@@ -104,6 +104,18 @@ class TestGetNodesToPrune:
         for layer, count in pruned_by_layer.items():
             assert count <= n_heads * 0.5
 
+    def test_warns_when_per_layer_head_cap_binds(self, caplog):
+        scores = _make_scores(n_layers=2, n_heads=4)
+        with caplog.at_level("WARNING"):
+            result = get_nodes_to_prune(scores, target_sparsity=0.75, pruning_scope="heads")
+        assert len(result) == 4  # 2 per layer, not the 6 requested
+        assert "pruned 4 of the 6 requested" in caplog.text
+
+    def test_no_cap_warning_below_half(self, caplog):
+        with caplog.at_level("WARNING"):
+            get_nodes_to_prune(_make_scores(n_layers=2, n_heads=4), 0.5, pruning_scope="heads")
+        assert "capped" not in caplog.text
+
     def test_empty_scores_returns_empty(self):
         result = get_nodes_to_prune({}, target_sparsity=0.5)
         assert result == []

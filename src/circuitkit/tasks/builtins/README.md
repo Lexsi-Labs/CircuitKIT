@@ -30,6 +30,7 @@ The task specifications that ship with CircuitKIT. They are registered via `task
 - `glue.py` — `GLUETaskSpec`: GLUE tasks (MRPC, QQP, SST-2, RTE, CoLA).
 - `gsm8k.py` — `GSM8KTaskSpec`: open-ended math generation circuit discovery.
 - `ifeval.py` — `IFEvalTaskSpec`: instruction-following eval prompts (mainly collateral evaluation).
+- `multilingual_refusal.py` — `MultilingualRefusalTaskSpec`: refusal minimal pairs for chat models, one language per run.
 
 ## Public API / entry points
 

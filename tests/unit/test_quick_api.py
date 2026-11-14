@@ -290,6 +290,25 @@ def test_faithfulness_calls_run_full_faithfulness():
     assert kwargs["device"] == "cpu"
 
 
+def test_faithfulness_passes_data_params_and_template_mode_to_the_dataloader():
+    """A task that reads data_params (multilingual_refusal: language, pairs, openers) must see them."""
+    c = Circuit(["A0.1"], {"A0.1": 0.5}, algorithm="eap-ig", task="multilingual_refusal")
+    params = {"language": "hi", "pairs_path": "p.csv", "chat_template_kwargs": {"enable_thinking": False}}
+    with (
+        patch("circuitkit.tasks.bootstrap._bootstrap_builtin_tasks"),
+        patch("circuitkit.tasks.registry.get_task") as mock_get_task,
+        patch("circuitkit.api._reconstruct_circuit_graph", return_value=MagicMock()),
+        patch("circuitkit.evaluation.run_full_faithfulness", return_value=MagicMock()),
+    ):
+        quick.faithfulness(
+            _fake_model(), c, "multilingual_refusal", n_examples=32, seed=3, device="cpu",
+            data_params=params, chat_template_mode="off",
+        )
+    cfg = mock_get_task.return_value.build_dataloader.call_args.args[1]
+    assert cfg["data_params"] == {"num_examples": 32, "batch_size": 16, "seed": 3, **params}
+    assert cfg["chat_template_mode"] == "off"
+
+
 def _pillars_passed_to_run_full_faithfulness(**kw):
     c = Circuit(["A0.1"], {"A0.1": 0.5}, algorithm="eap-ig", task="ioi")
     with (
@@ -632,6 +651,32 @@ def test_load_model_sets_discovery_flags():
     assert model.cfg.use_split_qkv_input is True
     assert model.cfg.use_hook_mlp_in is True
     assert model.cfg.ungroup_grouped_query_attention is True
+
+
+@pytest.mark.parametrize(
+    "device, cuda, mps, expected",
+    [
+        ("auto", True, True, "cuda"),
+        ("auto", False, True, "mps"),
+        ("auto", False, False, "cpu"),
+        # The default keeps choosing CUDA or CPU only.
+        (None, False, True, "cpu"),
+        (None, True, True, "cuda"),
+        ("cpu", True, True, "cpu"),
+    ],
+)
+def test_load_model_device_selection(device, cuda, mps, expected):
+    """device="auto" uses get_device (CUDA, then MPS, then CPU). Mocked: no model
+    is loaded and nothing is placed on a device."""
+    import torch
+
+    with (
+        patch.object(torch.cuda, "is_available", return_value=cuda),
+        patch.object(torch.backends.mps, "is_available", return_value=mps),
+        patch.object(quick, "_from_pretrained", return_value=MagicMock()) as load,
+    ):
+        quick.load_model("gpt2", dtype="float32", device=device)
+    assert load.call_args.kwargs["device"] == expected
 
 
 def _save_tiny_tokenizer(path, vocab_size):

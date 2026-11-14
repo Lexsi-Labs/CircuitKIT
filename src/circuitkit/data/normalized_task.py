@@ -18,6 +18,8 @@ consumes the EAP-CSV interface).
 from __future__ import annotations
 
 import csv
+import hashlib
+import json
 import logging
 import random
 from functools import partial
@@ -73,8 +75,20 @@ class NormalizedTaskSpec:
         *,
         name: Optional[str] = None,
         cache_dir: str = "./cache/normalized",
+        templated: bool = False,
     ):
+        """
+        Args:
+            ds: Paired (or, for IBCircuit / CD-T, clean-only) dataset.
+            name: Task name; defaults to ``"normalized:<ds.name>"``.
+            cache_dir: Where the EAP CSVs are written. File names carry a hash
+                of the CSV content, so changed data is never served from a stale file.
+            templated: Set True when the prompts already carry the model's chat
+                template (and so its BOS token); they are then tokenized without
+                prepending a second BOS.
+        """
         self._is_paired = ds.fully_paired
+        self.templated = templated
         self.ds = ds
         self.name = name or f"normalized:{ds.name}"
         self.cache_dir = Path(cache_dir)
@@ -178,22 +192,17 @@ class NormalizedTaskSpec:
         from .eap_dataset import EAPDiscoveryDataset
 
         align_tag = self.ds.meta.get("_alignment", {}).get("align_strategy", "unk")
-        cache_path = (
-            self.cache_dir
-            / (
-                f"{_safe_name(self.name)}_{len(self.ds)}_{align_tag}_seed{seed}"
-                + (f"_max{max_records}" if max_records else "")
-                + ".csv"
-            )
+        rows = self._eap_rows(model, seed, max_records=max_records)
+        cache_path = self.cache_dir / (
+            f"{_safe_name(self.name)}_{_digest(rows)}_{align_tag}_seed{seed}"
+            + (f"_max{max_records}" if max_records else "")
+            + ".csv"
         )
-        if not cache_path.exists():
-            self._materialise_eap_csv(model, cache_path, seed, max_records=max_records)
-        else:
-            logger.info(f"Reusing cached EAP CSV: {cache_path}")
-        ds = EAPDiscoveryDataset(str(cache_path))
+        ds = EAPDiscoveryDataset(str(_cached_csv(rows, cache_path)))
         return ds.to_dataloader(
             batch_size=batch_size,
             pair_padding_side=self.pair_padding_side,
+            templated=self.templated,
         )
 
     def _build_ibcircuit_dataloader(
@@ -233,7 +242,8 @@ class NormalizedTaskSpec:
             if max_records and len(token_lists) >= max_records:
                 break
             try:
-                toks = model.to_tokens(r.clean_prompt, prepend_bos=True).squeeze(0).cpu()
+                toks = model.to_tokens(r.clean_prompt, prepend_bos=not self.templated)
+                toks = toks.squeeze(0).cpu()
             except Exception:  # noqa: BLE001
                 skipped += 1
                 continue
@@ -353,28 +363,18 @@ class NormalizedTaskSpec:
         with an empty-string corrupted column and a dummy label (0) so the
         CD-T backend can iterate without modification.
         """
-        cache_path = self.cache_dir / f"{_safe_name(self.name)}_{len(self.ds)}_cdt_clean.csv"
-        if not cache_path.exists():
-            rows = [
-                {
-                    "clean": r.clean_prompt,
-                    "corrupted": "",
-                    "correct_idx": 0,
-                    "incorrect_idx": 0,
-                }
-                for r in self.ds.records
-            ]
-            with open(cache_path, "w", newline="") as f:
-                writer = csv.DictWriter(
-                    f,
-                    fieldnames=["clean", "corrupted", "correct_idx", "incorrect_idx"],
-                )
-                writer.writeheader()
-                for row in rows:
-                    writer.writerow(row)
-            logger.info(f"Wrote CD-T clean-only CSV: {cache_path} ({len(rows)} rows)")
-        else:
-            logger.info(f"Reusing cached CD-T CSV: {cache_path}")
+        rows = [
+            {
+                "clean": r.clean_prompt,
+                "corrupted": "",
+                "correct_idx": 0,
+                "incorrect_idx": 0,
+            }
+            for r in self.ds.records
+        ]
+        cache_path = _cached_csv(
+            rows, self.cache_dir / f"{_safe_name(self.name)}_{_digest(rows)}_cdt_clean.csv"
+        )
 
         from .eap_dataset import EAPDiscoveryDataset
 
@@ -382,6 +382,7 @@ class NormalizedTaskSpec:
         return ds.to_dataloader(
             batch_size=batch_size,
             pair_padding_side=self.pair_padding_side,
+            templated=self.templated,
         )
 
     def metric_fn(self, metric_type: str = "logit_diff") -> Callable:
@@ -421,7 +422,11 @@ class NormalizedTaskSpec:
     def _materialise_eap_csv(
         self, model, out_path: Path, seed: int = 42, max_records: Optional[int] = None
     ) -> None:
-        """Convert the NormalizedDataset to the CSV format EAPDiscoveryDataset wants.
+        """Write the rows from :meth:`_eap_rows` to ``out_path``."""
+        _write_eap_csv(self._eap_rows(model, seed, max_records=max_records), out_path)
+
+    def _eap_rows(self, model, seed: int = 42, max_records: Optional[int] = None) -> list:
+        """Convert the NormalizedDataset to the CSV rows EAPDiscoveryDataset wants.
 
         ``seed`` controls the order records are written to the CSV. The
         EAP DataLoader consumes the CSV in file order (it does not shuffle),
@@ -525,15 +530,38 @@ class NormalizedTaskSpec:
                 f"{skipped_same_target} same-target + {skipped_same_prompt} "
                 f"same-prompt records out of {len(self.ds)}"
             )
-        with open(out_path, "w", newline="") as f:
-            writer = csv.DictWriter(
-                f,
-                fieldnames=["clean", "corrupted", "correct_idx", "incorrect_idx"],
-            )
-            writer.writeheader()
-            for row in rows:
-                writer.writerow(row)
-        logger.info(f"Wrote EAP CSV: {out_path} ({len(rows)} rows)")
+        return rows
+
+
+def _digest(rows) -> str:
+    """Hash of the CSV rows for the cache file name.
+
+    The rows hold token ids, so the hash covers both the records and the
+    tokenizer: changed data or a different model gets a new file instead of a
+    stale one with the same name.
+    """
+    blob = json.dumps(rows, sort_keys=True, default=str).encode("utf-8")
+    return hashlib.sha256(blob).hexdigest()[:16]
+
+
+def _cached_csv(rows, path: Path) -> Path:
+    if path.exists():
+        logger.info(f"Reusing cached EAP CSV: {path}")
+    else:
+        _write_eap_csv(rows, path)
+    return path
+
+
+def _write_eap_csv(rows, path) -> None:
+    with open(path, "w", newline="") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=["clean", "corrupted", "correct_idx", "incorrect_idx"],
+        )
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(row)
+    logger.info(f"Wrote EAP CSV: {path} ({len(rows)} rows)")
 
 
 def _safe_name(s: str) -> str:

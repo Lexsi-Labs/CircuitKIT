@@ -16,6 +16,7 @@ specific first) and uses the first one whose ``fits()`` returns True.
 from __future__ import annotations
 
 import importlib
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from .adapters import ADAPTER_REGISTRY, get_adapter
@@ -99,8 +100,22 @@ DEFAULT_STRATEGY_BY_SHAPE: Dict[DatasetShape, Optional[str]] = {
 }
 
 
+def _rows_if_path(raw: Any) -> Any:
+    """A CSV file path becomes its list of rows; anything else is returned as is.
+
+    The adapters read columns from a dataset, DataFrame or list of dicts, never
+    from a path string, so without this a CSV path matched no adapter.
+    """
+    if isinstance(raw, (str, Path)):
+        from .clean_only import _load_rows
+
+        return _load_rows(raw)
+    return raw
+
+
 def detect_shape(raw: Any) -> DatasetShape:
     """Walk registered adapters in priority order; return the first match."""
+    raw = _rows_if_path(raw)
     for shape in _DETECTION_ORDER:
         cls = ADAPTER_REGISTRY.get(shape)
         if cls is None:
@@ -137,6 +152,7 @@ def auto_normalize(
     Raises:
         ValueError: if no adapter fits the input.
     """
+    raw = _rows_if_path(raw)
     shape = force_shape or detect_shape(raw)
     if shape == DatasetShape.UNKNOWN:
         raise ValueError(

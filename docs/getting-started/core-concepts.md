@@ -72,7 +72,7 @@ A **task** defines the input/output structure for discovery. It specifies:
 - A **corruption strategy** (how to generate paired corrupted inputs)
 - A `chat_template_mode` (auto/on/off)
 
-### 16 built-in tasks
+### 17 built-in tasks
 
 | Task | Description | Metric |
 |---|---|---|
@@ -92,6 +92,7 @@ A **task** defines the input/output structure for discovery. It specifies:
 | `ifeval` | Instruction following | Logit-diff |
 | `wmdp` | Hazardous knowledge | Logit-diff |
 | `gsm8k` | Math word problems | Answer-span NLL |
+| `multilingual_refusal` | Refusal of harmful requests, one language per run | Logit-diff |
 
 !!! note "Per-task metrics"
     Most tasks use single-token logit-difference. `winogrande` (suffix log-likelihood) and `gsm8k` (answer-span NLL) are deliberate exceptions.

@@ -46,6 +46,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 
 __all__ = [
     "load_model",
+    "build_discovery_config",
     "discover",
     "faithfulness",
     "prune",
@@ -290,7 +291,9 @@ def load_model(
         dtype: Torch dtype string — ``"bfloat16"`` (default), ``"float32"``,
             ``"float16"``, ...
         device: Target device. ``None`` (default) auto-selects ``"cuda"`` when
-            available, else ``"cpu"``.
+            available, else ``"cpu"``. ``"auto"`` picks ``"cuda"``, then
+            ``"mps"``, then ``"cpu"``, as the dict-config API does
+            (:func:`circuitkit.utils.device.get_device`).
         algorithm: If given, only the flags that algorithm needs are set. When
             omitted, the safe superset (all four flags) is enabled so the model
             works with any algorithm.
@@ -332,6 +335,10 @@ def load_model(
 
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
+    elif device == "auto":
+        from .utils.device import get_device
+
+        device = get_device("auto")
 
     try:
         torch_dtype = getattr(torch, dtype)
@@ -501,7 +508,10 @@ def discover(
         output_path: Where the engine writes the ``.pt`` artifact and the
             ``_scores.json`` / ``_scores.pt`` side-cars.
         **kw: Extra keys forwarded into the ``discovery`` block (e.g.
-            ``ig_steps=3``, ``intervention="patching"``).
+            ``ig_steps=3``, ``intervention="patching"``). ``signed=True``
+            (EAP family, node level) also keeps the scores' signs in
+            ``circuit.signed_scores``; ``circuit.scores`` and the circuit stay
+            the same.
 
     Returns:
         A :class:`Circuit` wrapping the discovered nodes and their scores.
@@ -575,6 +585,8 @@ def faithfulness(
     device: Optional[str] = None,
     configs: Optional[Union[str, List[str]]] = None,
     seed: Optional[int] = None,
+    data_params: Optional[Dict[str, Any]] = None,
+    chat_template_mode: Optional[str] = None,
     **kw: Any,
 ) -> "FaithfulnessReport":
     """Score a discovered circuit with the multi-pillar faithfulness framework.
@@ -608,6 +620,12 @@ def faithfulness(
             is evaluated on the distribution it was discovered on. ``None``
             (default) leaves the task's own default in effect, which for
             multi-config tasks like WMDP is *all* configs.
+        data_params: Task data options, merged over ``num_examples`` and ``seed``. Pass the
+            ones the circuit was discovered with, or a task that reads them (``multilingual_refusal``:
+            ``language``, ``pairs_path``, ``refuse``, ``comply``, ``chat_template_kwargs``) is
+            evaluated on its defaults, which for that task is the English pairs.
+        chat_template_mode: ``"auto"``, ``"on"`` or ``"off"``, as discovery was run with.
+            ``None`` keeps the task's own default.
         **kw: Extra keyword arguments forwarded to
             :func:`run_full_faithfulness` (e.g. ``n_stability_runs``).
 
@@ -674,6 +692,10 @@ def faithfulness(
     # a constant (zero-variance) — breaking any stability-vs-outcome analysis.
     if seed is not None:
         discovery_cfg["data_params"]["seed"] = seed
+    if data_params:
+        discovery_cfg["data_params"].update(data_params)
+    if chat_template_mode is not None:
+        discovery_cfg["chat_template_mode"] = chat_template_mode
 
     # Reconstruct at the circuit's ACTUAL sparsity. circuit.nodes is the PRUNED
     # (removed) node list, so the discovery sparsity is that fraction of the
