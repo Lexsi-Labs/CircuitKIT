@@ -44,12 +44,13 @@ from __future__ import annotations
 
 import copy
 import logging
-import re
 from typing import Any, Callable, Dict, Optional, Tuple
 
 import torch
 from torch import nn
 from transformer_lens import HookedTransformer
+
+from circuitkit.circuit import _HEAD_NAME_PATTERNS
 
 logger = logging.getLogger(__name__)
 
@@ -59,10 +60,11 @@ HeadSlice = Tuple[nn.Parameter, int]  # (full_param, head_idx)
 
 
 def _parse_head_name(head_name: str) -> Tuple[int, int]:
-    m = re.match(r"A(\d+)\.(\d+)", head_name)
-    if not m:
-        raise ValueError(f"head name must match A<layer>.<head>: got {head_name!r}")
-    return int(m.group(1)), int(m.group(2))
+    for pattern in _HEAD_NAME_PATTERNS:
+        m = pattern.match(head_name)
+        if m:
+            return int(m.group(1)), int(m.group(2))
+    raise ValueError(f"head name must match A<layer>.<head> or a<layer>.h<head>: got {head_name!r}")
 
 
 def get_head_weight_info(model: HookedTransformer, head_name: str) -> Dict[str, HeadSlice]:
@@ -168,11 +170,14 @@ class CircuitWeightSteering:
         self.score_threshold = score_threshold
 
         # Restrict to attention-head nodes (the paper's scope).
-        attn_nodes = {n: s for n, s in circuit_scores.items() if n.startswith("A")}
+        attn_nodes = {
+            n: s for n, s in circuit_scores.items()
+            if any(pattern.match(n) for pattern in _HEAD_NAME_PATTERNS)
+        }
         if not attn_nodes:
             raise ValueError(
                 "CircuitWeightSteering currently scopes to attention heads "
-                "(node names of the form 'A{layer}.{head}'). The supplied "
+                "(node names 'A{layer}.{head}' or 'a{layer}.h{head}'). The supplied "
                 "circuit_scores has no such nodes.",
             )
         if score_threshold is not None:
