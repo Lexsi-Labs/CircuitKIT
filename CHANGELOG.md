@@ -148,6 +148,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `CircuitWeightSteering` accepts EAP head names (`a{layer}.h{head}`) as well as uppercase names, while ignoring MLP entries (#51).
 - **`ck.faithfulness` drops the task's `data_params` and `chat_template_mode`.** It built the evaluation data from
   `num_examples` and `seed` only, so a `multilingual_refusal` circuit found in Spanish was scored on the bundled English
   pairs with the default openers (seen on Qwen3-0.6B: the cache file was the `en` one), and a base model with
