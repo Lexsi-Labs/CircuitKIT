@@ -39,7 +39,10 @@ def _build_node_hooks(nodes_to_prune: List[str]) -> List[Tuple[str, Any]]:
     import re
     from functools import partial
 
+    from circuitkit.circuit import _canonical_node_name
+
     for node_name in nodes_to_prune:
+        node_name = _canonical_node_name(node_name)  # EAP's "a1.h2" / "m3" too
         attn_match = re.match(r"A(\d+)\.(\d+)", node_name)
         if attn_match:
             layer_idx, head_idx = int(attn_match.group(1)), int(attn_match.group(2))

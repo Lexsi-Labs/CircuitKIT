@@ -44,6 +44,8 @@ from typing import Any, Dict, List, Optional
 
 import torch
 
+from circuitkit.circuit import _parse_mlp_name
+
 logger = logging.getLogger(__name__)
 
 
@@ -123,14 +125,10 @@ def _best_mlp_layer(node_scores: Dict[str, float], n_layers: int) -> int:
     """Return the highest-scored MLP layer from node_scores."""
     best_layer, best_score = n_layers // 2, -1.0
     for name, score in node_scores.items():
-        if name.startswith("MLP "):
-            try:
-                lyr = int(name.split()[-1])
-                if float(score) > best_score:
-                    best_score = float(score)
-                    best_layer = lyr
-            except (ValueError, IndexError):
-                pass
+        lyr = _parse_mlp_name(name)
+        if lyr is not None and float(score) > best_score:
+            best_score = float(score)
+            best_layer = lyr
     return best_layer
 
 

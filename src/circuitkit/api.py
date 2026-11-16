@@ -524,14 +524,14 @@ from .backends.eap.circuit_kit_adapter import (  # noqa: E402 - import after int
 
 
 def _ib_name_to_graph_name(ib_name: str) -> Optional[str]:
-    """Convert IBCircuit score key ('A0.0', 'MLP 0') to EAP Graph node key ('a0.h0', 'm0')."""
-    attn_match = re.match(r"A(\d+)\.(\d+)$", ib_name)
-    if attn_match:
-        return f"a{attn_match.group(1)}.h{attn_match.group(2)}"
-    mlp_match = re.match(r"MLP (\d+)$", ib_name)
-    if mlp_match:
-        return f"m{mlp_match.group(1)}"
-    return None
+    """Convert a score key ('A0.0', 'MLP 0', or already 'a0.h0', 'm0') to an EAP Graph node key ('a0.h0', 'm0')."""
+    from .circuit import _parse_head_name, _parse_mlp_name
+
+    head = _parse_head_name(ib_name)
+    if head is not None:
+        return f"a{head[0]}.h{head[1]}"
+    layer = _parse_mlp_name(ib_name)
+    return None if layer is None else f"m{layer}"
 
 
 def _populate_graph_from_ib_scores(graph: Graph, ib_node_scores: dict) -> Graph:

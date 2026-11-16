@@ -90,19 +90,18 @@ class ActivationSteering:
         Returns:
             Hook point string, e.g., "blocks.0.attn.hook_result"
         """
-        import re
+        from circuitkit.circuit import _parse_head_name, _parse_mlp_name
 
-        # Attention head node: "A<layer>.<head>"
-        attn_match = re.match(r"A(\d+)\.(\d+)", node_name)
-        if attn_match:
-            layer_idx = int(attn_match.group(1))
+        # Attention head node: "A<layer>.<head>" or EAP's "a<layer>.h<head>"
+        head = _parse_head_name(node_name)
+        if head is not None:
+            layer_idx = head[0]
             # Hook to the attention result (after all heads are combined)
             return f"blocks.{layer_idx}.attn.hook_result"
 
-        # MLP node: "MLP <layer>"
-        mlp_match = re.match(r"MLP\s+(\d+)", node_name)
-        if mlp_match:
-            layer_idx = int(mlp_match.group(1))
+        # MLP node: "MLP <layer>" or EAP's "m<layer>"
+        layer_idx = _parse_mlp_name(node_name)
+        if layer_idx is not None:
             # Hook to the MLP output
             return f"blocks.{layer_idx}.hook_mlp_out"
 
@@ -110,13 +109,11 @@ class ActivationSteering:
 
     @staticmethod
     def _node_head_index(node_name: str) -> Optional[int]:
-        """Return the head index for an attention node name ("A<layer>.<head>")."""
-        import re
+        """Return the head index for an attention node name ("A<layer>.<head>" or "a<layer>.h<head>")."""
+        from circuitkit.circuit import _parse_head_name
 
-        attn_match = re.match(r"A(\d+)\.(\d+)", node_name)
-        if attn_match:
-            return int(attn_match.group(2))
-        return None
+        head = _parse_head_name(node_name)
+        return None if head is None else head[1]
 
     def compute_steering_vector(
         self,

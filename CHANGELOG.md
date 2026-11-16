@@ -148,6 +148,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **EAP's own node names are read wherever circuit scores are used** (#51, #52). A neuron-level EAP run keeps the EAP
+  graph's names in `Circuit.scores` (`a{layer}.h{head}`, `m{layer}`), while node-level discovery writes
+  `A{layer}.{head}` / `MLP {layer}`. `CircuitWeightSteering` raised `ValueError` on the EAP names (fix by @observer04
+  in #52), and other consumers skipped them without a word: `ActivationSteering`, `get_nodes_to_prune`,
+  `get_nodes_to_prune_from_weights`, `StructuralPruner`, the hook and HF-checkpoint pruning in `circuitkit.evaluation`,
+  the quantization score converters, the MLP-layer pick of CURE/CLUE, `CircuitTuner`, CaKE and MCircKE (which fell
+  back to the middle layers), `ck.quantize` (which dropped `m{layer}`), `ComparisonDashboard` (a node-level and a
+  neuron-level circuit had no node in common), the `safety_units` written next to the scores, and `eap_to_artifact`.
+  All of them now read both styles through one parser in `circuitkit.circuit`, which matches whole names only, so
+  `A0.1.Q` or `a1.h2<q>` is never taken for a head. `CircuitWeightSteering` names each head `A{layer}.{head}` and counts a head
+  listed under both styles once, at its larger score. `eap_to_artifact` also reads the edges of an EAP `Graph`, which
+  it used to skip. `ck.faithfulness` on a neuron-level circuit now says it takes node-level circuits only, instead of
+  failing with `KeyError: 'neurons_scores'`; `circuitkit.api.evaluate_circuit` scores neuron-level circuits.
 - **`ck.faithfulness` drops the task's `data_params` and `chat_template_mode`.** It built the evaluation data from
   `num_examples` and `seed` only, so a `multilingual_refusal` circuit found in Spanish was scored on the bundled English
   pairs with the default openers (seen on Qwen3-0.6B: the cache file was the `en` one), and a base model with

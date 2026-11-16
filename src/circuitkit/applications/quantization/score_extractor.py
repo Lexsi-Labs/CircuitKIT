@@ -255,35 +255,34 @@ def head_scores_str_to_tuple(
 ) -> Dict[Tuple[int, int], float]:
     """Convert ``{"A{layer}.{head}": float}`` → ``{(layer, head): float}``.
 
-    Filters out MLP-style keys (``"MLP {layer}"``); only attention-head
+    EAP's ``"a{layer}.h{head}"`` keys are read too. MLP-style keys
+    (``"MLP {layer}"`` / ``"m{layer}"``) are filtered out; only attention-head
     entries are returned. Use this to feed a pruning-selector's flat score
     dict into the quantization tier-assignment helpers.
     """
-    import re
+    from circuitkit.circuit import _parse_head_name
 
-    pat = re.compile(r"A(\d+)\.(\d+)")
     out: Dict[Tuple[int, int], float] = {}
     for k, v in str_scores.items():
-        m = pat.match(k)
-        if m:
-            out[(int(m.group(1)), int(m.group(2)))] = float(v)
+        head = _parse_head_name(k)
+        if head is not None:
+            out[head] = float(v)
     return out
 
 
 def mlp_scores_str_to_int(str_scores: Dict[str, float]) -> Dict[int, float]:
     """Convert ``{"MLP {layer}": float}`` → ``{layer: float}``.
 
-    Filters out attention-head keys (``"A{layer}.{head}"``); only MLP
-    entries are returned. Mirror of ``head_scores_str_to_tuple``.
+    EAP's ``"m{layer}"`` keys are read too. Attention-head keys are filtered
+    out; only MLP entries are returned. Mirror of ``head_scores_str_to_tuple``.
     """
-    import re
+    from circuitkit.circuit import _parse_mlp_name
 
-    pat = re.compile(r"MLP (\d+)")
     out: Dict[int, float] = {}
     for k, v in str_scores.items():
-        m = pat.match(k)
-        if m:
-            out[int(m.group(1))] = float(v)
+        layer = _parse_mlp_name(k)
+        if layer is not None:
+            out[layer] = float(v)
     return out
 
 

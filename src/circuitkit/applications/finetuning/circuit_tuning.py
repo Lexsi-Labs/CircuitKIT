@@ -34,6 +34,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from circuitkit.applications.common_utils._dtype import reject_float16
+from circuitkit.circuit import _parse_mlp_name
 
 logger = logging.getLogger(__name__)
 
@@ -120,12 +121,9 @@ def _top_mlp_layers(
 ) -> List[int]:
     layer_scores: Dict[int, float] = {}
     for name, score in node_scores.items():
-        if name.startswith("MLP "):
-            try:
-                lyr = int(name.split()[-1])
-                layer_scores[lyr] = max(layer_scores.get(lyr, 0.0), float(score))
-            except (ValueError, IndexError):
-                pass
+        lyr = _parse_mlp_name(name)
+        if lyr is not None:
+            layer_scores[lyr] = max(layer_scores.get(lyr, 0.0), float(score))
     if not layer_scores:
         mid = n_layers // 2
         return list(range(max(0, mid - 1), min(n_layers, mid + top_k - 1)))
