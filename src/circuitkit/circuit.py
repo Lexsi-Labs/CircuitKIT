@@ -23,7 +23,7 @@ dict-config API (:func:`circuitkit.api.discover_circuit` /
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 
 import logging
@@ -57,6 +57,33 @@ PruningArtifact = Union[List[str], Dict[str, Any]]
 # ``A{layer}.{head}``.
 _MLP_NAME_PATTERNS = (re.compile(r"m(\d+)$"), re.compile(r"MLP (\d+)$"))
 _HEAD_NAME_PATTERNS = (re.compile(r"a(\d+)\.h(\d+)$"), re.compile(r"A(\d+)\.(\d+)$"))
+
+
+def _parse_head_name(name: str) -> Optional[Tuple[int, int]]:
+    """``(layer, head)`` for an attention-head name in either naming style, else ``None``."""
+    for pattern in _HEAD_NAME_PATTERNS:
+        match = pattern.match(name)
+        if match:
+            return int(match.group(1)), int(match.group(2))
+    return None
+
+
+def _parse_mlp_name(name: str) -> Optional[int]:
+    """The layer of an MLP name in either naming style, else ``None``."""
+    for pattern in _MLP_NAME_PATTERNS:
+        match = pattern.match(name)
+        if match:
+            return int(match.group(1))
+    return None
+
+
+def _canonical_node_name(name: str) -> str:
+    """``A{layer}.{head}`` / ``MLP {layer}`` for a head or MLP name in either style; other names unchanged."""
+    head = _parse_head_name(name)
+    if head is not None:
+        return f"A{head[0]}.{head[1]}"
+    layer = _parse_mlp_name(name)
+    return name if layer is None else f"MLP {layer}"
 
 
 def _fully_pruned_components(pruning_dict: Dict[str, Any], component_names: List[str]) -> List[str]:

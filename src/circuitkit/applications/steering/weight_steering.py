@@ -50,7 +50,7 @@ import torch
 from torch import nn
 from transformer_lens import HookedTransformer
 
-from circuitkit.circuit import _HEAD_NAME_PATTERNS
+from circuitkit.circuit import _canonical_node_name, _parse_head_name as _parse_head
 
 logger = logging.getLogger(__name__)
 
@@ -60,10 +60,9 @@ HeadSlice = Tuple[nn.Parameter, int]  # (full_param, head_idx)
 
 
 def _parse_head_name(head_name: str) -> Tuple[int, int]:
-    for pattern in _HEAD_NAME_PATTERNS:
-        m = pattern.match(head_name)
-        if m:
-            return int(m.group(1)), int(m.group(2))
+    parsed = _parse_head(head_name)
+    if parsed is not None:
+        return parsed
     raise ValueError(f"head name must match A<layer>.<head> or a<layer>.h<head>: got {head_name!r}")
 
 
@@ -170,10 +169,15 @@ class CircuitWeightSteering:
         self.score_threshold = score_threshold
 
         # Restrict to attention-head nodes (the paper's scope).
-        attn_nodes = {
-            n: s for n, s in circuit_scores.items()
-            if any(pattern.match(n) for pattern in _HEAD_NAME_PATTERNS)
-        }
+        # Both naming styles map to one 'A{layer}.{head}' name, so a head
+        # listed under both is selected (and steered) once, at its larger score.
+        attn_nodes: Dict[str, float] = {}
+        for n, s in circuit_scores.items():
+            if _parse_head(n) is None:
+                continue
+            name = _canonical_node_name(n)
+            if name not in attn_nodes or abs(s) > abs(attn_nodes[name]):
+                attn_nodes[name] = s
         if not attn_nodes:
             raise ValueError(
                 "CircuitWeightSteering currently scopes to attention heads "
