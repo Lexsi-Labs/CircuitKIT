@@ -647,6 +647,13 @@ def faithfulness(
     from .tasks.bootstrap import _bootstrap_builtin_tasks
     from .tasks.registry import get_task as _get_task
 
+    if circuit.level != "node":
+        # The graph is rebuilt from node scores here; a neuron-level circuit
+        # needs its per-neuron scores and sparsity, which this path lacks.
+        raise ValueError(
+            f"faithfulness() supports node-level circuits only; got level={circuit.level!r}. "
+            "Evaluate a neuron-level circuit with circuitkit.api.evaluate_circuit instead."
+        )
     if not circuit.scores:
         raise ValueError(
             "Circuit has no node scores — faithfulness needs them. "
@@ -871,8 +878,6 @@ def quantize(
     Returns:
         Tier-assignment plan (``"quanto"``) or summary dict (``"llmcompressor"``).
     """
-    import re
-
     if backend not in ("quanto", "llmcompressor"):
         raise ValueError(
             f"backend must be 'quanto' or 'llmcompressor', got {backend!r}"
@@ -895,21 +900,22 @@ def quantize(
         )
 
     # Derive per-head and per-MLP scores from the circuit's node scores.
-    # Node names: attention heads 'A{layer}.{head}', MLPs 'MLP {layer}'.
+    # Node names: attention heads 'A{layer}.{head}' / 'a{layer}.h{head}',
+    # MLPs 'MLP {layer}' / 'm{layer}'.
+    from .circuit import _parse_head_name, _parse_mlp_name
+
     q_head_scores: Dict[Any, float] = {}
     mlp_scores: Dict[int, float] = {}
     max_layer = -1
     for name, score in circuit.scores.items():
-        attn = re.match(r"[Aa](\d+)\.[hH]?(\d+)$", name)
-        mlp = re.match(r"MLP\s*(\d+)$", name)
-        if attn:
-            layer, head = int(attn.group(1)), int(attn.group(2))
-            q_head_scores[(layer, head)] = float(score)
-            max_layer = max(max_layer, layer)
-        elif mlp:
-            layer = int(mlp.group(1))
-            mlp_scores[layer] = float(score)
-            max_layer = max(max_layer, layer)
+        head = _parse_head_name(name)
+        mlp_layer = _parse_mlp_name(name)
+        if head is not None:
+            q_head_scores[head] = float(score)
+            max_layer = max(max_layer, head[0])
+        elif mlp_layer is not None:
+            mlp_scores[mlp_layer] = float(score)
+            max_layer = max(max_layer, mlp_layer)
 
     if n_layers is None:
         cfg = getattr(model, "config", None)

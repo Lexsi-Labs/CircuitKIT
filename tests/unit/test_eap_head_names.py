@@ -271,3 +271,33 @@ def test_circuit_lora_targets_eap_names():
     )
     lora._apply_lora_to_circuit()
     assert calls == [("head", 1, 0), ("mlp", 2)]
+
+
+def test_quick_quantize_reads_eap_names(monkeypatch):
+    import circuitkit.applications.quantization as quantization
+    from circuitkit.circuit import Circuit
+    from circuitkit.quick import quantize
+
+    seen = {}
+    monkeypatch.setattr(quantization, "circuit_quantize", lambda model, **kw: seen.update(kw))
+    quantize(object(), Circuit(nodes=[], scores=EAP_SCORES), n_layers=2)
+    assert seen["q_head_scores"] == {(1, 0): 0.9, (0, 1): 0.4}
+    assert seen["mlp_scores"] == {1: 0.8, 0: 0.1}
+
+
+def test_comparison_lines_up_node_and_neuron_level_names():
+    pytest.importorskip("plotly")
+    from circuitkit.visualize.comparison import ComparisonDashboard
+
+    node_level = {"A1.0": 0.5, "A0.1": 0.2, "MLP 1": 0.3, "MLP 0": 0.6}
+    dashboard = ComparisonDashboard(circuits={"node": node_level, "neuron": EAP_SCORES})
+    assert sorted(dashboard.common_nodes) == sorted(node_level)
+
+
+def test_faithfulness_rejects_neuron_level_circuits_clearly():
+    from circuitkit.circuit import Circuit
+    from circuitkit.quick import faithfulness
+
+    neuron_level = Circuit(nodes={"mlp": {}, "heads": {}, "_meta": {}}, scores=EAP_SCORES, level="neuron")
+    with pytest.raises(ValueError, match="node-level circuits only"):
+        faithfulness(object(), neuron_level, "ioi")

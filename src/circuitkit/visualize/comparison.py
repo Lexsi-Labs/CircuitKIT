@@ -46,7 +46,14 @@ class ComparisonDashboard:
             labels: Optional list of labels for circuits (default: circuit names).
             metadata: Optional metadata about the comparison.
         """
-        self.circuits = circuits
+        from ..circuit import _canonical_node_name
+
+        # One name per node, so a neuron-level EAP circuit (a0.h1, m2) lines up
+        # with a node-level one (A0.1, MLP 2).
+        self.circuits = {
+            label: {_canonical_node_name(n): s for n, s in scores.items()}
+            for label, scores in circuits.items()
+        }
         self.comparison_type = comparison_type
         self.labels = labels or list(circuits.keys())
         self.metadata = metadata or {}
