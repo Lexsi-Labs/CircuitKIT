@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional
 
 import torch
 
+from ..circuit import _canonical_node_name
 from .circuit_artifact import CircuitArtifact, Edge, Node, NodeType
 
 logger = logging.getLogger(__name__)
@@ -189,8 +190,10 @@ def eap_to_artifact(
     }
 
     # Parse node scores and create nodes
-    # Expected format: "A0.0" (attention L0H0), "MLP 3" (MLP layer 3)
+    # Expected format: "A0.0" (attention L0H0), "MLP 3" (MLP layer 3); EAP's
+    # own "a0.h0" / "m3" names are read as the same nodes.
     for node_name, importance in node_scores.items():
+        node_name = _canonical_node_name(node_name)
         importance_val = float(importance)
 
         if importance_val < threshold:
@@ -242,10 +245,14 @@ def eap_to_artifact(
         try:
             edge_idx = 0
             if hasattr(graph, "edges"):
-                for edge_obj in graph.edges:
+                # An EAP Graph keeps its edges in a dict, with parent/child nodes.
+                edges = graph.edges.values() if isinstance(graph.edges, dict) else graph.edges
+                for edge_obj in edges:
                     try:
-                        src_name = str(edge_obj.src.name)
-                        dst_name = str(edge_obj.dest.name)
+                        src = getattr(edge_obj, "src", None) or edge_obj.parent
+                        dst = getattr(edge_obj, "dest", None) or edge_obj.child
+                        src_name = _canonical_node_name(str(src.name))
+                        dst_name = _canonical_node_name(str(dst.name))
 
                         # Convert names to node IDs
                         src_node_id = None

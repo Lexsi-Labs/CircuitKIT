@@ -7,7 +7,6 @@ to circuit-relevant modules in a pruned transformer model. The goal is to
 recover performance of pruned models through targeted fine-tuning.
 """
 
-import re
 import warnings
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -17,6 +16,7 @@ from torch.utils.data import DataLoader
 from transformer_lens import HookedTransformer
 
 from circuitkit.applications.common_utils._dtype import reject_float16
+from circuitkit.circuit import _parse_head_name, _parse_mlp_name
 
 
 import logging
@@ -261,17 +261,15 @@ class CircuitLoRA(nn.Module):
         logger.info(f"Applying LoRA to circuit-relevant nodes (threshold: {self.score_threshold})")
 
         for node_name, score in self.high_score_nodes.items():
-            attn_match = re.match(r"A(\d+)\.(\d+)", node_name)
-            if attn_match and "attn_head" in self.target_modules:
-                self._apply_lora_to_attn_head(
-                    int(attn_match.group(1)), int(attn_match.group(2)), score
-                )
+            head = _parse_head_name(node_name)
+            if head is not None and "attn_head" in self.target_modules:
+                self._apply_lora_to_attn_head(head[0], head[1], score)
                 continue
 
-            mlp_match = re.match(r"MLP\s+(\d+)", node_name)
-            if mlp_match:
+            mlp_layer = _parse_mlp_name(node_name)
+            if mlp_layer is not None:
                 if "W_in" in self.target_modules or "W_out" in self.target_modules:
-                    self._apply_lora_to_mlp(int(mlp_match.group(1)), score)
+                    self._apply_lora_to_mlp(mlp_layer, score)
                 continue
 
     def _apply_lora_to_attn_head(self, layer_idx: int, head_idx: int, score: float):

@@ -19,6 +19,7 @@ from safetensors.torch import save_file as safe_save
 from transformer_lens import HookedTransformer
 from transformers import AutoConfig, AutoModelForCausalLM
 
+from ..circuit import _canonical_node_name
 from ..provenance import model_input, write_provenance
 
 logger = logging.getLogger(__name__)
@@ -398,6 +399,7 @@ def expected_zero_keys(
 
     merged = bool(arch_cfg.get("attn_merged_qkv"))
     for node in pruned_artifact:
+        node = _canonical_node_name(node)  # EAP's "a1.h2" / "m3" too
         m_head = head_pat.match(node)
         if m_head:
             layer = int(m_head.group(1))
@@ -588,6 +590,7 @@ def _prune_hf_state_dict(
 
     if isinstance(pruned_artifact, list):
         for node in pruned_artifact:
+            node = _canonical_node_name(node)  # EAP's "a1.h2" / "m3" too
             m_head = head_pat.match(node)
             if m_head:
                 _zero_head(int(m_head.group(1)), int(m_head.group(2)))

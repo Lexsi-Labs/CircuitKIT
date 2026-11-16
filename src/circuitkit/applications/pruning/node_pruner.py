@@ -1,12 +1,12 @@
 # FILE: circuitkit/applications/pruning/node_pruner.py
 
-import re
 from collections import defaultdict
 from functools import partial
 
 import torch as t
 
 from circuitkit.backends.acdc.utils.patchable_model import PatchableModel
+from circuitkit.circuit import _parse_head_name, _parse_mlp_name
 from circuitkit.utils import count_at_fraction
 import logging
 
@@ -67,14 +67,12 @@ def get_nodes_to_prune(
     attn_heads_by_layer = defaultdict(dict)
 
     for name, score in prunable_nodes.items():
-        attn_match = re.match(r"A(\d+)\.(\d+)", name)
-        mlp_match = re.match(r"MLP (\d+)", name)
-
-        if attn_match:
-            layer_idx = int(attn_match.group(1))
+        head = _parse_head_name(name)
+        if head is not None:
+            layer_idx = head[0]
             attn_head_scores[name] = score
             attn_heads_by_layer[layer_idx][name] = score
-        elif mlp_match:
+        elif _parse_mlp_name(name) is not None:
             mlp_scores[name] = score
 
     logger.info(
@@ -110,8 +108,7 @@ def get_nodes_to_prune(
             if len(pruned_attn_heads) >= total_heads_to_prune:
                 break
 
-            attn_match = re.match(r"A(\d+)\.(\d+)", head_name)
-            layer_idx = int(attn_match.group(1))
+            layer_idx = _parse_head_name(head_name)[0]
 
             total_heads_in_layer = len(attn_heads_by_layer[layer_idx])
             max_prune_for_layer = int(total_heads_in_layer * 0.5)
@@ -170,17 +167,16 @@ def prune_nodes_and_evaluate(
 
     hooks_to_add = []
     for node_name in nodes_to_prune:
-        attn_match = re.match(r"A(\d+)\.(\d+)", node_name)
-        if attn_match:
-            layer_idx, head_idx = int(attn_match.group(1)), int(attn_match.group(2))
+        head = _parse_head_name(node_name)
+        if head is not None:
+            layer_idx, head_idx = head
             hook_point = f"blocks.{layer_idx}.attn.hook_result"
             hook_func = partial(zero_head_hook, head_index=head_idx)
             hooks_to_add.append((hook_point, hook_func))
             continue
 
-        mlp_match = re.match(r"MLP (\d+)", node_name)
-        if mlp_match:
-            layer_idx = int(mlp_match.group(1))
+        layer_idx = _parse_mlp_name(node_name)
+        if layer_idx is not None:
             hook_point = f"blocks.{layer_idx}.hook_mlp_out"
             hooks_to_add.append((hook_point, zero_mlp_hook))
             continue

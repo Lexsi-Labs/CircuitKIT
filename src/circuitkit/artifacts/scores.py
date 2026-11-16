@@ -15,8 +15,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-_HEAD = re.compile(r"A(\d+)\.(\d+)$")
-_MLP = re.compile(r"(?:MLP |L)(\d+)(?:\.\d+)?$")  # "MLP 3" (node) or "L3.42" (neuron)
+# "MLP 3" / EAP's "m3" (node) or "L3.42" (neuron). Heads: circuit._parse_head_name.
+_MLP = re.compile(r"(?:MLP |L|m)(\d+)(?:\.\d+)?$")
 # Hugging Face projection names per registry family, minus the non-module keys.
 _NON_MODULE_KEYS = {"module", "head_dim"}
 
@@ -60,6 +60,7 @@ def interop_fields(
     * ``provenance``: a ``lexsi.provenance/1`` record (see :mod:`circuitkit.provenance`).
     """
     from ..applications.arch_registry import MODEL_ARCH_REGISTRY, get_model_family
+    from ..circuit import _parse_head_name
     from ..provenance import make_provenance, read_provenance
 
     try:
@@ -72,10 +73,10 @@ def interop_fields(
 
     units, layers, kinds = [], set(), {}
     for name, score in top:
-        m_head, m_mlp = _HEAD.match(name), _MLP.match(name)
-        if not (m_head or m_mlp):
+        head, m_mlp = _parse_head_name(name), _MLP.match(name)
+        if head is None and not m_mlp:
             continue
-        layer, kind = int((m_head or m_mlp).group(1)), "attn" if m_head else "mlp"
+        layer, kind = (head[0], "attn") if head is not None else (int(m_mlp.group(1)), "mlp")
         module = "mlp" if kind == "mlp" else arch["attn"]["module"]
         units.append((name, f"{arch['layers_path'][0]}.{layer}.{module}", score / peak))
         layers.add(layer)

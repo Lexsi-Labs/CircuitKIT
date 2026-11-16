@@ -1,12 +1,12 @@
 # FILE: circuitkit/applications/pruning/weight_pruner.py
 
-import re
 import warnings
 from collections import defaultdict
 from typing import Any, Dict, List, Tuple, Union
 
 from transformer_lens import HookedTransformer
 
+from circuitkit.circuit import _parse_head_name, _parse_mlp_name
 from circuitkit.utils import count_at_fraction
 import logging
 
@@ -413,17 +413,16 @@ def apply_node_pruning_to_weights(model: HookedTransformer, nodes_to_prune: List
     for node_name in nodes_to_prune:
         try:
             # Parse attention head nodes (e.g., "A0.1" -> layer 0, head 1)
-            attn_match = re.match(r"A(\d+)\.(\d+)", node_name)
-            if attn_match:
-                layer_idx, head_idx = int(attn_match.group(1)), int(attn_match.group(2))
+            head = _parse_head_name(node_name)
+            if head is not None:
+                layer_idx, head_idx = head
                 logger.info(f"  Pruning attention head: layer {layer_idx}, head {head_idx}")
                 zero_attention_head_weights(model, layer_idx, head_idx)
                 continue
 
             # Parse MLP nodes (e.g., "MLP 2" -> layer 2)
-            mlp_match = re.match(r"MLP (\d+)", node_name)
-            if mlp_match:
-                layer_idx = int(mlp_match.group(1))
+            layer_idx = _parse_mlp_name(node_name)
+            if layer_idx is not None:
                 logger.info(f"  Pruning MLP layer: {layer_idx}")
                 zero_mlp_weights(model, layer_idx)
                 continue
@@ -589,14 +588,12 @@ def get_nodes_to_prune_from_weights(
     attn_heads_by_layer = defaultdict(dict)
 
     for name, score in prunable_nodes.items():
-        attn_match = re.match(r"A(\d+)\.(\d+)", name)
-        mlp_match = re.match(r"MLP (\d+)", name)
-
-        if attn_match:
-            layer_idx = int(attn_match.group(1))
+        head = _parse_head_name(name)
+        if head is not None:
+            layer_idx = head[0]
             attn_head_scores[name] = score
             attn_heads_by_layer[layer_idx][name] = score
-        elif mlp_match:
+        elif _parse_mlp_name(name) is not None:
             mlp_scores[name] = score
 
     logger.info(
@@ -632,8 +629,7 @@ def get_nodes_to_prune_from_weights(
             if len(pruned_attn_heads) >= total_heads_to_prune:
                 break
 
-            attn_match = re.match(r"A(\d+)\.(\d+)", head_name)
-            layer_idx = int(attn_match.group(1))
+            layer_idx = _parse_head_name(head_name)[0]
 
             total_heads_in_layer = len(attn_heads_by_layer[layer_idx])
             max_prune_for_layer = int(total_heads_in_layer * 0.5)

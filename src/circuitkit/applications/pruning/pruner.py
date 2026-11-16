@@ -23,7 +23,6 @@ This module handles:
 
 import copy
 import logging
-import re
 import warnings
 from pathlib import Path
 from typing import Dict, List, Optional, Union
@@ -32,6 +31,7 @@ import torch as t
 from transformer_lens import HookedTransformer
 
 from circuitkit.artifacts.scores import CircuitScores
+from circuitkit.circuit import _parse_head_name, _parse_mlp_name
 from circuitkit.utils.hparams import validate as _validate_hparams
 from circuitkit.utils import count_at_fraction
 from circuitkit.utils.logging import get_logger
@@ -230,20 +230,21 @@ class StructuralPruner:
 
         # Filter the candidate set by component type and protected layers.
         # Node-name conventions match node_pruner.get_nodes_to_prune:
-        # attention heads 'A{layer}.{head}', MLP layers 'MLP {layer}'.
+        # attention heads 'A{layer}.{head}' / 'a{layer}.h{head}', MLP layers
+        # 'MLP {layer}' / 'm{layer}'.
         candidates: Dict[str, float] = {}
         for name, score in circuit_scores.node_scores.items():
-            attn_match = re.match(r"A(\d+)\.(\d+)", name)
-            mlp_match = re.match(r"MLP (\d+)", name)
-            if attn_match:
+            head = _parse_head_name(name)
+            mlp_layer = _parse_mlp_name(name)
+            if head is not None:
                 if scope not in ("heads", "both"):
                     continue
-                if int(attn_match.group(1)) in protected:
+                if head[0] in protected:
                     continue
-            elif mlp_match:
+            elif mlp_layer is not None:
                 if scope not in ("mlp", "both"):
                     continue
-                if int(mlp_match.group(1)) in protected:
+                if mlp_layer in protected:
                     continue
             else:
                 # Non head/MLP nodes (e.g. 'Resid Start') are never masked.
@@ -278,19 +279,12 @@ class StructuralPruner:
         """
         heads_by_layer: Dict[int, List[int]] = {}
 
-        # Parse attention node names: 'A{layer}.{head}'
+        # Parse attention node names: 'A{layer}.{head}' or 'a{layer}.h{head}'
         for node_name in nodes_to_prune.keys():
-            if node_name.startswith("A"):
-                parts = node_name[1:].split(".")
-                if len(parts) == 2:
-                    try:
-                        layer = int(parts[0])
-                        head = int(parts[1])
-                        if layer not in heads_by_layer:
-                            heads_by_layer[layer] = []
-                        heads_by_layer[layer].append(head)
-                    except (ValueError, IndexError):
-                        self.logger.warning(f"Could not parse attention node name: {node_name}")
+            parsed = _parse_head_name(node_name)
+            if parsed is not None:
+                layer, head = parsed
+                heads_by_layer.setdefault(layer, []).append(head)
 
         # Sort heads in descending order to remove from end first
         # (prevents index shifting)
@@ -404,15 +398,11 @@ class StructuralPruner:
         """
         mlp_layers_to_prune: List[int] = []
 
-        # Parse MLP node names: 'MLP {layer}'
+        # Parse MLP node names: 'MLP {layer}' or 'm{layer}'
         for node_name in nodes_to_prune.keys():
-            if node_name.startswith("MLP "):
-                parts = node_name.split()
-                if len(parts) == 2:
-                    try:
-                        mlp_layers_to_prune.append(int(parts[1]))
-                    except ValueError:
-                        self.logger.warning(f"Could not parse MLP node name: {node_name}")
+            mlp_layer = _parse_mlp_name(node_name)
+            if mlp_layer is not None:
+                mlp_layers_to_prune.append(mlp_layer)
 
         for layer_idx in sorted(set(mlp_layers_to_prune)):
             if not (0 <= layer_idx < len(model.blocks)):
