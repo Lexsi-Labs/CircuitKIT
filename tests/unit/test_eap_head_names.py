@@ -255,3 +255,19 @@ def test_neuron_level_eap_scores_drive_weight_steering(tmp_path, monkeypatch):
     assert torch.equal(
         loaded.apply_steering(k=1.0).blocks[layer].attn.W_Q[head], steered.blocks[layer].attn.W_Q[head]
     )
+
+
+def test_circuit_lora_targets_eap_names():
+    from circuitkit.applications.finetuning.soft_healing import CircuitLoRA
+
+    lora = CircuitLoRA.__new__(CircuitLoRA)
+    calls = []
+    vars(lora).update(
+        score_threshold=0.0,
+        target_modules=["attn_head", "W_in"],
+        high_score_nodes={"a1.h0": 0.9, "m2": 0.8, "Resid Start": 0.7},
+        _apply_lora_to_attn_head=lambda layer, head, score: calls.append(("head", layer, head)),
+        _apply_lora_to_mlp=lambda layer, score: calls.append(("mlp", layer)),
+    )
+    lora._apply_lora_to_circuit()
+    assert calls == [("head", 1, 0), ("mlp", 2)]
